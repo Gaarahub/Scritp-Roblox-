@@ -1,285 +1,260 @@
---[[
-    VIOLET CORE - B6
-    José FX
-    UI Base / Sistema modular
-    Para tu propio juego de Roblox
-]]
+--// Violet Core | B7
+--// José FX
+--// UI base + categorías + switches + scroll + menú móvil
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 --==================================================
--- CONFIGURACIÓN
+-- CONFIG
 --==================================================
 
-local CONFIG = {
-    Name = "Violet Core",
-    Version = "B6",
-
-    Background = Color3.fromRGB(10, 10, 12),
-    Panel = Color3.fromRGB(17, 17, 20),
-    Panel2 = Color3.fromRGB(23, 23, 27),
-    Hover = Color3.fromRGB(32, 32, 38),
-    Selected = Color3.fromRGB(38, 38, 44),
-
-    Text = Color3.fromRGB(235, 235, 240),
-    SubText = Color3.fromRGB(145, 145, 155),
-
-    Accent = Color3.fromRGB(155, 155, 165),
-    Green = Color3.fromRGB(70, 200, 105),
-    Red = Color3.fromRGB(220, 70, 70),
-
-    Transparency = 0.08
+local COLORS = {
+	Background = Color3.fromRGB(10, 10, 12),
+	Panel = Color3.fromRGB(17, 17, 20),
+	Panel2 = Color3.fromRGB(22, 22, 26),
+	Border = Color3.fromRGB(48, 48, 55),
+	Text = Color3.fromRGB(235, 235, 240),
+	SubText = Color3.fromRGB(145, 145, 155),
+	Accent = Color3.fromRGB(145, 85, 255),
+	AccentDark = Color3.fromRGB(90, 45, 170),
+	Off = Color3.fromRGB(70, 70, 76),
+	On = Color3.fromRGB(90, 210, 125),
+	White = Color3.fromRGB(255, 255, 255),
 }
 
-local function tween(object, properties, duration)
-    TweenService:Create(
-        object,
-        TweenInfo.new(duration or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        properties
-    ):Play()
-end
-
-local function corner(object, radius)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius or 6)
-    c.Parent = object
-end
-
-local function stroke(object, color, thickness, transparency)
-    local s = Instance.new("UIStroke")
-    s.Color = color or Color3.new(1,1,1)
-    s.Thickness = thickness or 1
-    s.Transparency = transparency or 0
-    s.Parent = object
-    return s
-end
+local TWEEN = TweenInfo.new(
+	0.16,
+	Enum.EasingStyle.Quad,
+	Enum.EasingDirection.Out
+)
 
 --==================================================
 -- LIMPIAR VERSION ANTERIOR
 --==================================================
 
-local old = PlayerGui:FindFirstChild("VioletCore_B6")
+local old = PlayerGui:FindFirstChild("VioletCore_B7")
 if old then
-    old:Destroy()
+	old:Destroy()
 end
 
 --==================================================
--- SCREEN GUI
+-- ESTADOS
 --==================================================
 
-local Screen = Instance.new("ScreenGui")
-Screen.Name = "VioletCore_B6"
-Screen.ResetOnSpawn = false
-Screen.IgnoreGuiInset = true
-Screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-Screen.Parent = PlayerGui
+local States = {}
+
+local function SetState(name, value)
+	States[name] = value
+end
+
+local function GetState(name)
+	return States[name] == true
+end
 
 --==================================================
--- BOTÓN PRINCIPAL
+-- GUI
+--==================================================
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "VioletCore_B7"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent = PlayerGui
+
+--==================================================
+-- BOTÓN ABRIR / CERRAR
 --==================================================
 
 local OpenButton = Instance.new("TextButton")
 OpenButton.Name = "OpenButton"
 OpenButton.Size = UDim2.fromOffset(42, 42)
-OpenButton.Position = UDim2.new(0, 18, 0, 65)
-OpenButton.BackgroundColor3 = CONFIG.Panel
-OpenButton.BackgroundTransparency = 0.05
+
+-- posición fija arriba, como pediste
+OpenButton.Position = UDim2.new(1, -62, 0, 70)
+
+OpenButton.BackgroundColor3 = COLORS.Panel
+OpenButton.BackgroundTransparency = 0.08
 OpenButton.BorderSizePixel = 0
 OpenButton.Text = "V"
-OpenButton.TextColor3 = CONFIG.Text
+OpenButton.TextColor3 = COLORS.Text
 OpenButton.TextSize = 18
 OpenButton.Font = Enum.Font.GothamBold
 OpenButton.AutoButtonColor = false
-OpenButton.Parent = Screen
+OpenButton.ZIndex = 50
+OpenButton.Parent = Gui
 
-corner(OpenButton, 9)
-stroke(OpenButton, Color3.fromRGB(65,65,70), 1)
+local OpenCorner = Instance.new("UICorner")
+OpenCorner.CornerRadius = UDim.new(0, 10)
+OpenCorner.Parent = OpenButton
 
--- El botón puede moverse
-do
-    local dragging = false
-    local dragStart
-    local startPosition
-
-    OpenButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-            dragging = true
-            dragStart = input.Position
-            startPosition = OpenButton.Position
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if not dragging then return end
-
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-
-            local delta = input.Position - dragStart
-
-            OpenButton.Position = UDim2.new(
-                startPosition.X.Scale,
-                startPosition.X.Offset + delta.X,
-                startPosition.Y.Scale,
-                startPosition.Y.Offset + delta.Y
-            )
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-end
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Color = COLORS.Accent
+OpenStroke.Thickness = 1
+OpenStroke.Transparency = 0.25
+OpenStroke.Parent = OpenButton
 
 --==================================================
 -- VENTANA PRINCIPAL
 --==================================================
 
-local Main = Instance.new("Frame")
-Main.Name = "Main"
-Main.Size = UDim2.fromOffset(600, 370)
-Main.Position = UDim2.new(0.5, -300, 0.5, -185)
-Main.BackgroundColor3 = CONFIG.Background
-Main.BackgroundTransparency = CONFIG.Transparency
-Main.BorderSizePixel = 0
-Main.Visible = true
-Main.Parent = Screen
+local Window = Instance.new("Frame")
+Window.Name = "Window"
+Window.Size = UDim2.fromOffset(540, 350)
+Window.Position = UDim2.new(0.5, -270, 0.5, -175)
+Window.BackgroundColor3 = COLORS.Background
+Window.BackgroundTransparency = 0.06
+Window.BorderSizePixel = 0
+Window.Visible = true
+Window.ZIndex = 10
+Window.Parent = Gui
 
-corner(Main, 10)
-stroke(Main, Color3.fromRGB(50,50,55), 1)
+local WindowCorner = Instance.new("UICorner")
+WindowCorner.CornerRadius = UDim.new(0, 12)
+WindowCorner.Parent = Window
+
+local WindowStroke = Instance.new("UIStroke")
+WindowStroke.Color = COLORS.Border
+WindowStroke.Thickness = 1
+WindowStroke.Parent = Window
 
 --==================================================
--- BARRA SUPERIOR
+-- HEADER
 --==================================================
 
-local Top = Instance.new("Frame")
-Top.Name = "TopBar"
-Top.Size = UDim2.new(1, 0, 0, 42)
-Top.BackgroundColor3 = CONFIG.Panel
-Top.BackgroundTransparency = 0.03
-Top.BorderSizePixel = 0
-Top.Parent = Main
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 58)
+Header.BackgroundColor3 = COLORS.Panel
+Header.BackgroundTransparency = 0.05
+Header.BorderSizePixel = 0
+Header.ZIndex = 11
+Header.Parent = Window
 
-corner(Top, 10)
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 12)
+HeaderCorner.Parent = Header
 
-local TopFill = Instance.new("Frame")
-TopFill.Size = UDim2.new(1,0,0,10)
-TopFill.Position = UDim2.new(0,0,1,-10)
-TopFill.BackgroundColor3 = CONFIG.Panel
-TopFill.BorderSizePixel = 0
-TopFill.Parent = Top
+local HeaderBottom = Instance.new("Frame")
+HeaderBottom.Size = UDim2.new(1, 0, 0, 12)
+HeaderBottom.Position = UDim2.new(0, 0, 1, -12)
+HeaderBottom.BackgroundColor3 = COLORS.Panel
+HeaderBottom.BorderSizePixel = 0
+HeaderBottom.ZIndex = 11
+HeaderBottom.Parent = Header
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1,-150,1,0)
-Title.Position = UDim2.fromOffset(15,0)
+Title.Size = UDim2.new(1, -100, 0, 24)
+Title.Position = UDim2.fromOffset(16, 7)
 Title.BackgroundTransparency = 1
-Title.Text = CONFIG.Name
-Title.TextColor3 = CONFIG.Text
-Title.TextSize = 14
+Title.Text = "Violet Core"
+Title.TextColor3 = COLORS.Text
+Title.TextSize = 17
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = Top
+Title.ZIndex = 12
+Title.Parent = Header
 
-local Version = Instance.new("TextLabel")
-Version.Size = UDim2.fromOffset(60,20)
-Version.Position = UDim2.new(1,-145,0.5,-10)
-Version.BackgroundTransparency = 1
-Version.Text = CONFIG.Version
-Version.TextColor3 = CONFIG.SubText
-Version.TextSize = 10
-Version.Font = Enum.Font.GothamMedium
-Version.Parent = Top
+local Creator = Instance.new("TextLabel")
+Creator.Size = UDim2.new(1, -100, 0, 16)
+Creator.Position = UDim2.fromOffset(17, 31)
+Creator.BackgroundTransparency = 1
+Creator.Text = "José FX"
+Creator.TextColor3 = COLORS.Accent
+Creator.TextSize = 9
+Creator.Font = Enum.Font.GothamMedium
+Creator.TextXAlignment = Enum.TextXAlignment.Left
+Creator.ZIndex = 12
+Creator.Parent = Header
 
 --==================================================
--- CONTROLES SUPERIORES
+-- CONTROLES HEADER
 --==================================================
 
-local Minimize = Instance.new("TextButton")
-Minimize.Size = UDim2.fromOffset(30,30)
-Minimize.Position = UDim2.new(1,-105,0.5,-15)
-Minimize.BackgroundTransparency = 1
-Minimize.Text = "−"
-Minimize.TextColor3 = CONFIG.SubText
-Minimize.TextSize = 18
-Minimize.Font = Enum.Font.GothamMedium
-Minimize.AutoButtonColor = false
-Minimize.Parent = Top
+local MinButton = Instance.new("TextButton")
+MinButton.Size = UDim2.fromOffset(28, 28)
+MinButton.Position = UDim2.new(1, -66, 0, 15)
+MinButton.BackgroundColor3 = COLORS.Panel2
+MinButton.BorderSizePixel = 0
+MinButton.Text = "—"
+MinButton.TextColor3 = COLORS.SubText
+MinButton.TextSize = 16
+MinButton.Font = Enum.Font.GothamBold
+MinButton.AutoButtonColor = false
+MinButton.ZIndex = 12
+MinButton.Parent = Header
 
-local Resize = Instance.new("TextButton")
-Resize.Size = UDim2.fromOffset(30,30)
-Resize.Position = UDim2.new(1,-72,0.5,-15)
-Resize.BackgroundTransparency = 1
-Resize.Text = "↗"
-Resize.TextColor3 = CONFIG.SubText
-Resize.TextSize = 14
-Resize.Font = Enum.Font.GothamMedium
-Resize.AutoButtonColor = false
-Resize.Parent = Top
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 7)
+MinCorner.Parent = MinButton
 
-local Close = Instance.new("TextButton")
-Close.Size = UDim2.fromOffset(30,30)
-Close.Position = UDim2.new(1,-38,0.5,-15)
-Close.BackgroundTransparency = 1
-Close.Text = "×"
-Close.TextColor3 = CONFIG.SubText
-Close.TextSize = 18
-Close.Font = Enum.Font.GothamMedium
-Close.AutoButtonColor = false
-Close.Parent = Top
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.fromOffset(28, 28)
+CloseButton.Position = UDim2.new(1, -34, 0, 15)
+CloseButton.BackgroundColor3 = COLORS.Panel2
+CloseButton.BorderSizePixel = 0
+CloseButton.Text = "×"
+CloseButton.TextColor3 = COLORS.SubText
+CloseButton.TextSize = 17
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.AutoButtonColor = false
+CloseButton.ZIndex = 12
+CloseButton.Parent = Header
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 7)
+CloseCorner.Parent = CloseButton
 
 --==================================================
 -- DRAG DEL MENÚ
 --==================================================
 
-do
-    local dragging = false
-    local dragStart
-    local startPosition
+local dragging = false
+local dragStart
+local startPosition
 
-    Top.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
+Header.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
 
-            dragging = true
-            dragStart = input.Position
-            startPosition = Main.Position
-        end
-    end)
+		dragging = true
+		dragStart = input.Position
+		startPosition = Window.Position
+	end
+end)
 
-    UserInputService.InputChanged:Connect(function(input)
-        if not dragging then return end
+Header.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
 
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
 
-            local delta = input.Position - dragStart
+UserInputService.InputChanged:Connect(function(input)
+	if not dragging then
+		return
+	end
 
-            Main.Position = UDim2.new(
-                startPosition.X.Scale,
-                startPosition.X.Offset + delta.X,
-                startPosition.Y.Scale,
-                startPosition.Y.Offset + delta.Y
-            )
-        end
-    end)
+	if input.UserInputType ~= Enum.UserInputType.MouseMovement
+		and input.UserInputType ~= Enum.UserInputType.Touch then
+		return
+	end
 
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-end
+	local delta = input.Position - dragStart
+
+	Window.Position = UDim2.new(
+		startPosition.X.Scale,
+		startPosition.X.Offset + delta.X,
+		startPosition.Y.Scale,
+		startPosition.Y.Offset + delta.Y
+	)
+end)
 
 --==================================================
 -- CONTENEDOR
@@ -287,587 +262,368 @@ end
 
 local Content = Instance.new("Frame")
 Content.Name = "Content"
-Content.Size = UDim2.new(1,-16,1,-52)
-Content.Position = UDim2.fromOffset(8,48)
+Content.Size = UDim2.new(1, -16, 1, -70)
+Content.Position = UDim2.fromOffset(8, 62)
 Content.BackgroundTransparency = 1
-Content.Parent = Main
-
---==================================================
--- PANEL IZQUIERDO
---==================================================
-
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.new(0,170,1,0)
-Sidebar.BackgroundColor3 = CONFIG.Panel
-Sidebar.BackgroundTransparency = 0.03
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = Content
-
-corner(Sidebar, 8)
-stroke(Sidebar, Color3.fromRGB(40,40,45), 1)
-
-local Search = Instance.new("TextBox")
-Search.Size = UDim2.new(1,-16,0,32)
-Search.Position = UDim2.fromOffset(8,8)
-Search.BackgroundColor3 = CONFIG.Panel2
-Search.BorderSizePixel = 0
-Search.PlaceholderText = "Buscar..."
-Search.PlaceholderColor3 = CONFIG.SubText
-Search.Text = ""
-Search.TextColor3 = CONFIG.Text
-Search.TextSize = 11
-Search.Font = Enum.Font.GothamMedium
-Search.ClearTextOnFocus = false
-Search.Parent = Sidebar
-
-corner(Search, 6)
-
-local CategoryScroll = Instance.new("ScrollingFrame")
-CategoryScroll.Name = "Categories"
-CategoryScroll.Size = UDim2.new(1,-8,1,-50)
-CategoryScroll.Position = UDim2.fromOffset(4,46)
-CategoryScroll.BackgroundTransparency = 1
-CategoryScroll.BorderSizePixel = 0
-CategoryScroll.ScrollBarThickness = 2
-CategoryScroll.ScrollBarImageColor3 = Color3.fromRGB(80,80,85)
-CategoryScroll.CanvasSize = UDim2.new(0,0,0,0)
-CategoryScroll.Parent = Sidebar
-
-local CategoryLayout = Instance.new("UIListLayout")
-CategoryLayout.Padding = UDim.new(0,3)
-CategoryLayout.Parent = CategoryScroll
-
---==================================================
--- PANEL DERECHO
---==================================================
-
-local OptionsPanel = Instance.new("Frame")
-OptionsPanel.Name = "Options"
-OptionsPanel.Size = UDim2.new(1,-180,1,0)
-OptionsPanel.Position = UDim2.fromOffset(180,0)
-OptionsPanel.BackgroundColor3 = CONFIG.Panel2
-OptionsPanel.BackgroundTransparency = 0.08
-OptionsPanel.BorderSizePixel = 0
-OptionsPanel.Parent = Content
-
-corner(OptionsPanel, 8)
-stroke(OptionsPanel, Color3.fromRGB(42,42,47), 1)
-
-local CategoryTitle = Instance.new("TextLabel")
-CategoryTitle.Size = UDim2.new(1,-20,0,32)
-CategoryTitle.Position = UDim2.fromOffset(10,5)
-CategoryTitle.BackgroundTransparency = 1
-CategoryTitle.Text = "Combat"
-CategoryTitle.TextColor3 = CONFIG.Text
-CategoryTitle.TextSize = 13
-CategoryTitle.Font = Enum.Font.GothamBold
-CategoryTitle.TextXAlignment = Enum.TextXAlignment.Left
-CategoryTitle.Parent = OptionsPanel
-
-local OptionsScroll = Instance.new("ScrollingFrame")
-OptionsScroll.Name = "OptionsScroll"
-OptionsScroll.Size = UDim2.new(1,-10,1,-45)
-OptionsScroll.Position = UDim2.fromOffset(5,40)
-OptionsScroll.BackgroundTransparency = 1
-OptionsScroll.BorderSizePixel = 0
-OptionsScroll.ScrollBarThickness = 2
-OptionsScroll.ScrollBarImageColor3 = Color3.fromRGB(90,90,95)
-OptionsScroll.CanvasSize = UDim2.new(0,0,0,0)
-OptionsScroll.Parent = OptionsPanel
-
-local OptionsLayout = Instance.new("UIListLayout")
-OptionsLayout.Padding = UDim.new(0,5)
-OptionsLayout.Parent = OptionsScroll
+Content.ZIndex = 11
+Content.Parent = Window
 
 --==================================================
 -- CATEGORÍAS
 --==================================================
 
-local Categories = {
-    {"◉", "ESP"},
-    {"⚔", "Combat"},
-    {"◈", "Auto Farm"},
-    {"↔", "Movimiento"},
-    {"♟", "Animaciones"},
-    {"⚡", "Performance"},
-    {"▣", "Configuración"},
-    {"ⓘ", "Información"}
+local Categories = Instance.new("Frame")
+Categories.Size = UDim2.fromOffset(145, 1)
+Categories.Position = UDim2.new(0, 0, 0, 0)
+Categories.BackgroundColor3 = COLORS.Panel
+Categories.BackgroundTransparency = 0.08
+Categories.BorderSizePixel = 0
+Categories.ZIndex = 12
+Categories.Parent = Content
+
+local CatCorner = Instance.new("UICorner")
+CatCorner.CornerRadius = UDim.new(0, 9)
+CatCorner.Parent = Categories
+
+local CatLayout = Instance.new("UIListLayout")
+CatLayout.Padding = UDim.new(0, 4)
+CatLayout.SortOrder = Enum.SortOrder.LayoutOrder
+CatLayout.Parent = Categories
+
+local CatPadding = Instance.new("UIPadding")
+CatPadding.PaddingTop = UDim.new(0, 7)
+CatPadding.PaddingBottom = UDim.new(0, 7)
+CatPadding.PaddingLeft = UDim.new(0, 6)
+CatPadding.PaddingRight = UDim.new(0, 6)
+CatPadding.Parent = Categories
+
+--==================================================
+-- PANEL DE OPCIONES
+--==================================================
+
+local Options = Instance.new("ScrollingFrame")
+Options.Name = "Options"
+Options.Size = UDim2.new(1, -153, 1, 0)
+Options.Position = UDim2.new(0, 153, 0, 0)
+Options.BackgroundColor3 = COLORS.Panel
+Options.BackgroundTransparency = 0.10
+Options.BorderSizePixel = 0
+Options.ScrollBarThickness = 3
+Options.ScrollBarImageColor3 = COLORS.Accent
+Options.CanvasSize = UDim2.new()
+Options.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Options.ZIndex = 12
+Options.Parent = Content
+
+local OptCorner = Instance.new("UICorner")
+OptCorner.CornerRadius = UDim.new(0, 9)
+OptCorner.Parent = Options
+
+local OptPadding = Instance.new("UIPadding")
+OptPadding.PaddingTop = UDim.new(0, 8)
+OptPadding.PaddingBottom = UDim.new(0, 8)
+OptPadding.PaddingLeft = UDim.new(0, 8)
+OptPadding.PaddingRight = UDim.new(0, 8)
+OptPadding.Parent = Options
+
+local OptLayout = Instance.new("UIListLayout")
+OptLayout.Padding = UDim.new(0, 5)
+OptLayout.SortOrder = Enum.SortOrder.LayoutOrder
+OptLayout.Parent = Options
+
+--==================================================
+-- DATOS
+--==================================================
+
+local Sections = {
+	{
+		Name = "Combate",
+		Icon = "⚔",
+		Items = {
+			{"Aimbot", "Aimbot"},
+			{"Aimbot silencioso", "SilentAim"},
+			{"Apuntar a cabeza", "HeadAim"},
+			{"Auto Shoot", "AutoShoot"},
+			{"Distancia larga", "LongRange"},
+		}
+	},
+
+	{
+		Name = "ESP",
+		Icon = "◉",
+		Items = {
+			{"Ver enemigos", "ESP"},
+			{"Líneas", "ESP_Lines"},
+			{"Rainbow ESP", "ESP_Rainbow"},
+			{"Seguir objetivo", "ESP_Track"},
+		}
+	},
+
+	{
+		Name = "Movimiento",
+		Icon = "➤",
+		Items = {
+			{"Speed", "Speed"},
+			{"Velocidad personalizada", "CustomSpeed"},
+			{"Salto infinito", "InfiniteJump"},
+			{"Salto personalizado", "CustomJump"},
+		}
+	},
+
+	{
+		Name = "Animaciones",
+		Icon = "♟",
+		Items = {
+			{"Ghost", "AnimGhost"},
+			{"Zombie", "AnimZombie"},
+			{"Goat", "AnimGoat"},
+			{"Caminar", "AnimWalk"},
+			{"Correr", "AnimRun"},
+			{"Salto", "AnimJump"},
+			{"Caída", "AnimFall"},
+			{"Inactividad", "AnimIdle"},
+			{"Invisible", "Invisible"},
+		}
+	},
+
+	{
+		Name = "Autofarm",
+		Icon = "$",
+		Items = {
+			{"Auto Farm", "AutoFarm"},
+			{"Auto Collect", "AutoCollect"},
+		}
+	},
+
+	{
+		Name = "GPS",
+		Icon = "⚡",
+		Items = {
+			{"120 GPS", "GPS120"},
+			{"80 GPS", "GPS80"},
+		}
+	},
+
+	{
+		Name = "Configuración",
+		Icon = "⚙",
+		Items = {
+			{"Guardar configuración", "SaveConfig"},
+			{"Cargar configuración", "LoadConfig"},
+			{"Restablecer", "ResetConfig"},
+		}
+	},
+
+	{
+		Name = "Información",
+		Icon = "ⓘ",
+		Items = {
+			{"Discord", "Discord"},
+			{"Créditos", "Credits"},
+		}
+	},
 }
 
-local CurrentCategory = nil
+--==================================================
+-- FUNCIÓN REAL DE CATEGORÍAS
+--==================================================
 
-local function clearOptions()
-    for _, child in ipairs(OptionsScroll:GetChildren()) do
-        if child:IsA("GuiObject") then
-            child:Destroy()
-        end
-    end
+local CurrentSection = nil
+local CategoryButtons = {}
+
+local function ClearOptions()
+	for _, child in ipairs(Options:GetChildren()) do
+		if not child:IsA("UIListLayout")
+			and not child:IsA("UIPadding") then
+			child:Destroy()
+		end
+	end
 end
 
 --==================================================
 -- SWITCH
 --==================================================
 
-local function createSwitch(parent, name, callback)
+local function CreateToggle(parent, text, stateName)
+	local Row = Instance.new("Frame")
+	Row.Size = UDim2.new(1, 0, 0, 38)
+	Row.BackgroundColor3 = COLORS.Panel2
+	Row.BackgroundTransparency = 0.08
+	Row.BorderSizePixel = 0
+	Row.ZIndex = 13
+	Row.Parent = parent
 
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1,-6,0,42)
-    Row.BackgroundColor3 = CONFIG.Panel
-    Row.BorderSizePixel = 0
-    Row.Parent = parent
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 7)
+	Corner.Parent = Row
 
-    corner(Row, 6)
+	local Label = Instance.new("TextLabel")
+	Label.Size = UDim2.new(1, -60, 1, 0)
+	Label.Position = UDim2.fromOffset(10, 0)
+	Label.BackgroundTransparency = 1
+	Label.Text = text
+	Label.TextColor3 = COLORS.Text
+	Label.TextSize = 10
+	Label.Font = Enum.Font.GothamMedium
+	Label.TextXAlignment = Enum.TextXAlignment.Left
+	Label.ZIndex = 14
+	Label.Parent = Row
 
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1,-70,1,0)
-    Label.Position = UDim2.fromOffset(10,0)
-    Label.BackgroundTransparency = 1
-    Label.Text = name
-    Label.TextColor3 = CONFIG.Text
-    Label.TextSize = 11
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
+	-- switch pequeño
+	local Switch = Instance.new("TextButton")
+	Switch.Size = UDim2.fromOffset(31, 17)
+	Switch.Position = UDim2.new(1, -41, 0.5, -8)
+	Switch.BackgroundColor3 = COLORS.Off
+	Switch.BorderSizePixel = 0
+	Switch.Text = ""
+	Switch.AutoButtonColor = false
+	Switch.ZIndex = 15
+	Switch.Parent = Row
 
-    local Switch = Instance.new("TextButton")
-    Switch.Size = UDim2.fromOffset(42,22)
-    Switch.Position = UDim2.new(1,-52,0.5,-11)
-    Switch.BackgroundColor3 = Color3.fromRGB(55,55,60)
-    Switch.BorderSizePixel = 0
-    Switch.Text = ""
-    Switch.AutoButtonColor = false
-    Switch.Parent = Row
+	local SwitchCorner = Instance.new("UICorner")
+	SwitchCorner.CornerRadius = UDim.new(1, 0)
+	SwitchCorner.Parent = Switch
 
-    corner(Switch, 11)
+	local Knob = Instance.new("Frame")
+	Knob.Size = UDim2.fromOffset(13, 13)
+	Knob.Position = UDim2.fromOffset(2, 2)
+	Knob.BackgroundColor3 = COLORS.White
+	Knob.BorderSizePixel = 0
+	Knob.ZIndex = 16
+	Knob.Parent = Switch
 
-    local Knob = Instance.new("Frame")
-    Knob.Size = UDim2.fromOffset(16,16)
-    Knob.Position = UDim2.fromOffset(3,3)
-    Knob.BackgroundColor3 = Color3.fromRGB(220,220,225)
-    Knob.BorderSizePixel = 0
-    Knob.Parent = Switch
+	local KnobCorner = Instance.new("UICorner")
+	KnobCorner.CornerRadius = UDim.new(1, 0)
+	KnobCorner.Parent = Knob
 
-    corner(Knob, 8)
+	local function UpdateVisual()
+		local enabled = GetState(stateName)
 
-    local enabled = false
+		TweenService:Create(
+			Switch,
+			TWEEN,
+			{
+				BackgroundColor3 = enabled
+					and COLORS.On
+					or COLORS.Off
+			}
+		):Play()
 
-    Switch.MouseButton1Click:Connect(function()
-        enabled = not enabled
+		TweenService:Create(
+			Knob,
+			TWEEN,
+			{
+				Position = enabled
+					and UDim2.new(1, -15, 0, 2)
+					or UDim2.fromOffset(2, 2)
+			}
+		):Play()
+	end
 
-        if enabled then
-            tween(Switch, {
-                BackgroundColor3 = CONFIG.Green
-            })
+	Switch.MouseButton1Click:Connect(function()
+		SetState(stateName, not GetState(stateName))
+		UpdateVisual()
 
-            tween(Knob, {
-                Position = UDim2.new(1,-19,0,3)
-            })
-        else
-            tween(Switch, {
-                BackgroundColor3 = Color3.fromRGB(55,55,60)
-            })
+		-- Aquí se conecta la función real de TU juego.
+		-- Cada sistema puede escuchar States[stateName].
+		-- La interfaz no cambia aunque cambie la lógica.
 
-            tween(Knob, {
-                Position = UDim2.fromOffset(3,3)
-            })
-        end
+		print(
+			"[Violet Core]",
+			stateName,
+			GetState(stateName) and "ON" or "OFF"
+		)
+	end)
 
-        if callback then
-            callback(enabled)
-        end
-    end)
+	UpdateVisual()
 
-    return Row
+	return Row
 end
 
 --==================================================
--- SLIDER
+-- MOSTRAR SECCIÓN
 --==================================================
 
-local function createSlider(parent, name, min, max, default, callback)
+local function ShowSection(section)
+	CurrentSection = section
+	ClearOptions()
 
-    local Row = Instance.new("Frame")
-    Row.Size = UDim2.new(1,-6,0,58)
-    Row.BackgroundColor3 = CONFIG.Panel
-    Row.BorderSizePixel = 0
-    Row.Parent = parent
+	local HeaderLabel = Instance.new("TextLabel")
+	HeaderLabel.Size = UDim2.new(1, 0, 0, 27)
+	HeaderLabel.BackgroundTransparency = 1
+	HeaderLabel.Text = section.Icon .. "  " .. section.Name
+	HeaderLabel.TextColor3 = COLORS.Text
+	HeaderLabel.TextSize = 13
+	HeaderLabel.Font = Enum.Font.GothamBold
+	HeaderLabel.TextXAlignment = Enum.TextXAlignment.Left
+	HeaderLabel.ZIndex = 14
+	HeaderLabel.Parent = Options
 
-    corner(Row, 6)
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1,-70,0,24)
-    Label.Position = UDim2.fromOffset(10,3)
-    Label.BackgroundTransparency = 1
-    Label.Text = name
-    Label.TextColor3 = CONFIG.Text
-    Label.TextSize = 11
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Row
-
-    local Value = Instance.new("TextLabel")
-    Value.Size = UDim2.fromOffset(55,20)
-    Value.Position = UDim2.new(1,-65,0,3)
-    Value.BackgroundTransparency = 1
-    Value.Text = tostring(default)
-    Value.TextColor3 = CONFIG.SubText
-    Value.TextSize = 10
-    Value.Font = Enum.Font.GothamMedium
-    Value.TextXAlignment = Enum.TextXAlignment.Right
-    Value.Parent = Row
-
-    local Bar = Instance.new("Frame")
-    Bar.Size = UDim2.new(1,-20,0,5)
-    Bar.Position = UDim2.fromOffset(10,38)
-    Bar.BackgroundColor3 = Color3.fromRGB(55,55,60)
-    Bar.BorderSizePixel = 0
-    Bar.Parent = Row
-
-    corner(Bar, 4)
-
-    local Fill = Instance.new("Frame")
-    Fill.Size = UDim2.new(
-        math.clamp((default-min)/(max-min),0,1),
-        0,1,0
-    )
-    Fill.BackgroundColor3 = CONFIG.Accent
-    Fill.BorderSizePixel = 0
-    Fill.Parent = Bar
-
-    corner(Fill, 4)
-
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(1,0,1,10)
-    Button.Position = UDim2.fromOffset(0,-5)
-    Button.BackgroundTransparency = 1
-    Button.Text = ""
-    Button.Parent = Bar
-
-    local function update(inputX)
-        local alpha = math.clamp(
-            (inputX - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X,
-            0,1
-        )
-
-        local value = math.floor(
-            min + ((max-min) * alpha)
-        )
-
-        Fill.Size = UDim2.new(alpha,0,1,0)
-        Value.Text = tostring(value)
-
-        if callback then
-            callback(value)
-        end
-    end
-
-    Button.MouseButton1Down:Connect(function(x)
-        update(x)
-    end)
-
-    Button.MouseButton1Click:Connect(function(x)
-        update(x)
-    end)
-
-    return Row
+	for _, item in ipairs(section.Items) do
+		CreateToggle(
+			Options,
+			item[1],
+			item[2]
+		)
+	end
 end
 
 --==================================================
--- CONTENIDO DE CATEGORÍAS
+-- BOTONES DE CATEGORÍA
 --==================================================
 
-local CategoryData = {
-
-    ["ESP"] = function()
-
-        createSwitch(OptionsScroll, "Ver jugadores", function(enabled)
-            -- Conectar al sistema ESP del juego
-        end)
-
-        createSwitch(OptionsScroll, "ESP a través de paredes", function(enabled)
-            -- Conectar al sistema ESP
-        end)
-
-        createSwitch(OptionsScroll, "Líneas hacia jugadores", function(enabled)
-            -- Conectar al sistema de líneas
-        end)
-
-        createSwitch(OptionsScroll, "Rainbow ESP", function(enabled)
-            -- Conectar al sistema Rainbow
-        end)
-
-    end,
-
-    ["Combat"] = function()
-
-        createSwitch(OptionsScroll, "Aimbot", function(enabled)
-            -- Conectar al sistema de combate del juego
-        end)
-
-        createSwitch(OptionsScroll, "Silent Aim", function(enabled)
-            -- Conectar al sistema de combate del juego
-        end)
-
-        createSwitch(OptionsScroll, "Apuntar a la cabeza", function(enabled)
-            -- Selección de objetivo
-        end)
-
-        createSwitch(OptionsScroll, "Auto Shoot", function(enabled)
-            -- Conectar al sistema de armas
-        end)
-
-        createSlider(
-            OptionsScroll,
-            "Distancia",
-            50,
-            1000,
-            250,
-            function(value)
-                -- Distancia de objetivo
-            end
-        )
-
-    end,
-
-    ["Auto Farm"] = function()
-
-        createSwitch(OptionsScroll, "Auto Farm", function(enabled)
-            -- Sistema Auto Farm del juego
-        end)
-
-        createSwitch(OptionsScroll, "Recoger automáticamente", function(enabled)
-            -- Sistema de recogida
-        end)
-
-    end,
-
-    ["Movimiento"] = function()
-
-        createSwitch(OptionsScroll, "Infinite Jump", function(enabled)
-
-            -- Preparado para conectar al sistema de movimiento
-
-        end)
-
-        createSwitch(OptionsScroll, "Velocidad personalizada", function(enabled)
-
-            -- Preparado para conectar al sistema de movimiento
-
-        end)
-
-        createSlider(
-            OptionsScroll,
-            "Velocidad",
-            16,
-            150,
-            16,
-            function(value)
-
-                -- Aquí se conecta la velocidad real
-
-            end
-        )
-
-        createSlider(
-            OptionsScroll,
-            "Salto",
-            25,
-            150,
-            50,
-            function(value)
-
-                -- Aquí se conecta el salto real
-
-            end
-        )
-
-    end,
-
-    ["Animaciones"] = function()
-
-        createSwitch(OptionsScroll, "Invisible", function(enabled)
-
-            -- El botón externo aparece/desaparece
-            -- La lógica real de invisibilidad
-            -- se conectará al sistema servidor.
-
-        end)
-
-        createSwitch(OptionsScroll, "Animación de correr", function(enabled)
-            -- Sistema de animaciones
-        end)
-
-        createSwitch(OptionsScroll, "Animación de caminar", function(enabled)
-            -- Sistema de animaciones
-        end)
-
-        createSwitch(OptionsScroll, "Animación de salto", function(enabled)
-            -- Sistema de animaciones
-        end)
-
-        createSwitch(OptionsScroll, "Animación de caída", function(enabled)
-            -- Sistema de animaciones
-        end)
-
-    end,
-
-    ["Performance"] = function()
-
-        createSwitch(OptionsScroll, "Optimizar efectos", function(enabled)
-            -- Optimización del juego
-        end)
-
-        createSwitch(OptionsScroll, "Reducir partículas", function(enabled)
-            -- Optimización
-        end)
-
-        createSwitch(OptionsScroll, "Modo rendimiento", function(enabled)
-            -- Optimización
-        end)
-
-    end,
-
-    ["Configuración"] = function()
-
-        createSwitch(OptionsScroll, "Guardar configuración", function(enabled)
-            -- El guardado se hará mediante el botón.
-        end)
-
-        createSwitch(OptionsScroll, "Cargar configuración", function(enabled)
-            -- Carga manual.
-        end)
-
-        createSwitch(OptionsScroll, "Restaurar valores", function(enabled)
-            -- Restaurar configuración.
-        end)
-
-    end,
-
-    ["Información"] = function()
-
-        createSwitch(OptionsScroll, "José FX", function()
-            -- Créditos
-        end)
-
-        local Info = Instance.new("TextLabel")
-        Info.Size = UDim2.new(1,-15,0,90)
-        Info.BackgroundTransparency = 1
-        Info.Text =
-            "Violet Core\n\n" ..
-            "Creado por José FX\n" ..
-            "Versión B6\n\n" ..
-            "Sistema modular para tu juego."
-        Info.TextColor3 = CONFIG.SubText
-        Info.TextSize = 11
-        Info.Font = Enum.Font.GothamMedium
-        Info.TextWrapped = true
-        Info.TextXAlignment = Enum.TextXAlignment.Left
-        Info.TextYAlignment = Enum.TextYAlignment.Top
-        Info.Parent = OptionsScroll
-
-    end
-}
-
---==================================================
--- CREAR CATEGORÍAS
---==================================================
-
-for _, data in ipairs(Categories) do
-
-    local icon = data[1]
-    local name = data[2]
-
-    local Button = Instance.new("TextButton")
-    Button.Name = name
-    Button.Size = UDim2.new(1,-4,0,35)
-    Button.BackgroundColor3 = CONFIG.Panel
-    Button.BorderSizePixel = 0
-    Button.Text = ""
-    Button.AutoButtonColor = false
-    Button.Parent = CategoryScroll
-
-    corner(Button, 6)
-
-    local Icon = Instance.new("TextLabel")
-    Icon.Size = UDim2.fromOffset(28,35)
-    Icon.Position = UDim2.fromOffset(5,0)
-    Icon.BackgroundTransparency = 1
-    Icon.Text = icon
-    Icon.TextColor3 = CONFIG.SubText
-    Icon.TextSize = 14
-    Icon.Font = Enum.Font.GothamBold
-    Icon.Parent = Button
-
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1,-40,1,0)
-    Label.Position = UDim2.fromOffset(38,0)
-    Label.BackgroundTransparency = 1
-    Label.Text = name
-    Label.TextColor3 = CONFIG.SubText
-    Label.TextSize = 10
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Button
-
-    Button.MouseEnter:Connect(function()
-        if CurrentCategory ~= name then
-            tween(Button, {BackgroundColor3 = CONFIG.Hover})
-        end
-    end)
-
-    Button.MouseLeave:Connect(function()
-        if CurrentCategory ~= name then
-            tween(Button, {BackgroundColor3 = CONFIG.Panel})
-        end
-    end)
-
-    Button.MouseButton1Click:Connect(function()
-
-        CurrentCategory = name
-
-        for _, categoryButton in ipairs(CategoryScroll:GetChildren()) do
-            if categoryButton:IsA("TextButton") then
-                tween(categoryButton, {
-                    BackgroundColor3 =
-                        categoryButton.Name == name
-                        and CONFIG.Selected
-                        or CONFIG.Panel
-                })
-            end
-        end
-
-        CategoryTitle.Text = name
-
-        clearOptions()
-
-        if CategoryData[name] then
-            CategoryData[name]()
-        end
-
-        OptionsScroll.CanvasPosition = Vector2.zero
-    end)
+for index, section in ipairs(Sections) do
+
+	local Button = Instance.new("TextButton")
+	Button.Name = section.Name
+	Button.Size = UDim2.new(1, 0, 0, 34)
+	Button.BackgroundColor3 = COLORS.Panel
+	Button.BorderSizePixel = 0
+	Button.Text = section.Icon .. "  " .. section.Name
+	Button.TextColor3 = COLORS.SubText
+	Button.TextSize = 9
+	Button.Font = Enum.Font.GothamMedium
+	Button.TextXAlignment = Enum.TextXAlignment.Left
+	Button.AutoButtonColor = false
+	Button.LayoutOrder = index
+	Button.ZIndex = 13
+	Button.Parent = Categories
+
+	local Pad = Instance.new("UIPadding")
+	Pad.PaddingLeft = UDim.new(0, 8)
+	Pad.Parent = Button
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0, 7)
+	Corner.Parent = Button
+
+	CategoryButtons[section.Name] = Button
+
+	Button.MouseButton1Click:Connect(function()
+
+		for _, other in pairs(CategoryButtons) do
+			TweenService:Create(
+				other,
+				TWEEN,
+				{
+					BackgroundColor3 = COLORS.Panel,
+					TextColor3 = COLORS.SubText
+				}
+			):Play()
+		end
+
+		TweenService:Create(
+			Button,
+			TWEEN,
+			{
+				BackgroundColor3 = COLORS.AccentDark,
+				TextColor3 = COLORS.White
+			}
+		):Play()
+
+		ShowSection(section)
+	end)
 end
-
---==================================================
--- CANVAS AUTOMÁTICO
---==================================================
-
-CategoryLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    CategoryScroll.CanvasSize = UDim2.new(
-        0,0,
-        0,
-        CategoryLayout.AbsoluteContentSize.Y + 8
-    )
-end)
-
-OptionsLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    OptionsScroll.CanvasSize = UDim2.new(
-        0,0,
-        0,
-        OptionsLayout.AbsoluteContentSize.Y + 8
-    )
-end)
 
 --==================================================
 -- BOTÓN INVISIBLE EXTERNO
@@ -875,69 +631,63 @@ end)
 
 local InvisibleButton = Instance.new("TextButton")
 InvisibleButton.Name = "InvisibleButton"
-InvisibleButton.Size = UDim2.fromOffset(92,34)
-InvisibleButton.Position = UDim2.new(1,-105,0.5,-17)
-InvisibleButton.BackgroundColor3 = CONFIG.Panel
-InvisibleButton.BackgroundTransparency = 0.05
+InvisibleButton.Size = UDim2.fromOffset(48, 30)
+InvisibleButton.Position = UDim2.new(1, -58, 0.5, -15)
+InvisibleButton.BackgroundColor3 = COLORS.Off
 InvisibleButton.BorderSizePixel = 0
-InvisibleButton.Text = "Invisible"
-InvisibleButton.TextColor3 = CONFIG.SubText
-InvisibleButton.TextSize = 10
+InvisibleButton.Text = "INVIS"
+InvisibleButton.TextColor3 = COLORS.White
+InvisibleButton.TextSize = 8
 InvisibleButton.Font = Enum.Font.GothamBold
-InvisibleButton.AutoButtonColor = false
 InvisibleButton.Visible = false
-InvisibleButton.Parent = Screen
+InvisibleButton.AutoButtonColor = false
+InvisibleButton.ZIndex = 40
+InvisibleButton.Parent = Gui
 
-corner(InvisibleButton, 7)
-stroke(InvisibleButton, Color3.fromRGB(55,55,60), 1)
-
-local invisibleEnabled = false
+local InvisCorner = Instance.new("UICorner")
+InvisCorner.CornerRadius = UDim.new(0, 7)
+InvisCorner.Parent = InvisibleButton
 
 InvisibleButton.MouseButton1Click:Connect(function()
+	SetState("Invisible", not GetState("Invisible"))
 
-    invisibleEnabled = not invisibleEnabled
+	InvisibleButton.BackgroundColor3 =
+		GetState("Invisible")
+		and COLORS.On
+		or COLORS.Off
 
-    if invisibleEnabled then
-
-        InvisibleButton.Text = "Invisible • ON"
-
-        tween(InvisibleButton, {
-            BackgroundColor3 = CONFIG.Green,
-            TextColor3 = Color3.fromRGB(10,10,10)
-        })
-
-        -- Aquí se conecta la invisibilidad real
-        -- mediante el sistema servidor de tu juego.
-
-    else
-
-        InvisibleButton.Text = "Invisible"
-
-        tween(InvisibleButton, {
-            BackgroundColor3 = CONFIG.Panel,
-            TextColor3 = CONFIG.SubText
-        })
-
-        -- Restaurar apariencia del personaje.
-
-    end
+	-- Aquí irá la lógica de invisibilidad del personaje.
 end)
 
 --==================================================
--- CONTROL DEL BOTÓN INVISIBLE DESDE ANIMACIONES
+-- VISIBILIDAD DEL BOTÓN INVISIBLE
 --==================================================
 
-local function SetInvisibleButtonVisible(value)
-    InvisibleButton.Visible = value
+local function UpdateInvisibleButton()
+	InvisibleButton.Visible = GetState("InvisibleButtonEnabled")
 
-    if not value then
-        invisibleEnabled = false
+	if not InvisibleButton.Visible then
+		SetState("Invisible", false)
+	end
+end
 
-        InvisibleButton.Text = "Invisible"
+--==================================================
+-- CONECTAR ESTADO INVISIBLE
+--==================================================
 
-        InvisibleButton.BackgroundColor3 = CONFIG.Panel
-        InvisibleButton.TextColor3 = CONFIG.SubText
-    end
+local oldSetState = SetState
+
+SetState = function(name, value)
+	oldSetState(name, value)
+
+	if name == "Invisible" then
+		InvisibleButton.BackgroundColor3 =
+			value and COLORS.On or COLORS.Off
+	end
+
+	if name == "InvisibleButtonEnabled" then
+		UpdateInvisibleButton()
+	end
 end
 
 --==================================================
@@ -946,108 +696,50 @@ end
 
 local minimized = false
 
-Minimize.MouseButton1Click:Connect(function()
+MinButton.MouseButton1Click:Connect(function()
+	minimized = not minimized
 
-    minimized = not minimized
+	Content.Visible = not minimized
 
-    if minimized then
-
-        Content.Visible = false
-
-        tween(Main, {
-            Size = UDim2.fromOffset(600,42)
-        }, 0.2)
-
-    else
-
-        Content.Visible = true
-
-        tween(Main, {
-            Size = UDim2.fromOffset(600,370)
-        }, 0.2)
-
-    end
+	if minimized then
+		Window.Size = UDim2.fromOffset(540, 58)
+	else
+		Window.Size = UDim2.fromOffset(540, 350)
+	end
 end)
 
 --==================================================
 -- CERRAR
 --==================================================
 
-Close.MouseButton1Click:Connect(function()
-
-    Main.Visible = false
-
-    OpenButton.Visible = true
-
+CloseButton.MouseButton1Click:Connect(function()
+	Window.Visible = false
+	OpenButton.Visible = true
 end)
 
 OpenButton.MouseButton1Click:Connect(function()
-
-    Main.Visible = not Main.Visible
-
+	Window.Visible = not Window.Visible
 end)
 
 --==================================================
--- REDIMENSIONAR
---==================================================
-
-local large = false
-
-Resize.MouseButton1Click:Connect(function()
-
-    large = not large
-
-    if large then
-        tween(Main, {
-            Size = UDim2.fromOffset(700,430)
-        }, 0.2)
-    else
-        tween(Main, {
-            Size = UDim2.fromOffset(600,370)
-        }, 0.2)
-    end
-end)
-
---==================================================
--- HOVER CONTROLES
---==================================================
-
-for _, button in ipairs({Minimize, Resize, Close}) do
-
-    button.MouseEnter:Connect(function()
-        tween(button, {
-            TextColor3 = CONFIG.Text
-        })
-    end)
-
-    button.MouseLeave:Connect(function()
-        tween(button, {
-            TextColor3 = CONFIG.SubText
-        })
-    end)
-
-end
-
---==================================================
--- INICIALIZAR
+-- ESTADO INICIAL
 --==================================================
 
 OpenButton.Visible = false
-Main.Visible = true
 
--- Abrir Combat inicialmente
-CategoryTitle.Text = "Combat"
+SetState("InvisibleButtonEnabled", false)
 
-if CategoryData["Combat"] then
-    CategoryData["Combat"]()
-end
+-- abrir Combate inicialmente
+ShowSection(Sections[1])
 
-CurrentCategory = "Combat"
+TweenService:Create(
+	CategoryButtons["Combate"],
+	TWEEN,
+	{
+		BackgroundColor3 = COLORS.AccentDark,
+		TextColor3 = COLORS.White
+	}
+):Play()
 
-for _, child in ipairs(CategoryScroll:GetChildren()) do
-    if child:IsA("TextButton") and child.Name == "Combat" then
-        child.BackgroundColor3 = CONFIG.Selected
-    end
-end
-
-print("Violet Core " .. CONFIG.Version .. " cargado correctamente.")
+print("Violet Core B7 cargado correctamente.")
+print("José FX")
