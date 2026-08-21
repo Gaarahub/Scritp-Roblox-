@@ -1,1230 +1,1155 @@
---==================================================
--- VIOLETCORE B4
--- José FX
--- UI FRAMEWORK
---==================================================
+--[[
+    JOSE FX HUB
+    V5
+    Roblox Studio - versión para tu propia experiencia
+
+    Estructura:
+    ESP
+    Combat
+    Auto Farm
+    Movimiento
+    Animaciones
+    Performance
+    Configuración
+    Información
+]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 
 local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
 
 --==================================================
--- LIMPIAR VERSION ANTERIOR
+-- CONFIGURACIÓN
 --==================================================
 
-local Old = PlayerGui:FindFirstChild("VioletCore")
+local CONFIG = {
+    Speed = 16,
+    FOV = 70,
 
-if Old then
-    Old:Destroy()
-end
+    ESP = false,
+    Hitbox = false,
 
---==================================================
--- TEMA
---==================================================
+    InfiniteJump = false,
+    SpeedEnabled = false,
+    FOVEnabled = false,
 
-local Theme = {
-    Background = Color3.fromRGB(22, 15, 30),
-    Panel = Color3.fromRGB(30, 21, 40),
-    Item = Color3.fromRGB(43, 32, 54),
+    Invisible = false,
 
-    Purple = Color3.fromRGB(150, 75, 255),
-    PurpleDark = Color3.fromRGB(75, 40, 105),
-
-    Green = Color3.fromRGB(45, 220, 110),
-    Gray = Color3.fromRGB(80, 78, 85),
-
-    White = Color3.fromRGB(245, 245, 250),
-    Muted = Color3.fromRGB(165, 160, 175)
+    Saved = false
 }
+
+local ESPObjects = {}
 
 --==================================================
 -- GUI
 --==================================================
 
-local GUI = Instance.new("ScreenGui")
-GUI.Name = "VioletCore"
-GUI.ResetOnSpawn = false
-GUI.IgnoreGuiInset = true
-GUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-GUI.Parent = PlayerGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "JoseFX_V5"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 
 --==================================================
--- UTILIDADES
+-- FUNCIONES VISUALES
 --==================================================
 
 local function Corner(object, radius)
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, radius)
+    c.CornerRadius = UDim.new(0, radius or 10)
     c.Parent = object
-    return c
 end
 
 local function Stroke(object, color, thickness)
     local s = Instance.new("UIStroke")
     s.Color = color
     s.Thickness = thickness or 1
+    s.Transparency = 0
     s.Parent = object
-    return s
+end
+
+local function Tween(object, properties, duration)
+    TweenService:Create(
+        object,
+        TweenInfo.new(duration or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        properties
+    ):Play()
 end
 
 --==================================================
--- BOTÓN DE ABRIR / CERRAR
+-- BOTÓN PRINCIPAL
 --==================================================
 
 local OpenButton = Instance.new("TextButton")
-
 OpenButton.Name = "OpenButton"
-OpenButton.Size = UDim2.fromOffset(210, 54)
-
--- Posición inicial solicitada
-OpenButton.Position = UDim2.new(0.5, -105, 0, 70)
-
-OpenButton.BackgroundColor3 = Theme.Panel
-OpenButton.BackgroundTransparency = 0.12
-
-OpenButton.Text = "☷   VioletCore"
-OpenButton.TextColor3 = Theme.White
-OpenButton.TextSize = 18
-OpenButton.Font = Enum.Font.GothamBold
-
+OpenButton.Size = UDim2.new(0, 235, 0, 58)
+OpenButton.Position = UDim2.new(0.5, -117, 0, 55)
+OpenButton.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+OpenButton.BackgroundTransparency = 0.05
+OpenButton.Text = ""
 OpenButton.AutoButtonColor = false
-OpenButton.Parent = GUI
+OpenButton.Parent = ScreenGui
 
-Corner(OpenButton, 18)
-Stroke(OpenButton, Theme.Purple, 2)
+Corner(OpenButton, 30)
+
+local OpenGradient = Instance.new("UIGradient")
+OpenGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 170, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(125, 80, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 60, 220))
+})
+OpenGradient.Rotation = 0
+OpenGradient.Parent = OpenButton
+
+local OpenStroke = Instance.new("UIStroke")
+OpenStroke.Thickness = 2.5
+OpenStroke.Color = Color3.fromRGB(100, 160, 255)
+OpenStroke.Parent = OpenButton
+
+local OpenInner = Instance.new("Frame")
+OpenInner.Size = UDim2.new(1, -6, 1, -6)
+OpenInner.Position = UDim2.new(0, 3, 0, 3)
+OpenInner.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+OpenInner.Parent = OpenButton
+Corner(OpenInner, 27)
+
+local DragIcon = Instance.new("TextLabel")
+DragIcon.Size = UDim2.new(0, 50, 1, 0)
+DragIcon.BackgroundTransparency = 1
+DragIcon.Text = "✣"
+DragIcon.TextColor3 = Color3.fromRGB(210, 210, 220)
+DragIcon.TextSize = 27
+DragIcon.Font = Enum.Font.GothamBold
+DragIcon.Parent = OpenInner
+
+local OpenTitle = Instance.new("TextLabel")
+OpenTitle.Position = UDim2.new(0, 50, 0, 0)
+OpenTitle.Size = UDim2.new(1, -55, 1, 0)
+OpenTitle.BackgroundTransparency = 1
+OpenTitle.Text = "Jose FX"
+OpenTitle.TextColor3 = Color3.fromRGB(245, 245, 250)
+OpenTitle.TextSize = 19
+OpenTitle.Font = Enum.Font.GothamBold
+OpenTitle.Parent = OpenInner
 
 --==================================================
 -- MENÚ PRINCIPAL
 --==================================================
 
 local Main = Instance.new("Frame")
-
 Main.Name = "Main"
-
-Main.Size = UDim2.fromOffset(720, 500)
-
-Main.Position = UDim2.new(
-    0.5,
-    -360,
-    0.5,
-    -250
-)
-
-Main.BackgroundColor3 = Theme.Background
-Main.BackgroundTransparency = 0.12
-
+Main.Size = UDim2.new(0, 720, 0, 470)
+Main.Position = UDim2.new(0.5, -360, 0.5, -235)
+Main.BackgroundColor3 = Color3.fromRGB(18, 17, 22)
+Main.BackgroundTransparency = 0.08
 Main.Visible = false
-Main.Active = true
-
-Main.Parent = GUI
+Main.Parent = ScreenGui
 
 Corner(Main, 16)
-Stroke(Main, Theme.PurpleDark, 1.5)
+Stroke(Main, Color3.fromRGB(90, 75, 130), 1.5)
 
 --==================================================
 -- HEADER
 --==================================================
 
 local Header = Instance.new("Frame")
-
-Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 62)
-
-Header.BackgroundColor3 = Theme.Panel
-Header.BackgroundTransparency = 0.1
-
-Header.Active = true
+Header.Size = UDim2.new(1, 0, 0, 55)
+Header.BackgroundTransparency = 1
 Header.Parent = Main
 
-Corner(Header, 16)
-
-local HeaderFill = Instance.new("Frame")
-
-HeaderFill.Size = UDim2.new(1, 0, 0, 18)
-HeaderFill.Position = UDim2.new(0, 0, 1, -18)
-
-HeaderFill.BackgroundColor3 = Theme.Panel
-HeaderFill.BorderSizePixel = 0
-HeaderFill.Parent = Header
-
---==================================================
--- TÍTULO
---==================================================
-
 local Title = Instance.new("TextLabel")
-
-Title.Size = UDim2.new(1, -140, 0, 30)
-Title.Position = UDim2.fromOffset(18, 8)
-
+Title.Position = UDim2.new(0, 18, 0, 7)
+Title.Size = UDim2.new(0, 300, 0, 25)
 Title.BackgroundTransparency = 1
-
-Title.Text = "VioletCore"
-Title.TextColor3 = Theme.White
-
-Title.TextSize = 22
+Title.Text = "Jose FX"
+Title.TextColor3 = Color3.fromRGB(245,245,250)
+Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
-
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Header
 
---==================================================
--- AUTOR
---==================================================
+local SubTitle = Instance.new("TextLabel")
+SubTitle.Position = UDim2.new(0, 20, 0, 31)
+SubTitle.Size = UDim2.new(0, 250, 0, 18)
+SubTitle.BackgroundTransparency = 1
+SubTitle.Text = "V5 • Control Panel"
+SubTitle.TextColor3 = Color3.fromRGB(140,140,150)
+SubTitle.TextSize = 11
+SubTitle.Font = Enum.Font.Gotham
+SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.Parent = Header
 
-local Creator = Instance.new("TextLabel")
-
-Creator.Size = UDim2.new(1, -140, 0, 20)
-Creator.Position = UDim2.fromOffset(20, 35)
-
-Creator.BackgroundTransparency = 1
-
-Creator.Text = "José FX"
-Creator.TextColor3 = Theme.Muted
-
-Creator.TextSize = 11
-Creator.Font = Enum.Font.GothamMedium
-
-Creator.TextXAlignment = Enum.TextXAlignment.Left
-Creator.Parent = Header
-
---==================================================
--- VERSIÓN
---==================================================
-
-local Version = Instance.new("TextLabel")
-
-Version.Size = UDim2.fromOffset(70, 25)
-Version.Position = UDim2.new(1, -85, 0, 18)
-
-Version.BackgroundTransparency = 1
-
-Version.Text = "B4"
-Version.TextColor3 = Theme.Muted
-
-Version.TextSize = 12
-Version.Font = Enum.Font.GothamBold
-
-Version.Parent = Header
+local Close = Instance.new("TextButton")
+Close.Size = UDim2.new(0, 38, 0, 38)
+Close.Position = UDim2.new(1, -48, 0, 8)
+Close.BackgroundColor3 = Color3.fromRGB(35, 34, 40)
+Close.Text = "×"
+Close.TextColor3 = Color3.fromRGB(220,220,225)
+Close.TextSize = 25
+Close.Font = Enum.Font.Gotham
+Close.Parent = Header
+Corner(Close, 10)
 
 --==================================================
--- NAVEGACIÓN
+-- SIDEBAR
 --==================================================
 
-local Navigation = Instance.new("Frame")
+local Sidebar = Instance.new("Frame")
+Sidebar.Position = UDim2.new(0, 10, 0, 62)
+Sidebar.Size = UDim2.new(0, 215, 1, -72)
+Sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 19)
+Sidebar.BackgroundTransparency = 0.15
+Sidebar.Parent = Main
+Corner(Sidebar, 14)
 
-Navigation.Name = "Navigation"
+local Search = Instance.new("TextBox")
+Search.Position = UDim2.new(0, 10, 0, 10)
+Search.Size = UDim2.new(1, -20, 0, 42)
+Search.BackgroundColor3 = Color3.fromRGB(32, 31, 36)
+Search.PlaceholderText = "⌕  Search"
+Search.PlaceholderColor3 = Color3.fromRGB(125,125,135)
+Search.TextColor3 = Color3.fromRGB(240,240,245)
+Search.TextSize = 14
+Search.Font = Enum.Font.Gotham
+Search.ClearTextOnFocus = false
+Search.Parent = Sidebar
+Corner(Search, 10)
 
-Navigation.Size = UDim2.new(
-    0,
-    210,
-    1,
-    -75
-)
+local CategoryHolder = Instance.new("ScrollingFrame")
+CategoryHolder.Position = UDim2.new(0, 5, 0, 62)
+CategoryHolder.Size = UDim2.new(1, -10, 1, -67)
+CategoryHolder.BackgroundTransparency = 1
+CategoryHolder.BorderSizePixel = 0
+CategoryHolder.ScrollBarThickness = 3
+CategoryHolder.CanvasSize = UDim2.new()
+CategoryHolder.Parent = Sidebar
 
-Navigation.Position = UDim2.fromOffset(10, 70)
-
-Navigation.BackgroundColor3 = Theme.Panel
-Navigation.BackgroundTransparency = 0.12
-
-Navigation.Parent = Main
-
-Corner(Navigation, 12)
-
-local NavPadding = Instance.new("UIPadding")
-
-NavPadding.PaddingTop = UDim.new(0, 8)
-NavPadding.PaddingLeft = UDim.new(0, 7)
-NavPadding.PaddingRight = UDim.new(0, 7)
-
-NavPadding.Parent = Navigation
-
-local NavLayout = Instance.new("UIListLayout")
-
-NavLayout.Padding = UDim.new(0, 5)
-NavLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-NavLayout.Parent = Navigation
+local CategoryLayout = Instance.new("UIListLayout")
+CategoryLayout.Padding = UDim.new(0, 5)
+CategoryLayout.Parent = CategoryHolder
 
 --==================================================
--- CONTENIDO
+-- CONTENT
 --==================================================
 
 local Content = Instance.new("Frame")
-
-Content.Name = "Content"
-
-Content.Size = UDim2.new(
-    1,
-    -230,
-    1,
-    -75
-)
-
-Content.Position = UDim2.fromOffset(
-    220,
-    70
-)
-
-Content.BackgroundColor3 = Theme.Panel
-Content.BackgroundTransparency = 0.08
-
+Content.Position = UDim2.new(0, 235, 0, 62)
+Content.Size = UDim2.new(1, -245, 1, -72)
+Content.BackgroundColor3 = Color3.fromRGB(20, 19, 24)
+Content.BackgroundTransparency = 0.1
 Content.Parent = Main
-
-Corner(Content, 12)
-
---==================================================
--- PÁGINAS
---==================================================
-
-local Pages = {}
-
-local function ClearContent()
-
-    for _, child in ipairs(Content:GetChildren()) do
-        if child:IsA("GuiObject") then
-            child:Destroy()
-        end
-    end
-
-end
-
-local function HeaderText(text)
-
-    local Label = Instance.new("TextLabel")
-
-    Label.Size = UDim2.new(1, -30, 0, 40)
-    Label.Position = UDim2.fromOffset(15, 10)
-
-    Label.BackgroundTransparency = 1
-
-    Label.Text = text
-    Label.TextColor3 = Theme.White
-
-    Label.TextSize = 20
-    Label.Font = Enum.Font.GothamBold
-
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    Label.Parent = Content
-
-end
-
---==================================================
--- TOGGLE
---==================================================
-
-local function Toggle(text, callback, y)
-
-    local Button = Instance.new("TextButton")
-
-    Button.Size = UDim2.new(
-        1,
-        -30,
-        0,
-        50
-    )
-
-    Button.Position = UDim2.fromOffset(15, y)
-
-    Button.BackgroundColor3 = Theme.Item
-    Button.BorderSizePixel = 0
-
-    Button.Text = ""
-    Button.AutoButtonColor = false
-
-    Button.Parent = Content
-
-    Corner(Button, 10)
-
-    local Label = Instance.new("TextLabel")
-
-    Label.Size = UDim2.new(
-        1,
-        -90,
-        1,
-        0
-    )
-
-    Label.Position = UDim2.fromOffset(15, 0)
-
-    Label.BackgroundTransparency = 1
-
-    Label.Text = text
-    Label.TextColor3 = Theme.White
-
-    Label.TextSize = 14
-    Label.Font = Enum.Font.GothamMedium
-
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    Label.Parent = Button
-
-    local Switch = Instance.new("Frame")
-
-    Switch.Size = UDim2.fromOffset(50, 26)
-
-    Switch.Position = UDim2.new(
-        1,
-        -65,
-        0.5,
-        -13
-    )
-
-    Switch.BackgroundColor3 = Theme.Gray
-    Switch.Parent = Button
-
-    Corner(Switch, 20)
-
-    local Knob = Instance.new("Frame")
-
-    Knob.Size = UDim2.fromOffset(20, 20)
-    Knob.Position = UDim2.fromOffset(3, 3)
-
-    Knob.BackgroundColor3 = Theme.White
-    Knob.Parent = Switch
-
-    Corner(Knob, 20)
-
-    local Enabled = false
-
-    Button.MouseButton1Click:Connect(function()
-
-        Enabled = not Enabled
-
-        if Enabled then
-
-            Switch.BackgroundColor3 = Theme.Green
-
-            Knob.Position = UDim2.new(
-                1,
-                -23,
-                0,
-                3
-            )
-
-        else
-
-            Switch.BackgroundColor3 = Theme.Gray
-
-            Knob.Position = UDim2.fromOffset(
-                3,
-                3
-            )
-
-        end
-
-        if callback then
-            callback(Enabled)
-        end
-
-    end)
-
-    return Button
-end
-
---==================================================
--- SLIDER
---==================================================
-
-local function Slider(
-    text,
-    min,
-    max,
-    default,
-    callback,
-    y
-)
-
-    local Holder = Instance.new("Frame")
-
-    Holder.Size = UDim2.new(
-        1,
-        -30,
-        0,
-        65
-    )
-
-    Holder.Position = UDim2.fromOffset(
-        15,
-        y
-    )
-
-    Holder.BackgroundColor3 = Theme.Item
-
-    Holder.Parent = Content
-
-    Corner(Holder, 10)
-
-    local Label = Instance.new("TextLabel")
-
-    Label.Size = UDim2.new(
-        1,
-        -30,
-        0,
-        25
-    )
-
-    Label.Position = UDim2.fromOffset(
-        15,
-        5
-    )
-
-    Label.BackgroundTransparency = 1
-
-    Label.Text =
-        text .. ": " .. default
-
-    Label.TextColor3 = Theme.White
-
-    Label.TextSize = 14
-    Label.Font = Enum.Font.GothamMedium
-
-    Label.TextXAlignment =
-        Enum.TextXAlignment.Left
-
-    Label.Parent = Holder
-
-    local Bar = Instance.new("Frame")
-
-    Bar.Size = UDim2.new(
-        1,
-        -30,
-        0,
-        5
-    )
-
-    Bar.Position = UDim2.fromOffset(
-        15,
-        45
-    )
-
-    Bar.BackgroundColor3 = Theme.Gray
-    Bar.Parent = Holder
-
-    Corner(Bar, 10)
-
-    local Fill = Instance.new("Frame")
-
-    local initial =
-        (default - min) /
-        (max - min)
-
-    Fill.Size = UDim2.new(
-        initial,
-        0,
-        1,
-        0
-    )
-
-    Fill.BackgroundColor3 = Theme.Purple
-    Fill.Parent = Bar
-
-    Corner(Fill, 10)
-
-    local dragging = false
-
-    Bar.InputBegan:Connect(function(input)
-
-        if input.UserInputType ==
-            Enum.UserInputType.MouseButton1
-            or input.UserInputType ==
-            Enum.UserInputType.Touch then
-
-            dragging = true
-
-        end
-
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-
-        if input.UserInputType ==
-            Enum.UserInputType.MouseButton1
-            or input.UserInputType ==
-            Enum.UserInputType.Touch then
-
-            dragging = false
-
-        end
-
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-
-        if not dragging then
-            return
-        end
-
-        if input.UserInputType ~=
-            Enum.UserInputType.MouseMovement
-            and input.UserInputType ~=
-            Enum.UserInputType.Touch then
-
-            return
-        end
-
-        local percent = math.clamp(
-            (
-                input.Position.X -
-                Bar.AbsolutePosition.X
-            ) / Bar.AbsoluteSize.X,
-            0,
-            1
-        )
-
-        local value = math.floor(
-            min +
-            ((max - min) * percent)
-        )
-
-        Fill.Size = UDim2.new(
-            percent,
-            0,
-            1,
-            0
-        )
-
-        Label.Text =
-            text .. ": " .. value
-
-        if callback then
-            callback(value)
-        end
-
-    end)
-
-    return Holder
-
-end
+Corner(Content, 14)
+
+local ContentScroll = Instance.new("ScrollingFrame")
+ContentScroll.Position = UDim2.new(0, 12, 0, 12)
+ContentScroll.Size = UDim2.new(1, -24, 1, -24)
+ContentScroll.BackgroundTransparency = 1
+ContentScroll.BorderSizePixel = 0
+ContentScroll.ScrollBarThickness = 4
+ContentScroll.CanvasSize = UDim2.new()
+ContentScroll.Parent = Content
+
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.Padding = UDim.new(0, 8)
+ContentLayout.Parent = ContentScroll
 
 --==================================================
 -- CATEGORÍAS
 --==================================================
 
-local function CreateCategory(
-    name,
-    icon,
-    pageFunction
-)
+local Categories = {
+    {"◉", "ESP"},
+    {"◎", "Combat"},
+    {"◌", "Auto Farm"},
+    {"✣", "Movimiento"},
+    {"♙", "Animaciones"},
+    {"◔", "Performance"},
+    {"⚙", "Configuración"},
+    {"ⓘ", "Información"}
+}
 
-    local Button = Instance.new("TextButton")
+local CurrentCategory = nil
+local CategoryButtons = {}
 
-    Button.Size = UDim2.new(
-        1,
-        0,
-        0,
-        40
-    )
+--==================================================
+-- CONTROLES
+--==================================================
 
-    Button.BackgroundColor3 =
-        Theme.Item
+local function ClearContent()
+    for _, child in ipairs(ContentScroll:GetChildren()) do
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
+    end
+end
 
-    Button.BackgroundTransparency = 1
+local function CreateSection(text)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -5, 0, 28)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(245,245,250)
+    label.TextSize = 17
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = ContentScroll
+end
 
-    Button.Text =
-        icon .. "   " .. name
+local function CreateToggle(name, description, callback, default)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -5, 0, 65)
+    frame.BackgroundColor3 = Color3.fromRGB(35,34,40)
+    frame.Parent = ContentScroll
+    Corner(frame, 12)
 
-    Button.TextColor3 =
-        Theme.White
+    local label = Instance.new("TextLabel")
+    label.Position = UDim2.new(0, 15, 0, 8)
+    label.Size = UDim2.new(1, -90, 0, 23)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(240,240,245)
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
 
-    Button.TextSize = 13
-    Button.Font = Enum.Font.GothamMedium
+    if description then
+        local desc = Instance.new("TextLabel")
+        desc.Position = UDim2.new(0, 15, 0, 32)
+        desc.Size = UDim2.new(1, -90, 0, 20)
+        desc.BackgroundTransparency = 1
+        desc.Text = description
+        desc.TextColor3 = Color3.fromRGB(145,145,155)
+        desc.TextSize = 11
+        desc.Font = Enum.Font.Gotham
+        desc.TextXAlignment = Enum.TextXAlignment.Left
+        desc.Parent = frame
+    end
 
-    Button.TextXAlignment =
-        Enum.TextXAlignment.Left
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 58, 0, 30)
+    button.Position = UDim2.new(1, -70, 0.5, -15)
+    button.BackgroundColor3 = Color3.fromRGB(65,64,72)
+    button.Text = ""
+    button.Parent = frame
+    Corner(button, 20)
 
-    Button.AutoButtonColor = false
-    Button.Parent = Navigation
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.new(0, 24, 0, 24)
+    knob.Position = UDim2.new(0, 3, 0.5, -12)
+    knob.BackgroundColor3 = Color3.fromRGB(245,245,245)
+    knob.Parent = button
+    Corner(knob, 20)
 
-    Corner(Button, 8)
+    local state = default == true
 
-    Pages[name] = Button
-
-    Button.MouseButton1Click:Connect(function()
-
-        for _, item in pairs(Pages) do
-            item.BackgroundTransparency = 1
+    local function Update()
+        if state then
+            button.BackgroundColor3 = Color3.fromRGB(35, 205, 105)
+            Tween(knob, {
+                Position = UDim2.new(1, -27, 0.5, -12)
+            }, 0.15)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(65,64,72)
+            Tween(knob, {
+                Position = UDim2.new(0, 3, 0.5, -12)
+            }, 0.15)
         end
 
-        Button.BackgroundTransparency = 0
+        callback(state)
+    end
 
-        ClearContent()
-        pageFunction()
-
+    button.MouseButton1Click:Connect(function()
+        state = not state
+        Update()
     end)
 
-    return Button
+    return {
+        Frame = frame,
+        Get = function()
+            return state
+        end,
+        Set = function(value)
+            state = value
+            Update()
+        end
+    }
+end
+
+local function CreateSlider(name, minimum, maximum, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, -5, 0, 70)
+    frame.BackgroundColor3 = Color3.fromRGB(35,34,40)
+    frame.Parent = ContentScroll
+    Corner(frame, 12)
+
+    local label = Instance.new("TextLabel")
+    label.Position = UDim2.new(0, 15, 0, 9)
+    label.Size = UDim2.new(0, 150, 0, 25)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(235,235,240)
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Position = UDim2.new(1, -65, 0, 9)
+    valueLabel.Size = UDim2.new(0, 45, 0, 25)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.TextColor3 = Color3.fromRGB(190,190,200)
+    valueLabel.TextSize = 13
+    valueLabel.Font = Enum.Font.Gotham
+    valueLabel.Text = tostring(default)
+    valueLabel.Parent = frame
+
+    local bar = Instance.new("Frame")
+    bar.Position = UDim2.new(0, 15, 0, 43)
+    bar.Size = UDim2.new(1, -30, 0, 5)
+    bar.BackgroundColor3 = Color3.fromRGB(55,54,62)
+    bar.Parent = frame
+    Corner(bar, 5)
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(
+        (default - minimum) / (maximum - minimum),
+        0,
+        1,
+        0
+    )
+    fill.BackgroundColor3 = Color3.fromRGB(125,85,255)
+    fill.Parent = bar
+    Corner(fill, 5)
+
+    local dragging = false
+
+    local function SetValue(value)
+        value = math.clamp(value, minimum, maximum)
+        value = math.floor(value)
+
+        local percent = (value - minimum) / (maximum - minimum)
+
+        fill.Size = UDim2.new(percent, 0, 1, 0)
+        valueLabel.Text = tostring(value)
+
+        callback(value)
+    end
+
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+
+            local percent =
+                math.clamp(
+                    (input.Position.X - bar.AbsolutePosition.X) /
+                    bar.AbsoluteSize.X,
+                    0,
+                    1
+                )
+
+            SetValue(minimum + (maximum - minimum) * percent)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+
+            local percent =
+                math.clamp(
+                    (input.Position.X - bar.AbsolutePosition.X) /
+                    bar.AbsoluteSize.X,
+                    0,
+                    1
+                )
+
+            SetValue(minimum + (maximum - minimum) * percent)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    return frame
 end
 
 --==================================================
 -- ESP
 --==================================================
 
-local function ESPPage()
-
-    HeaderText("ESP")
-
-    Toggle(
-        "Activar ESP",
-        function(enabled)
-            -- Sistema ESP de la experiencia
-        end,
-        60
-    )
-
-    Toggle(
-        "Mostrar líneas",
-        function(enabled)
-        end,
-        120
-    )
-
-    Toggle(
-        "Mostrar nombres",
-        function(enabled)
-        end,
-        180
-    )
-
-    Toggle(
-        "Rainbow",
-        function(enabled)
-        end,
-        240
-    )
-
+local function RemoveESP()
+    for player, highlight in pairs(ESPObjects) do
+        if highlight then
+            highlight:Destroy()
+        end
+        ESPObjects[player] = nil
+    end
 end
 
---==================================================
--- COMBAT
---==================================================
+local function ApplyESP()
+    RemoveESP()
 
-local function CombatPage()
+    if not CONFIG.ESP then
+        return
+    end
 
-    HeaderText("Combat")
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Player and player.Character then
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "JoseFX_ESP"
+            highlight.FillColor = Color3.fromRGB(255, 60, 60)
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.FillTransparency = 0.65
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            highlight.Parent = player.Character
 
-    Toggle(
-        "Aimbot",
-        function(enabled)
-            -- Conectar con la lógica de combate
-            -- de tu propia experiencia.
-        end,
-        60
-    )
-
-    Toggle(
-        "Silent Aim",
-        function(enabled)
-            -- Conectar con el sistema de combate
-            -- implementado por el desarrollador.
-        end,
-        120
-    )
-
-    Toggle(
-        "Auto Shoot",
-        function(enabled)
-        end,
-        180
-    )
-
-    Slider(
-        "FOV",
-        10,
-        180,
-        70,
-        function(value)
-        end,
-        245
-    )
-
+            ESPObjects[player] = highlight
+        end
+    end
 end
 
---==================================================
--- AUTO FARM
---==================================================
+Players.PlayerAdded:Connect(function()
+    task.wait(1)
+    ApplyESP()
+end)
 
-local function FarmPage()
-
-    HeaderText("Auto Farm")
-
-    Toggle(
-        "Auto Farm",
-        function(enabled)
-        end,
-        60
-    )
-
-    Toggle(
-        "Auto Collect",
-        function(enabled)
-        end,
-        120
-    )
-
-end
+Players.PlayerRemoving:Connect(function(player)
+    if ESPObjects[player] then
+        ESPObjects[player]:Destroy()
+        ESPObjects[player] = nil
+    end
+end)
 
 --==================================================
 -- MOVIMIENTO
 --==================================================
 
-local function MovementPage()
+local function UpdateMovement()
+    local character = Player.Character
+    if not character then return end
 
-    HeaderText("Movimiento")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
 
-    Toggle(
-        "Speed",
-        function(enabled)
-        end,
-        60
-    )
+    if CONFIG.SpeedEnabled then
+        humanoid.WalkSpeed = CONFIG.Speed
+    else
+        humanoid.WalkSpeed = 16
+    end
+end
 
-    Slider(
-        "Velocidad",
-        1,
-        120,
-        16,
-        function(value)
-        end,
-        120
-    )
+Player.CharacterAdded:Connect(function()
+    task.wait(1)
+    UpdateMovement()
+end)
 
-    Toggle(
-        "Infinite Jump",
-        function(enabled)
-        end,
-        195
-    )
+UserInputService.JumpRequest:Connect(function()
+    if CONFIG.InfiniteJump then
+        local character = Player.Character
+        if not character then return end
 
-    Slider(
-        "Salto",
-        1,
-        120,
-        50,
-        function(value)
-        end,
-        255
-    )
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
 
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+--==================================================
+-- FOV
+--==================================================
+
+local function UpdateFOV()
+    if CONFIG.FOVEnabled then
+        Camera.FieldOfView = CONFIG.FOV
+    else
+        Camera.FieldOfView = 70
+    end
 end
 
 --==================================================
--- ANIMACIONES
+-- INVISIBLE LOCAL
 --==================================================
 
-local function AnimationsPage()
+local function SetLocalInvisible(enabled)
+    local character = Player.Character
+    if not character then return end
 
-    HeaderText("Animaciones")
+    for _, object in ipairs(character:GetDescendants()) do
+        if object:IsA("BasePart") then
 
-    Toggle(
-        "Invisible",
-        function(enabled)
-            -- Conectar con el sistema de personaje
-            -- de tu propia experiencia.
-        end,
-        60
-    )
-
-    Toggle(
-        "Ghost",
-        function(enabled)
-        end,
-        120
-    )
-
-    Toggle(
-        "Zombie",
-        function(enabled)
-        end,
-        180
-    )
-
-    Toggle(
-        "Animación personalizada",
-        function(enabled)
-        end,
-        240
-    )
-
-end
-
---==================================================
--- FPS
---==================================================
-
-local function FPSPage()
-
-    HeaderText("FPS / Performance")
-
-    Toggle(
-        "Modo rendimiento",
-        function(enabled)
-        end,
-        60
-    )
-
-    Toggle(
-        "Reducir efectos",
-        function(enabled)
-        end,
-        120
-    )
-
-    Slider(
-        "FPS objetivo",
-        30,
-        120,
-        60,
-        function(value)
-        end,
-        195
-    )
-
-end
-
---==================================================
--- CONFIGURACIÓN
---==================================================
-
-local function ConfigPage()
-
-    HeaderText("Configuración")
-
-    Toggle(
-        "Animaciones del menú",
-        function(enabled)
-        end,
-        60
-    )
-
-    Toggle(
-        "Mostrar al iniciar",
-        function(enabled)
-        end,
-        120
-    )
-
-    local Save = Instance.new("TextButton")
-
-    Save.Size = UDim2.new(
-        1,
-        -30,
-        0,
-        50
-    )
-
-    Save.Position =
-        UDim2.fromOffset(15, 195)
-
-    Save.BackgroundColor3 =
-        Theme.Purple
-
-    Save.Text =
-        "Guardar configuración"
-
-    Save.TextColor3 =
-        Theme.White
-
-    Save.TextSize = 14
-    Save.Font = Enum.Font.GothamBold
-
-    Save.Parent = Content
-
-    Corner(Save, 10)
-
-    Save.MouseButton1Click:Connect(function()
-
-        Save.Text =
-            "Configuración guardada ✓"
-
-        task.delay(1.5, function()
-
-            if Save.Parent then
-                Save.Text =
-                    "Guardar configuración"
+            if enabled then
+                object.LocalTransparencyModifier = 0.65
+            else
+                object.LocalTransparencyModifier = 0
             end
 
-        end)
+        elseif object:IsA("Decal") then
 
-    end)
-
+            if enabled then
+                object.Transparency = 0.65
+            else
+                object.Transparency = 0
+            end
+        end
+    end
 end
 
 --==================================================
--- INFORMACIÓN
+-- CONTENIDO DE CATEGORÍAS
 --==================================================
 
-local function InfoPage()
+local function ShowESP()
+    ClearContent()
 
-    HeaderText("Información")
+    CreateSection("ESP")
 
-    local Info = Instance.new("TextLabel")
-
-    Info.Size = UDim2.new(
-        1,
-        -30,
-        0,
-        150
+    CreateToggle(
+        "Activar ESP",
+        "Muestra jugadores a través de obstáculos.",
+        function(value)
+            CONFIG.ESP = value
+            ApplyESP()
+        end,
+        CONFIG.ESP
     )
 
-    Info.Position =
-        UDim2.fromOffset(15, 65)
+    CreateSlider(
+        "Distancia ESP",
+        50,
+        1000,
+        250,
+        function(value)
+            -- Preparado para conectar la distancia máxima del ESP.
+        end
+    )
 
-    Info.BackgroundTransparency = 1
+    CreateSection("Hitbox")
 
-    Info.Text =
-        "VioletCore\n\n" ..
-        "Creado por José FX\n\n" ..
-        "Créditos\n" ..
-        "Discord: próximamente"
+    CreateToggle(
+        "Activar Hitbox",
+        "Control de hitbox para tu propia experiencia.",
+        function(value)
+            CONFIG.Hitbox = value
+        end,
+        CONFIG.Hitbox
+    )
 
-    Info.TextColor3 =
-        Theme.White
-
-    Info.TextSize = 15
-    Info.Font = Enum.Font.GothamMedium
-
-    Info.TextXAlignment =
-        Enum.TextXAlignment.Left
-
-    Info.TextYAlignment =
-        Enum.TextYAlignment.Top
-
-    Info.Parent = Content
-
+    CreateSlider(
+        "Tamaño Hitbox",
+        5,
+        30,
+        15,
+        function(value)
+            -- Preparado para la lógica server-side de tu juego.
+        end
+    )
 end
+
+local function ShowCombat()
+    ClearContent()
+
+    CreateSection("Combat")
+
+    CreateToggle(
+        "Aimbot",
+        "Apunta al objetivo seleccionado de tu propia experiencia.",
+        function(value)
+            -- Aquí irá la lógica de combate de tu juego.
+        end,
+        false
+    )
+
+    CreateToggle(
+        "Silent Aim",
+        "Sistema de apuntado controlado por tu experiencia.",
+        function(value)
+            -- Preparado para la lógica server-side.
+        end,
+        false
+    )
+
+    CreateToggle(
+        "Auto Shoot",
+        "Disparo automático para tu sistema de combate.",
+        function(value)
+            -- Preparado para conectar con tu arma.
+        end,
+        false
+    )
+
+    CreateToggle(
+        "Apuntar a Cabeza",
+        "Selecciona Head como objetivo.",
+        function(value)
+        end,
+        false
+    )
+
+    CreateSlider(
+        "FOV de Aimbot",
+        10,
+        180,
+        70,
+        function(value)
+        end
+    )
+end
+
+local function ShowAutoFarm()
+    ClearContent()
+
+    CreateSection("Auto Farm")
+
+    CreateToggle(
+        "Auto Farm",
+        "Sistema de automatización de tu propia experiencia.",
+        function(value)
+        end,
+        false
+    )
+
+    CreateToggle(
+        "Auto Collect",
+        "Recoge objetos permitidos por tu juego.",
+        function(value)
+        end,
+        false
+    )
+end
+
+local function ShowMovement()
+    ClearContent()
+
+    CreateSection("Player")
+
+    CreateToggle(
+        "Activar Speed",
+        "Modifica la velocidad del jugador.",
+        function(value)
+            CONFIG.SpeedEnabled = value
+            UpdateMovement()
+        end,
+        CONFIG.SpeedEnabled
+    )
+
+    CreateSlider(
+        "Speed Slider",
+        16,
+        120,
+        CONFIG.Speed,
+        function(value)
+            CONFIG.Speed = value
+            UpdateMovement()
+        end
+    )
+
+    CreateToggle(
+        "Salto Infinito",
+        "Permite volver a saltar en el aire.",
+        function(value)
+            CONFIG.InfiniteJump = value
+        end,
+        CONFIG.InfiniteJump
+    )
+
+    CreateToggle(
+        "Activar FOV",
+        "Modifica el campo de visión.",
+        function(value)
+            CONFIG.FOVEnabled = value
+            UpdateFOV()
+        end,
+        CONFIG.FOVEnabled
+    )
+
+    CreateSlider(
+        "Valor FOV",
+        40,
+        120,
+        CONFIG.FOV,
+        function(value)
+            CONFIG.FOV = value
+            UpdateFOV()
+        end
+    )
+end
+
+local function ShowAnimations()
+    ClearContent()
+
+    CreateSection("Animaciones")
+
+    local animations = {
+        "Zombie",
+        "Fantasma",
+        "Robot",
+        "Gangster",
+        "Dab",
+        "Dance",
+        "Idle"
+    }
+
+    for _, animationName in ipairs(animations) do
+        CreateToggle(
+            animationName,
+            "Animación preparada para conectar con el AnimationId de tu juego.",
+            function(value)
+                -- Aquí se conectará el AnimationId correspondiente.
+            end,
+            false
+        )
+    end
+
+    CreateSection("Invisible")
+
+    CreateToggle(
+        "Invisible",
+        "Tú lo ves semitransparente.",
+        function(value)
+            CONFIG.Invisible = value
+            SetLocalInvisible(value)
+        end,
+        CONFIG.Invisible
+    )
+end
+
+local function ShowPerformance()
+    ClearContent()
+
+    CreateSection("Performance")
+
+    CreateToggle(
+        "Optimización",
+        "Reduce efectos visuales locales.",
+        function(value)
+            if value then
+                Lighting.GlobalShadows = false
+            else
+                Lighting.GlobalShadows = true
+            end
+        end,
+        false
+    )
+
+    CreateToggle(
+        "Low Graphics",
+        "Modo visual ligero.",
+        function(value)
+            -- Preparado para el sistema gráfico de tu experiencia.
+        end,
+        false
+    )
+end
+
+local function ShowSettings()
+    ClearContent()
+
+    CreateSection("Configuración")
+
+    CreateToggle(
+        "Guardar configuración",
+        "Solo guarda cuando pulsas el botón.",
+        function(value)
+            -- El toggle visual no guarda automáticamente.
+        end,
+        false
+    )
+
+    local save = Instance.new("TextButton")
+    save.Size = UDim2.new(1, -5, 0, 55)
+    save.BackgroundColor3 = Color3.fromRGB(90,65,160)
+    save.Text = "Guardar configuración"
+    save.TextColor3 = Color3.fromRGB(255,255,255)
+    save.TextSize = 15
+    save.Font = Enum.Font.GothamBold
+    save.Parent = ContentScroll
+    Corner(save, 12)
+
+    save.MouseButton1Click:Connect(function()
+        CONFIG.Saved = true
+
+        save.Text = "✓ Configuración guardada"
+
+        task.delay(1.5, function()
+            if save and save.Parent then
+                save.Text = "Guardar configuración"
+            end
+        end)
+    end)
+
+    CreateSection("Interfaz")
+
+    CreateToggle(
+        "Mostrar botón Invisible",
+        "Muestra u oculta el botón lateral.",
+        function(value)
+            InvisibleButton.Visible = value
+        end,
+        true
+    )
+end
+
+local function ShowInformation()
+    ClearContent()
+
+    CreateSection("Información")
+
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1, -5, 0, 160)
+    info.BackgroundColor3 = Color3.fromRGB(35,34,40)
+    info.TextColor3 = Color3.fromRGB(225,225,230)
+    info.TextSize = 14
+    info.Font = Enum.Font.Gotham
+    info.TextWrapped = true
+    info.TextXAlignment = Enum.TextXAlignment.Left
+    info.TextYAlignment = Enum.TextYAlignment.Top
+    info.Text = [[
+Jose FX
+
+Versión: V5
+
+Creado para la propia experiencia.
+
+Créditos:
+José
+
+Discord:
+AÑADE-AQUÍ-TU-DISCORD
+
+Sistema de interfaz:
+Jose FX UI
+]]
+    info.Parent = ContentScroll
+    Corner(info, 12)
+end
+
+local CategoryFunctions = {
+    ["ESP"] = ShowESP,
+    ["Combat"] = ShowCombat,
+    ["Auto Farm"] = ShowAutoFarm,
+    ["Movimiento"] = ShowMovement,
+    ["Animaciones"] = ShowAnimations,
+    ["Performance"] = ShowPerformance,
+    ["Configuración"] = ShowSettings,
+    ["Información"] = ShowInformation
+}
 
 --==================================================
 -- CREAR CATEGORÍAS
 --==================================================
 
-CreateCategory(
-    "ESP",
-    "◎",
-    ESPPage
-)
+for _, data in ipairs(Categories) do
 
-CreateCategory(
-    "Combat",
-    "◉",
-    CombatPage
-)
+    local icon = data[1]
+    local name = data[2]
 
-CreateCategory(
-    "Auto Farm",
-    "◌",
-    FarmPage
-)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -5, 0, 43)
+    button.BackgroundColor3 = Color3.fromRGB(25,24,29)
+    button.Text = ""
+    button.AutoButtonColor = false
+    button.Parent = CategoryHolder
+    Corner(button, 10)
 
-CreateCategory(
-    "Movimiento",
-    "✣",
-    MovementPage
-)
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Position = UDim2.new(0, 12, 0, 0)
+    iconLabel.Size = UDim2.new(0, 30, 1, 0)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = icon
+    iconLabel.TextColor3 = Color3.fromRGB(160,160,170)
+    iconLabel.TextSize = 18
+    iconLabel.Font = Enum.Font.GothamBold
+    iconLabel.Parent = button
 
-CreateCategory(
-    "Animaciones",
-    "♙",
-    AnimationsPage
-)
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Position = UDim2.new(0, 45, 0, 0)
+    textLabel.Size = UDim2.new(1, -50, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = name
+    textLabel.TextColor3 = Color3.fromRGB(220,220,225)
+    textLabel.TextSize = 14
+    textLabel.Font = Enum.Font.GothamMedium
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = button
 
-CreateCategory(
-    "FPS",
-    "ϟ",
-    FPSPage
-)
+    CategoryButtons[name] = button
 
-CreateCategory(
-    "Configuración",
-    "⚙",
-    ConfigPage
-)
+    button.MouseButton1Click:Connect(function()
 
-CreateCategory(
-    "Información",
-    "ⓘ",
-    InfoPage
+        for _, other in pairs(CategoryButtons) do
+            other.BackgroundColor3 = Color3.fromRGB(25,24,29)
+        end
+
+        button.BackgroundColor3 = Color3.fromRGB(45,40,55)
+
+        CurrentCategory = name
+
+        local func = CategoryFunctions[name]
+
+        if func then
+            func()
+        end
+    end)
+end
+
+CategoryHolder.CanvasSize = UDim2.new(
+    0,
+    0,
+    0,
+    CategoryLayout.AbsoluteContentSize.Y + 10
 )
 
 --==================================================
--- BOTÓN INVISIBLE EXTERNO
+-- BOTÓN INVISIBLE FIJO
 --==================================================
 
-local InvisibleButton =
-    Instance.new("TextButton")
+InvisibleButton = Instance.new("TextButton")
+InvisibleButton.Name = "InvisibleButton"
+InvisibleButton.Size = UDim2.new(0, 185, 0, 58)
+InvisibleButton.Position = UDim2.new(1, -205, 0.5, -29)
+InvisibleButton.BackgroundColor3 = Color3.fromRGB(45,43,48)
+InvisibleButton.Text = "INVISIBLE"
+InvisibleButton.TextColor3 = Color3.fromRGB(170,170,180)
+InvisibleButton.TextSize = 16
+InvisibleButton.Font = Enum.Font.GothamBold
+InvisibleButton.AutoButtonColor = false
+InvisibleButton.Parent = ScreenGui
+Corner(InvisibleButton, 15)
 
-InvisibleButton.Name =
-    "InvisibleButton"
+local InvisibleStroke = Instance.new("UIStroke")
+InvisibleStroke.Color = Color3.fromRGB(100,90,110)
+InvisibleStroke.Thickness = 2
+InvisibleStroke.Parent = InvisibleButton
 
-InvisibleButton.Size =
-    UDim2.fromOffset(145, 45)
+local invisibleState = false
 
--- FIJO A LA DERECHA
-InvisibleButton.Position =
-    UDim2.new(
-        1,
-        -165,
-        0.5,
-        -22
-    )
-
-InvisibleButton.BackgroundColor3 =
-    Theme.Panel
-
-InvisibleButton.BackgroundTransparency =
-    0.08
-
-InvisibleButton.Text =
-    "INVISIBLE"
-
-InvisibleButton.TextColor3 =
-    Theme.Muted
-
-InvisibleButton.TextSize =
-    13
-
-InvisibleButton.Font =
-    Enum.Font.GothamBold
-
-InvisibleButton.AutoButtonColor =
-    false
-
-InvisibleButton.Parent =
-    GUI
-
-Corner(InvisibleButton, 13)
-
-local InvisibleStroke =
-    Stroke(
-        InvisibleButton,
-        Theme.Purple,
-        2
-    )
-
-local InvisibleEnabled = false
+local function UpdateInvisibleButton()
+    if invisibleState then
+        InvisibleButton.Text = "ACTIVE"
+        InvisibleButton.TextColor3 = Color3.fromRGB(35,255,125)
+        InvisibleButton.BackgroundColor3 = Color3.fromRGB(45,48,45)
+        InvisibleStroke.Color = Color3.fromRGB(30,255,120)
+    else
+        InvisibleButton.Text = "INVISIBLE"
+        InvisibleButton.TextColor3 = Color3.fromRGB(170,170,180)
+        InvisibleButton.BackgroundColor3 = Color3.fromRGB(45,43,48)
+        InvisibleStroke.Color = Color3.fromRGB(100,90,110)
+    end
+end
 
 InvisibleButton.MouseButton1Click:Connect(function()
+    invisibleState = not invisibleState
+    CONFIG.Invisible = invisibleState
 
-    InvisibleEnabled =
-        not InvisibleEnabled
+    UpdateInvisibleButton()
+    SetLocalInvisible(invisibleState)
 
-    if InvisibleEnabled then
-
-        InvisibleButton.Text =
-            "INVISIBLE • ON"
-
-        InvisibleButton.TextColor3 =
-            Theme.Green
-
-        InvisibleStroke.Color =
-            Theme.Green
-
-    else
-
-        InvisibleButton.Text =
-            "INVISIBLE"
-
-        InvisibleButton.TextColor3 =
-            Theme.Muted
-
-        InvisibleStroke.Color =
-            Theme.Purple
-
-    end
-
+    -- IMPORTANTE:
+    -- Para que otros jugadores también dejen de verte,
+    -- aquí se debe llamar a un RemoteEvent del servidor.
 end)
 
 --==================================================
--- ABRIR / CERRAR
+-- ABRIR / CERRAR MENÚ
 --==================================================
-
-local Open = false
 
 OpenButton.MouseButton1Click:Connect(function()
 
-    Open = not Open
+    Main.Visible = not Main.Visible
 
-    Main.Visible = Open
+    if Main.Visible then
+        OpenButton.BackgroundTransparency = 0
+    else
+        OpenButton.BackgroundTransparency = 0.05
+    end
+end)
 
+Close.MouseButton1Click:Connect(function()
+    Main.Visible = false
 end)
 
 --==================================================
--- ARRASTRAR MENÚ
+-- ARRASTRAR BOTÓN PRINCIPAL
 --==================================================
 
-local dragging = false
+local draggingButton = false
 local dragStart
 local startPosition
 
-Header.InputBegan:Connect(function(input)
+OpenButton.InputBegan:Connect(function(input)
 
-    if input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or input.UserInputType ==
-        Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
 
-        dragging = true
-
-        dragStart =
-            input.Position
-
-        startPosition =
-            Main.Position
-
+        draggingButton = true
+        dragStart = input.Position
+        startPosition = OpenButton.Position
     end
-
 end)
 
 UserInputService.InputChanged:Connect(function(input)
 
-    if not dragging then
-        return
-    end
+    if not draggingButton then return end
 
-    if input.UserInputType ~=
-        Enum.UserInputType.MouseMovement
-        and input.UserInputType ~=
-        Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+    or input.UserInputType == Enum.UserInputType.Touch then
 
-        return
-    end
+        local delta = input.Position - dragStart
 
-    local delta =
-        input.Position - dragStart
-
-    Main.Position =
-        UDim2.new(
+        OpenButton.Position = UDim2.new(
             startPosition.X.Scale,
             startPosition.X.Offset + delta.X,
-
             startPosition.Y.Scale,
             startPosition.Y.Offset + delta.Y
         )
-
+    end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
 
-    if input.UserInputType ==
-        Enum.UserInputType.MouseButton1
-        or input.UserInputType ==
-        Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+    or input.UserInputType == Enum.UserInputType.Touch then
 
-        dragging = false
-
+        draggingButton = false
     end
-
 end)
 
 --==================================================
--- PÁGINA INICIAL
+-- ACTUALIZACIÓN CONTINUA
 --==================================================
 
-Pages["ESP"].BackgroundTransparency = 0
+RunService.RenderStepped:Connect(function()
 
-ClearContent()
-ESPPage()
+    if CONFIG.SpeedEnabled then
+        UpdateMovement()
+    end
 
-print("VioletCore B4 cargado | José FX")
+    if CONFIG.FOVEnabled then
+        UpdateFOV()
+    end
+end)
+
+--==================================================
+-- INICIO
+--==================================================
+
+ShowESP()
+CategoryButtons["ESP"].BackgroundColor3 = Color3.fromRGB(45,40,55)
+
+print("Jose FX V5 cargado correctamente.")
