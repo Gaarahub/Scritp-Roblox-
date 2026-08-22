@@ -1,12 +1,14 @@
+```lua
 --========================================================
--- VIOLET CORE B11
+-- VIOLET CORE FX
 -- Created by José FX
--- UI / Movement / ESP / Animation Framework
+-- Optimized / reorganized version
 --========================================================
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -15,33 +17,34 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 -- CLEAN PREVIOUS VERSION
 --========================================================
 
-local OldGui = PlayerGui:FindFirstChild("VioletCore")
-if OldGui then
-	OldGui:Destroy()
+local Old = PlayerGui:FindFirstChild("VioletCore_FX")
+
+if Old then
+    Old:Destroy()
 end
 
 --========================================================
 -- COLORS
 --========================================================
 
-local C = {
-	Background = Color3.fromRGB(8, 8, 10),
-	Panel = Color3.fromRGB(15, 15, 18),
-	Panel2 = Color3.fromRGB(22, 22, 26),
-	Panel3 = Color3.fromRGB(29, 29, 34),
+local Colors = {
+    Background = Color3.fromRGB(12, 12, 15),
+    Panel = Color3.fromRGB(18, 18, 22),
+    Panel2 = Color3.fromRGB(27, 27, 32),
+    Panel3 = Color3.fromRGB(32, 32, 38),
 
-	Border = Color3.fromRGB(48, 48, 55),
+    Border = Color3.fromRGB(48, 48, 56),
 
-	Text = Color3.fromRGB(240, 240, 245),
-	SubText = Color3.fromRGB(145, 145, 155),
+    Text = Color3.fromRGB(242, 242, 247),
+    SubText = Color3.fromRGB(150, 150, 160),
 
-	Accent = Color3.fromRGB(145, 85, 255),
-	AccentDark = Color3.fromRGB(85, 48, 150),
+    Accent = Color3.fromRGB(145, 85, 255),
+    AccentDark = Color3.fromRGB(82, 48, 150),
 
-	On = Color3.fromRGB(65, 195, 110),
-	Off = Color3.fromRGB(58, 58, 65),
+    On = Color3.fromRGB(55, 200, 112),
+    Off = Color3.fromRGB(66, 66, 75),
 
-	White = Color3.fromRGB(255, 255, 255)
+    White = Color3.fromRGB(255, 255, 255)
 }
 
 --========================================================
@@ -49,58 +52,43 @@ local C = {
 --========================================================
 
 local State = {
-	Aimbot = false,
-	SilentAim = false,
-	AutoShoot = false,
+    Aimbot = false,
+    SilentAim = false,
+    AutoShoot = false,
+    LongRange = false,
 
-	ESP = false,
-	ESPLines = false,
-	ESPRainbow = false,
-	ESPTrack = false,
+    ESP = false,
+    ESPLines = false,
+    ESPRainbow = false,
+    ESPTrack = false,
 
-	Speed = false,
-	CustomSpeed = false,
-	InfiniteJump = false,
-	CustomJump = false,
+    Speed = false,
+    CustomSpeed = false,
+    InfiniteJump = false,
+    CustomJump = false,
 
-	AnimZombie = false,
-	AnimGhost = false,
-	AnimGoat = false,
+    AnimZombie = false,
+    AnimGhost = false,
+    AnimGoat = false,
 
-	AutoFarm = false,
-	AutoCollect = false,
+    AutoFarm = false,
+    AutoCollect = false,
 
-	GPS120 = false,
-	GPS80 = false,
+    GPS120 = false,
+    GPS80 = false,
 
-	SaveConfig = false,
-	LoadConfig = false,
-	ResetConfig = false,
-
-	TargetPart = "Head"
+    TargetPart = "Head"
 }
 
 --========================================================
--- CHARACTER HELPERS
+-- CONNECTION STORAGE
 --========================================================
 
-local function GetCharacter()
-	return LocalPlayer.Character
-end
+local Connections = {}
 
-local function GetHumanoid()
-	local Character = GetCharacter()
+local ESPObjects = {}
 
-	if not Character then
-		return nil
-	end
-
-	return Character:FindFirstChildOfClass("Humanoid")
-end
-
---========================================================
--- MOVEMENT
---========================================================
+local CurrentAnimationTrack = nil
 
 local DEFAULT_SPEED = 16
 local CUSTOM_SPEED = 32
@@ -108,277 +96,788 @@ local CUSTOM_SPEED = 32
 local DEFAULT_JUMP = 50
 local CUSTOM_JUMP = 75
 
-local function ApplySpeed()
-	local Humanoid = GetHumanoid()
+--========================================================
+-- CHARACTER HELPERS
+--========================================================
 
-	if not Humanoid then
-		return
-	end
-
-	if State.Speed or State.CustomSpeed then
-		Humanoid.WalkSpeed = CUSTOM_SPEED
-	else
-		Humanoid.WalkSpeed = DEFAULT_SPEED
-	end
+local function GetCharacter()
+    return LocalPlayer.Character
 end
 
-local function ApplyJump()
-	local Humanoid = GetHumanoid()
+local function GetHumanoid()
+    local Character = GetCharacter()
 
-	if not Humanoid then
-		return
-	end
+    if not Character then
+        return nil
+    end
 
-	if State.CustomJump then
-		Humanoid.JumpPower = CUSTOM_JUMP
-	else
-		Humanoid.JumpPower = DEFAULT_JUMP
-	end
+    return Character:FindFirstChildOfClass("Humanoid")
 end
 
-UserInputService.JumpRequest:Connect(function()
-	if not State.InfiniteJump then
-		return
-	end
+local function GetRoot()
+    local Character = GetCharacter()
 
-	local Humanoid = GetHumanoid()
+    if not Character then
+        return nil
+    end
 
-	if Humanoid then
-		Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-	end
-end)
+    return Character:FindFirstChild("HumanoidRootPart")
+end
+
+--========================================================
+-- TARGET PART
+--========================================================
+
+local function GetTargetPart(Character)
+    if not Character then
+        return nil
+    end
+
+    if State.TargetPart == "Head" then
+        return Character:FindFirstChild("Head")
+    end
+
+    if State.TargetPart == "Torso" then
+        return Character:FindFirstChild("UpperTorso")
+            or Character:FindFirstChild("Torso")
+    end
+
+    if State.TargetPart == "Feet" then
+        return Character:FindFirstChild("LeftFoot")
+            or Character:FindFirstChild("RightFoot")
+            or Character:FindFirstChild("Left Leg")
+    end
+
+    return nil
+end
+
+--========================================================
+-- CLOSEST TARGET
+--========================================================
+
+local function GetClosestTarget()
+    local Camera = workspace.CurrentCamera
+
+    if not Camera then
+        return nil
+    end
+
+    local MousePosition = UserInputService:GetMouseLocation()
+
+    local ClosestCharacter = nil
+    local ClosestDistance = math.huge
+
+    for _, Player in ipairs(Players:GetPlayers()) do
+        if Player ~= LocalPlayer then
+
+            local Character = Player.Character
+            local Humanoid = Character
+                and Character:FindFirstChildOfClass("Humanoid")
+
+            local Root = Character
+                and Character:FindFirstChild("HumanoidRootPart")
+
+            if Character
+                and Humanoid
+                and Root
+                and Humanoid.Health > 0 then
+
+                local ScreenPosition, Visible =
+                    Camera:WorldToViewportPoint(Root.Position)
+
+                if Visible then
+
+                    local Distance =
+                        (
+                            Vector2.new(
+                                ScreenPosition.X,
+                                ScreenPosition.Y
+                            )
+                            - MousePosition
+                        ).Magnitude
+
+                    if Distance < ClosestDistance then
+                        ClosestDistance = Distance
+                        ClosestCharacter = Character
+                    end
+                end
+            end
+        end
+    end
+
+    return ClosestCharacter
+end
+
+--========================================================
+-- AIMBOT
+--========================================================
+
+local function UpdateAimbot()
+    if not State.Aimbot then
+        return
+    end
+
+    local Camera = workspace.CurrentCamera
+
+    if not Camera then
+        return
+    end
+
+    local Target = GetClosestTarget()
+
+    if not Target then
+        return
+    end
+
+    local Part = GetTargetPart(Target)
+
+    if not Part then
+        return
+    end
+
+    Camera.CFrame = CFrame.lookAt(
+        Camera.CFrame.Position,
+        Part.Position
+    )
+end
+
+Connections.Aimbot = RunService.RenderStepped:Connect(UpdateAimbot)
+
+--========================================================
+-- MOVEMENT
+--========================================================
+
+local function UpdateSpeed()
+    local Humanoid = GetHumanoid()
+
+    if not Humanoid then
+        return
+    end
+
+    if State.Speed or State.CustomSpeed then
+        Humanoid.WalkSpeed = CUSTOM_SPEED
+    else
+        Humanoid.WalkSpeed = DEFAULT_SPEED
+    end
+end
+
+local function UpdateJump()
+    local Humanoid = GetHumanoid()
+
+    if not Humanoid then
+        return
+    end
+
+    if State.CustomJump then
+        Humanoid.JumpPower = CUSTOM_JUMP
+    else
+        Humanoid.JumpPower = DEFAULT_JUMP
+    end
+end
+
+Connections.InfiniteJump =
+    UserInputService.JumpRequest:Connect(function()
+
+        if not State.InfiniteJump then
+            return
+        end
+
+        local Humanoid = GetHumanoid()
+
+        if Humanoid then
+            Humanoid:ChangeState(
+                Enum.HumanoidStateType.Jumping
+            )
+        end
+    end)
 
 --========================================================
 -- ANIMATIONS
 --========================================================
+-- Put YOUR animation IDs here.
+-- The menu itself does not invent animation IDs.
 
 local AnimationIds = {
-	Zombie = "",
-	Ghost = "",
-	Goat = ""
+    Zombie = "",
+    Ghost = "",
+    Goat = ""
 }
 
-local CurrentTrack
+local function StopCurrentAnimation()
+    if CurrentAnimationTrack then
+        pcall(function()
+            CurrentAnimationTrack:Stop()
+            CurrentAnimationTrack:Destroy()
+        end)
 
-local function StopAnimation()
-	if CurrentTrack then
-		CurrentTrack:Stop()
-		CurrentTrack:Destroy()
-		CurrentTrack = nil
-	end
+        CurrentAnimationTrack = nil
+    end
 end
 
 local function PlayAnimation(Name)
-	local Id = AnimationIds[Name]
 
-	if not Id or Id == "" then
-		warn("[Violet Core] Missing animation ID:", Name)
-		return
-	end
+    local Id = AnimationIds[Name]
 
-	local Humanoid = GetHumanoid()
+    if not Id or Id == "" then
+        warn(
+            "[Violet Core FX] Missing animation ID:",
+            Name
+        )
+        return
+    end
 
-	if not Humanoid then
-		return
-	end
+    local Humanoid = GetHumanoid()
 
-	local Animator = Humanoid:FindFirstChildOfClass("Animator")
+    if not Humanoid then
+        return
+    end
 
-	if not Animator then
-		Animator = Instance.new("Animator")
-		Animator.Parent = Humanoid
-	end
+    local Animator =
+        Humanoid:FindFirstChildOfClass("Animator")
 
-	StopAnimation()
+    if not Animator then
+        Animator = Instance.new("Animator")
+        Animator.Parent = Humanoid
+    end
 
-	local Animation = Instance.new("Animation")
-	Animation.AnimationId = "rbxassetid://" .. Id
+    StopCurrentAnimation()
 
-	local Track = Animator:LoadAnimation(Animation)
-	Track.Priority = Enum.AnimationPriority.Action
-	Track:Play()
+    local Animation = Instance.new("Animation")
 
-	CurrentTrack = Track
+    Animation.AnimationId =
+        "rbxassetid://" .. tostring(Id)
+
+    local Success, Track =
+        pcall(function()
+            return Animator:LoadAnimation(Animation)
+        end)
+
+    Animation:Destroy()
+
+    if not Success or not Track then
+        warn(
+            "[Violet Core FX] Could not load animation:",
+            Name
+        )
+        return
+    end
+
+    Track.Priority = Enum.AnimationPriority.Action
+    Track:Play()
+
+    CurrentAnimationTrack = Track
+end
+
+local function UpdateAnimation(Name, Enabled)
+
+    if Enabled then
+        PlayAnimation(Name)
+    else
+        StopCurrentAnimation()
+    end
 end
 
 --========================================================
 -- ESP
 --========================================================
 
-local ESPData = {}
-
 local function RemoveESP(Player)
-	local Data = ESPData[Player]
 
-	if not Data then
-		return
-	end
+    local Data = ESPObjects[Player]
 
-	if Data.Highlight then
-		Data.Highlight:Destroy()
-	end
+    if not Data then
+        return
+    end
 
-	if Data.Line then
-		Data.Line:Destroy()
-	end
+    for _, Object in pairs(Data) do
+        if typeof(Object) == "Instance" then
+            Object:Destroy()
+        end
+    end
 
-	ESPData[Player] = nil
+    ESPObjects[Player] = nil
 end
 
 local function CreateESP(Player)
-	if Player == LocalPlayer then
-		return
-	end
 
-	RemoveESP(Player)
+    if Player == LocalPlayer then
+        return
+    end
 
-	if not State.ESP then
-		return
-	end
+    RemoveESP(Player)
 
-	local Character = Player.Character
+    if not State.ESP then
+        return
+    end
 
-	if not Character then
-		return
-	end
+    local Character = Player.Character
 
-	local Root = Character:FindFirstChild("HumanoidRootPart")
+    if not Character then
+        return
+    end
 
-	if not Root then
-		return
-	end
+    local Root =
+        Character:FindFirstChild("HumanoidRootPart")
 
-	local Highlight = Instance.new("Highlight")
-	Highlight.Name = "VioletESP"
-	Highlight.Adornee = Character
-	Highlight.FillTransparency = 0.75
-	Highlight.OutlineTransparency = 0
-	Highlight.Parent = Character
+    if not Root then
+        return
+    end
 
-	ESPData[Player] = {
-		Highlight = Highlight
-	}
+    local Highlight = Instance.new("Highlight")
 
-	if State.ESPLines then
-		local Line = Instance.new("Beam")
+    Highlight.Name = "VioletFX_ESP"
+    Highlight.Adornee = Character
 
-		local LocalRoot =
-			LocalPlayer.Character
-			and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    Highlight.FillTransparency = 0.65
+    Highlight.OutlineTransparency = 0
 
-		if LocalRoot then
-			local Attachment0 = Instance.new("Attachment")
-			Attachment0.Parent = LocalRoot
+    Highlight.FillColor = Colors.Accent
+    Highlight.OutlineColor = Colors.White
 
-			local Attachment1 = Instance.new("Attachment")
-			Attachment1.Parent = Root
+    Highlight.DepthMode =
+        Enum.HighlightDepthMode.AlwaysOnTop
 
-			Line.Attachment0 = Attachment0
-			Line.Attachment1 = Attachment1
+    Highlight.Parent = Character
 
-			Line.Width0 = 0.04
-			Line.Width1 = 0.04
+    local Data = {
+        Highlight = Highlight
+    }
 
-			Line.FaceCamera = true
-			Line.Parent = Root
+    --====================================================
+    -- ESP LINE
+    --====================================================
 
-			ESPData[Player].Line = Line
-			ESPData[Player].Attachment0 = Attachment0
-			ESPData[Player].Attachment1 = Attachment1
-		end
-	end
+    if State.ESPLines then
+
+        local Attachment0 = Instance.new("Attachment")
+        Attachment0.Name = "VioletFX_LineStart"
+        Attachment0.Parent = Root
+
+        local Beam = Instance.new("Beam")
+
+        Beam.Name = "VioletFX_Line"
+        Beam.Attachment0 = Attachment0
+        Beam.FaceCamera = true
+
+        Beam.Width0 = 0.025
+        Beam.Width1 = 0.025
+
+        Beam.Transparency =
+            NumberSequence.new(0.15)
+
+        Beam.Color =
+            ColorSequence.new(Colors.Accent)
+
+        Beam.Parent = Root
+
+        Data.Attachment = Attachment0
+        Data.Beam = Beam
+    end
+
+    ESPObjects[Player] = Data
 end
 
-local function RefreshESP()
-	for _, Player in ipairs(Players:GetPlayers()) do
-		if Player ~= LocalPlayer then
-			CreateESP(Player)
-		end
-	end
+local function UpdateESP()
+
+    for Player in pairs(ESPObjects) do
+        RemoveESP(Player)
+    end
+
+    if not State.ESP then
+        return
+    end
+
+    for _, Player in ipairs(Players:GetPlayers()) do
+        if Player ~= LocalPlayer then
+            CreateESP(Player)
+        end
+    end
 end
+
+--========================================================
+-- RAINBOW ESP
+--========================================================
+
+Connections.RainbowESP =
+    RunService.RenderStepped:Connect(function()
+
+        if not State.ESP
+            or not State.ESPRainbow then
+            return
+        end
+
+        local Hue =
+            (os.clock() * 0.15) % 1
+
+        local RainbowColor =
+            Color3.fromHSV(Hue, 0.8, 1)
+
+        for _, Data in pairs(ESPObjects) do
+
+            if Data.Highlight then
+                Data.Highlight.FillColor =
+                    RainbowColor
+
+                Data.Highlight.OutlineColor =
+                    RainbowColor
+            end
+
+            if Data.Beam then
+                Data.Beam.Color =
+                    ColorSequence.new(
+                        RainbowColor
+                    )
+            end
+        end
+    end)
+
+--========================================================
+-- TARGET TRACK
+--========================================================
+
+Connections.TargetTrack =
+    RunService.RenderStepped:Connect(function()
+
+        if not State.ESP
+            or not State.ESPTrack then
+            return
+        end
+
+        for Player, Data in pairs(ESPObjects) do
+
+            local Character = Player.Character
+            local Humanoid =
+                Character
+                and Character:FindFirstChildOfClass(
+                    "Humanoid"
+                )
+
+            if not Character
+                or not Humanoid
+                or Humanoid.Health <= 0 then
+
+                RemoveESP(Player)
+            elseif not Data.Highlight then
+                CreateESP(Player)
+            end
+        end
+    end)
+
+--========================================================
+-- PLAYER EVENTS
+--========================================================
 
 Players.PlayerAdded:Connect(function(Player)
-	Player.CharacterAdded:Connect(function()
-		task.wait(0.25)
-		CreateESP(Player)
-	end)
+
+    Player.CharacterAdded:Connect(function()
+
+        task.wait(0.5)
+
+        if State.ESP then
+            CreateESP(Player)
+        end
+    end)
 end)
 
 Players.PlayerRemoving:Connect(function(Player)
-	RemoveESP(Player)
+    RemoveESP(Player)
 end)
+
+--========================================================
+-- CONFIGURATION
+--========================================================
+
+local ConfigName = "VioletCoreFX_Config"
+
+local function GetConfigData()
+
+    return {
+        Aimbot = State.Aimbot,
+        SilentAim = State.SilentAim,
+        AutoShoot = State.AutoShoot,
+        LongRange = State.LongRange,
+
+        ESP = State.ESP,
+        ESPLines = State.ESPLines,
+        ESPRainbow = State.ESPRainbow,
+        ESPTrack = State.ESPTrack,
+
+        Speed = State.Speed,
+        CustomSpeed = State.CustomSpeed,
+        InfiniteJump = State.InfiniteJump,
+        CustomJump = State.CustomJump,
+
+        AnimZombie = State.AnimZombie,
+        AnimGhost = State.AnimGhost,
+        AnimGoat = State.AnimGoat,
+
+        AutoFarm = State.AutoFarm,
+        AutoCollect = State.AutoCollect,
+
+        GPS120 = State.GPS120,
+        GPS80 = State.GPS80,
+
+        TargetPart = State.TargetPart
+    }
+end
+
+local function ApplyConfig(Data)
+
+    if type(Data) ~= "table" then
+        return false
+    end
+
+    for Key, Value in pairs(Data) do
+
+        if State[Key] ~= nil then
+            State[Key] = Value
+        end
+    end
+
+    UpdateSpeed()
+    UpdateJump()
+    UpdateESP()
+
+    if State.AnimZombie then
+        PlayAnimation("Zombie")
+    elseif State.AnimGhost then
+        PlayAnimation("Ghost")
+    elseif State.AnimGoat then
+        PlayAnimation("Goat")
+    end
+
+    return true
+end
+
+--========================================================
+-- CONFIG API
+--========================================================
+-- These functions are intentionally isolated.
+-- If your executor/game provides a persistence API,
+-- connect it here instead of spreading it through the UI.
+
+local SavedConfig = nil
+
+local function SaveConfig()
+    SavedConfig = GetConfigData()
+    return true
+end
+
+local function LoadConfig()
+    if not SavedConfig then
+        return false
+    end
+
+    return ApplyConfig(SavedConfig)
+end
+
+local function ResetConfig()
+
+    for Key, Value in pairs(State) do
+
+        if typeof(Value) == "boolean" then
+            State[Key] = false
+        end
+    end
+
+    State.TargetPart = "Head"
+
+    StopCurrentAnimation()
+    UpdateSpeed()
+    UpdateJump()
+    UpdateESP()
+
+    return true
+end
+
+--========================================================
+-- ACTION ROUTER
+--========================================================
+
+local function ApplyOption(Key)
+
+    if Key == "Speed"
+        or Key == "CustomSpeed" then
+
+        UpdateSpeed()
+        return
+    end
+
+    if Key == "CustomJump"
+        or Key == "InfiniteJump" then
+
+        UpdateJump()
+        return
+    end
+
+    if Key == "ESP"
+        or Key == "ESPLines"
+        or Key == "ESPRainbow"
+        or Key == "ESPTrack" then
+
+        UpdateESP()
+        return
+    end
+
+    if Key == "AnimZombie" then
+        UpdateAnimation(
+            "Zombie",
+            State.AnimZombie
+        )
+        return
+    end
+
+    if Key == "AnimGhost" then
+        UpdateAnimation(
+            "Ghost",
+            State.AnimGhost
+        )
+        return
+    end
+
+    if Key == "AnimGoat" then
+        UpdateAnimation(
+            "Goat",
+            State.AnimGoat
+        )
+        return
+    end
+
+    if Key == "SaveConfig" then
+        SaveConfig()
+        return
+    end
+
+    if Key == "LoadConfig" then
+        LoadConfig()
+        return
+    end
+
+    if Key == "ResetConfig" then
+        ResetConfig()
+        return
+    end
+
+    -- Combat options that require the game's
+    -- own weapon/remotes are deliberately kept
+    -- isolated here instead of pretending to work.
+end
 
 --========================================================
 -- GUI
 --========================================================
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "VioletCore"
+
+Gui.Name = "VioletCore_FX"
 Gui.ResetOnSpawn = false
 Gui.IgnoreGuiInset = true
-Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.ZIndexBehavior =
+    Enum.ZIndexBehavior.Sibling
+
 Gui.Parent = PlayerGui
 
 --========================================================
--- OPEN BUTTON
+-- FX OPEN BUTTON
 --========================================================
 
 local OpenButton = Instance.new("TextButton")
-OpenButton.Name = "OpenButton"
 
-OpenButton.Size = UDim2.fromOffset(38, 38)
-OpenButton.Position = UDim2.new(1, -52, 0.5, -19)
+OpenButton.Name = "FXButton"
 
-OpenButton.BackgroundColor3 = C.Panel
-OpenButton.BackgroundTransparency = 0.08
+OpenButton.Size =
+    UDim2.fromOffset(52, 52)
+
+OpenButton.Position =
+    UDim2.new(1, -72, 0.5, -26)
+
+OpenButton.BackgroundColor3 =
+    Colors.Panel
+
+OpenButton.BackgroundTransparency = 0.03
+
 OpenButton.BorderSizePixel = 0
 
-OpenButton.Text = "V"
-OpenButton.TextColor3 = C.Text
-OpenButton.TextSize = 13
-OpenButton.Font = Enum.Font.GothamBold
+OpenButton.Text = "FX"
+
+OpenButton.TextColor3 =
+    Colors.White
+
+OpenButton.TextSize = 15
+
+OpenButton.Font =
+    Enum.Font.GothamBold
 
 OpenButton.AutoButtonColor = false
+
 OpenButton.Visible = true
+
 OpenButton.ZIndex = 100
+
 OpenButton.Parent = Gui
 
 local OpenCorner = Instance.new("UICorner")
-OpenCorner.CornerRadius = UDim.new(0, 9)
+
+OpenCorner.CornerRadius =
+    UDim.new(0, 15)
+
 OpenCorner.Parent = OpenButton
 
 local OpenStroke = Instance.new("UIStroke")
-OpenStroke.Color = C.Accent
-OpenStroke.Thickness = 1
-OpenStroke.Transparency = 0.25
+
+OpenStroke.Color =
+    Colors.Accent
+
+OpenStroke.Thickness = 2
+
+OpenStroke.Transparency = 0.05
+
 OpenStroke.Parent = OpenButton
 
 --========================================================
--- WINDOW
+-- MAIN WINDOW
 --========================================================
 
 local Window = Instance.new("Frame")
+
 Window.Name = "MainWindow"
 
-Window.Size = UDim2.fromOffset(475, 315)
-Window.Position = UDim2.new(0.5, -237, 0.5, -157)
+Window.Size =
+    UDim2.fromOffset(650, 430)
 
-Window.BackgroundColor3 = C.Background
-Window.BackgroundTransparency = 0.08
+Window.Position =
+    UDim2.new(
+        0.5,
+        -325,
+        0.5,
+        -215
+    )
+
+Window.BackgroundColor3 =
+    Colors.Background
+
 Window.BorderSizePixel = 0
 
 Window.Visible = false
+
 Window.ZIndex = 10
+
 Window.Parent = Gui
 
 local WindowCorner = Instance.new("UICorner")
-WindowCorner.CornerRadius = UDim.new(0, 10)
+
+WindowCorner.CornerRadius =
+    UDim.new(0, 14)
+
 WindowCorner.Parent = Window
 
 local WindowStroke = Instance.new("UIStroke")
-WindowStroke.Color = C.Border
+
+WindowStroke.Color =
+    Colors.Border
+
 WindowStroke.Thickness = 1
-WindowStroke.Transparency = 0.2
+
 WindowStroke.Parent = Window
 
 --========================================================
@@ -386,142 +885,170 @@ WindowStroke.Parent = Window
 --========================================================
 
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 50)
 
-Header.BackgroundColor3 = C.Panel
+Header.Size =
+    UDim2.new(1, 0, 0, 64)
+
+Header.BackgroundColor3 =
+    Colors.Panel
+
 Header.BorderSizePixel = 0
+
+Header.ZIndex = 11
+
 Header.Parent = Window
 
 local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 10)
+
+HeaderCorner.CornerRadius =
+    UDim.new(0, 14)
+
 HeaderCorner.Parent = Header
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -105, 0, 20)
-Title.Position = UDim2.fromOffset(13, 6)
+
+Title.Size =
+    UDim2.new(1, -150, 0, 27)
+
+Title.Position =
+    UDim2.fromOffset(18, 8)
 
 Title.BackgroundTransparency = 1
+
 Title.Text = "Violet Core"
 
-Title.TextColor3 = C.Text
-Title.TextSize = 15
-Title.Font = Enum.Font.GothamBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.TextColor3 =
+    Colors.Text
+
+Title.TextSize = 18
+
+Title.Font =
+    Enum.Font.GothamBold
+
+Title.TextXAlignment =
+    Enum.TextXAlignment.Left
+
+Title.ZIndex = 12
 
 Title.Parent = Header
 
 local Creator = Instance.new("TextLabel")
-Creator.Size = UDim2.new(1, -105, 0, 13)
-Creator.Position = UDim2.fromOffset(14, 28)
+
+Creator.Size =
+    UDim2.new(1, -150, 0, 15)
+
+Creator.Position =
+    UDim2.fromOffset(19, 36)
 
 Creator.BackgroundTransparency = 1
+
 Creator.Text = "José FX"
 
-Creator.TextColor3 = C.Accent
-Creator.TextSize = 8
-Creator.Font = Enum.Font.GothamMedium
-Creator.TextXAlignment = Enum.TextXAlignment.Left
+Creator.TextColor3 =
+    Colors.Accent
+
+Creator.TextSize = 9
+
+Creator.Font =
+    Enum.Font.GothamMedium
+
+Creator.TextXAlignment =
+    Enum.TextXAlignment.Left
+
+Creator.ZIndex = 12
 
 Creator.Parent = Header
 
 --========================================================
--- HEADER CONTROLS
+-- HEADER BUTTONS
 --========================================================
 
 local MinButton = Instance.new("TextButton")
-MinButton.Size = UDim2.fromOffset(25, 25)
-MinButton.Position = UDim2.new(1, -59, 0, 12)
 
-MinButton.BackgroundColor3 = C.Panel2
+MinButton.Size =
+    UDim2.fromOffset(34, 34)
+
+MinButton.Position =
+    UDim2.new(1, -78, 0, 15)
+
+MinButton.BackgroundColor3 =
+    Colors.Panel2
+
 MinButton.BorderSizePixel = 0
 
-MinButton.Text = "—"
-MinButton.TextColor3 = C.SubText
-MinButton.TextSize = 13
-MinButton.Font = Enum.Font.GothamBold
+MinButton.Text = "−"
+
+MinButton.TextColor3 =
+    Colors.SubText
+
+MinButton.TextSize = 17
+
+MinButton.Font =
+    Enum.Font.GothamBold
 
 MinButton.AutoButtonColor = false
+
+MinButton.ZIndex = 12
+
 MinButton.Parent = Header
 
 local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0, 6)
+
+MinCorner.CornerRadius =
+    UDim.new(0, 9)
+
 MinCorner.Parent = MinButton
 
 local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.fromOffset(25, 25)
-CloseButton.Position = UDim2.new(1, -30, 0, 12)
 
-CloseButton.BackgroundColor3 = C.Panel2
+CloseButton.Size =
+    UDim2.fromOffset(34, 34)
+
+CloseButton.Position =
+    UDim2.new(1, -38, 0, 15)
+
+CloseButton.BackgroundColor3 =
+    Colors.Panel2
+
 CloseButton.BorderSizePixel = 0
 
 CloseButton.Text = "×"
-CloseButton.TextColor3 = C.SubText
-CloseButton.TextSize = 16
-CloseButton.Font = Enum.Font.GothamBold
+
+CloseButton.TextColor3 =
+    Colors.SubText
+
+CloseButton.TextSize = 18
+
+CloseButton.Font =
+    Enum.Font.GothamBold
 
 CloseButton.AutoButtonColor = false
+
+CloseButton.ZIndex = 12
+
 CloseButton.Parent = Header
 
 local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
+
+CloseCorner.CornerRadius =
+    UDim.new(0, 9)
+
 CloseCorner.Parent = CloseButton
-
---========================================================
--- DRAGGING
---========================================================
-
-local Dragging = false
-local DragStart
-local StartPosition
-
-Header.InputBegan:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1
-		or Input.UserInputType == Enum.UserInputType.Touch then
-
-		Dragging = true
-		DragStart = Input.Position
-		StartPosition = Window.Position
-	end
-end)
-
-Header.InputEnded:Connect(function(Input)
-	if Input.UserInputType == Enum.UserInputType.MouseButton1
-		or Input.UserInputType == Enum.UserInputType.Touch then
-
-		Dragging = false
-	end
-end)
-
-UserInputService.InputChanged:Connect(function(Input)
-	if not Dragging then
-		return
-	end
-
-	if Input.UserInputType ~= Enum.UserInputType.MouseMovement
-		and Input.UserInputType ~= Enum.UserInputType.Touch then
-		return
-	end
-
-	local Delta = Input.Position - DragStart
-
-	Window.Position = UDim2.new(
-		StartPosition.X.Scale,
-		StartPosition.X.Offset + Delta.X,
-
-		StartPosition.Y.Scale,
-		StartPosition.Y.Offset + Delta.Y
-	)
-end)
 
 --========================================================
 -- CONTENT
 --========================================================
 
 local Content = Instance.new("Frame")
-Content.Size = UDim2.new(1, -12, 1, -58)
-Content.Position = UDim2.fromOffset(6, 55)
+
+Content.Size =
+    UDim2.new(1, -14, 1, -72)
+
+Content.Position =
+    UDim2.fromOffset(7, 69)
 
 Content.BackgroundTransparency = 1
+
 Content.Parent = Window
 
 --========================================================
@@ -529,35 +1056,65 @@ Content.Parent = Window
 --========================================================
 
 local Categories = Instance.new("ScrollingFrame")
-Categories.Size = UDim2.fromOffset(135, 1)
 
-Categories.BackgroundColor3 = C.Panel
-Categories.BackgroundTransparency = 0.08
+Categories.Size =
+    UDim2.fromOffset(190, 1)
+
+Categories.Position =
+    UDim2.fromOffset(0, 0)
+
+Categories.BackgroundColor3 =
+    Colors.Panel
+
 Categories.BorderSizePixel = 0
 
-Categories.ScrollBarThickness = 2
-Categories.ScrollBarImageColor3 = C.Accent
+Categories.ScrollBarThickness = 3
 
-Categories.AutomaticCanvasSize = Enum.AutomaticSize.Y
-Categories.CanvasSize = UDim2.new()
+Categories.ScrollBarImageColor3 =
+    Colors.Accent
+
+Categories.AutomaticCanvasSize =
+    Enum.AutomaticSize.Y
+
+Categories.CanvasSize =
+    UDim2.new()
+
+Categories.ZIndex = 12
 
 Categories.Parent = Content
 
+local CatCorner = Instance.new("UICorner")
+
+CatCorner.CornerRadius =
+    UDim.new(0, 10)
+
+CatCorner.Parent = Categories
+
 local CatPadding = Instance.new("UIPadding")
-CatPadding.PaddingTop = UDim.new(0, 6)
-CatPadding.PaddingBottom = UDim.new(0, 6)
-CatPadding.PaddingLeft = UDim.new(0, 5)
-CatPadding.PaddingRight = UDim.new(0, 5)
+
+CatPadding.PaddingTop =
+    UDim.new(0, 10)
+
+CatPadding.PaddingBottom =
+    UDim.new(0, 10)
+
+CatPadding.PaddingLeft =
+    UDim.new(0, 7)
+
+CatPadding.PaddingRight =
+    UDim.new(0, 7)
+
 CatPadding.Parent = Categories
 
 local CatLayout = Instance.new("UIListLayout")
-CatLayout.Padding = UDim.new(0, 3)
-CatLayout.SortOrder = Enum.SortOrder.LayoutOrder
-CatLayout.Parent = Categories
 
-local CatCorner = Instance.new("UICorner")
-CatCorner.CornerRadius = UDim.new(0, 8)
-CatCorner.Parent = Categories
+CatLayout.Padding =
+    UDim.new(0, 5)
+
+CatLayout.SortOrder =
+    Enum.SortOrder.LayoutOrder
+
+CatLayout.Parent = Categories
 
 --========================================================
 -- OPTIONS PANEL
@@ -565,122 +1122,150 @@ CatCorner.Parent = Categories
 
 local Options = Instance.new("ScrollingFrame")
 
-Options.Size = UDim2.new(1, -141, 1, 0)
-Options.Position = UDim2.fromOffset(141, 0)
+Options.Size =
+    UDim2.new(1, -197, 1, 0)
 
-Options.BackgroundColor3 = C.Panel
-Options.BackgroundTransparency = 0.05
+Options.Position =
+    UDim2.fromOffset(197, 0)
+
+Options.BackgroundColor3 =
+    Colors.Panel
+
 Options.BorderSizePixel = 0
 
-Options.ScrollBarThickness = 2
-Options.ScrollBarImageColor3 = C.Accent
+Options.ScrollBarThickness = 4
 
-Options.AutomaticCanvasSize = Enum.AutomaticSize.Y
-Options.CanvasSize = UDim2.new()
+Options.ScrollBarImageColor3 =
+    Colors.Accent
+
+Options.AutomaticCanvasSize =
+    Enum.AutomaticSize.Y
+
+Options.CanvasSize =
+    UDim2.new()
+
+Options.ZIndex = 12
 
 Options.Parent = Content
 
+local OptionsCorner = Instance.new("UICorner")
+
+OptionsCorner.CornerRadius =
+    UDim.new(0, 10)
+
+OptionsCorner.Parent = Options
+
 local OptionsPadding = Instance.new("UIPadding")
-OptionsPadding.PaddingTop = UDim.new(0, 7)
-OptionsPadding.PaddingBottom = UDim.new(0, 7)
-OptionsPadding.PaddingLeft = UDim.new(0, 7)
-OptionsPadding.PaddingRight = UDim.new(0, 7)
+
+OptionsPadding.PaddingTop =
+    UDim.new(0, 13)
+
+OptionsPadding.PaddingBottom =
+    UDim.new(0, 13)
+
+OptionsPadding.PaddingLeft =
+    UDim.new(0, 13)
+
+OptionsPadding.PaddingRight =
+    UDim.new(0, 13)
+
 OptionsPadding.Parent = Options
 
 local OptionsLayout = Instance.new("UIListLayout")
-OptionsLayout.Padding = UDim.new(0, 4)
-OptionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-OptionsLayout.Parent = Options
 
-local OptionsCorner = Instance.new("UICorner")
-OptionsCorner.CornerRadius = UDim.new(0, 8)
-OptionsCorner.Parent = Options
+OptionsLayout.Padding =
+    UDim.new(0, 7)
+
+OptionsLayout.SortOrder =
+    Enum.SortOrder.LayoutOrder
+
+OptionsLayout.Parent = Options
 
 --========================================================
 -- SECTIONS
 --========================================================
 
 local Sections = {
-	{
-		Name = "Combat",
-		Icon = "⚔",
-		Items = {
-			{"toggle", "Aimbot", "Aimbot"},
-			{"toggle", "Silent Aim", "SilentAim"},
-			{"selector", "Target Part"},
-			{"toggle", "Auto Shoot", "AutoShoot"}
-		}
-	},
 
-	{
-		Name = "ESP",
-		Icon = "◉",
-		Items = {
-			{"toggle", "Player ESP", "ESP"},
-			{"toggle", "ESP Lines", "ESPLines"},
-			{"toggle", "Rainbow ESP", "ESPRainbow"},
-			{"toggle", "Track Target", "ESPTrack"}
-		}
-	},
+    {
+        Name = "Combat",
+        Icon = "⚔",
+        Items = {
+            {"toggle", "Aimbot", "Aimbot"},
+            {"toggle", "Silent Aim", "SilentAim"},
+            {"selector", "Target Part"},
+            {"toggle", "Auto Shoot", "AutoShoot"},
+            {"toggle", "Long Range", "LongRange"}
+        }
+    },
 
-	{
-		Name = "Movement",
-		Icon = "➤",
-		Items = {
-			{"toggle", "Speed", "Speed"},
-			{"toggle", "Custom Speed", "CustomSpeed"},
-			{"toggle", "Infinite Jump", "InfiniteJump"},
-			{"toggle", "Custom Jump", "CustomJump"}
-		}
-	},
+    {
+        Name = "ESP",
+        Icon = "◉",
+        Items = {
+            {"toggle", "Player ESP", "ESP"},
+            {"toggle", "ESP Lines", "ESPLines"},
+            {"toggle", "Rainbow ESP", "ESPRainbow"},
+            {"toggle", "Track Target", "ESPTrack"}
+        }
+    },
 
-	{
-		Name = "Animations",
-		Icon = "♟",
-		Items = {
-			{"toggle", "Zombie", "AnimZombie"},
-			{"toggle", "Ghost", "AnimGhost"},
-			{"toggle", "Goat", "AnimGoat"}
-		}
-	},
+    {
+        Name = "Movement",
+        Icon = "✦",
+        Items = {
+            {"toggle", "Speed", "Speed"},
+            {"toggle", "Custom Speed", "CustomSpeed"},
+            {"toggle", "Infinite Jump", "InfiniteJump"},
+            {"toggle", "Custom Jump", "CustomJump"}
+        }
+    },
 
-	{
-		Name = "Autofarm",
-		Icon = "$",
-		Items = {
-			{"toggle", "Auto Farm", "AutoFarm"},
-			{"toggle", "Auto Collect", "AutoCollect"}
-		}
-	},
+    {
+        Name = "Animations",
+        Icon = "♙",
+        Items = {
+            {"toggle", "Zombie", "AnimZombie"},
+            {"toggle", "Ghost", "AnimGhost"},
+            {"toggle", "Goat", "AnimGoat"}
+        }
+    },
 
-	{
-		Name = "GPS",
-		Icon = "⚡",
-		Items = {
-			{"toggle", "120 GPS", "GPS120"},
-			{"toggle", "80 GPS", "GPS80"}
-		}
-	},
+    {
+        Name = "Autofarm",
+        Icon = "◉",
+        Items = {
+            {"toggle", "Auto Farm", "AutoFarm"},
+            {"toggle", "Auto Collect", "AutoCollect"}
+        }
+    },
 
-	{
-		Name = "Settings",
-		Icon = "⚙",
-		Items = {
-			{"toggle", "Save Configuration", "SaveConfig"},
-			{"toggle", "Load Configuration", "LoadConfig"},
-			{"toggle", "Reset Configuration", "ResetConfig"}
-		}
-	},
+    {
+        Name = "GPS",
+        Icon = "⚡",
+        Items = {
+            {"toggle", "120 GPS", "GPS120"},
+            {"toggle", "80 GPS", "GPS80"}
+        }
+    },
 
-	{
-		Name = "Information",
-		Icon = "ⓘ",
-		Items = {
-			{"info", "Created by", "José FX"},
-			{"info", "Discord", "Community / Social"},
-			{"info", "Credits", "José FX"}
-		}
-	}
+    {
+        Name = "Settings",
+        Icon = "⚙",
+        Items = {
+            {"toggle", "Save Configuration", "SaveConfig"},
+            {"toggle", "Load Configuration", "LoadConfig"},
+            {"toggle", "Reset Configuration", "ResetConfig"}
+        }
+    },
+
+    {
+        Name = "Information",
+        Icon = "ⓘ",
+        Items = {
+            {"info", "Created by", "José FX"}
+        }
+    }
 }
 
 --========================================================
@@ -688,142 +1273,170 @@ local Sections = {
 --========================================================
 
 local function ClearOptions()
-	for _, Object in ipairs(Options:GetChildren()) do
-		if not Object:IsA("UIListLayout")
-			and not Object:IsA("UIPadding") then
 
-			Object:Destroy()
-		end
-	end
+    for _, Object in ipairs(Options:GetChildren()) do
+
+        if not Object:IsA("UIListLayout")
+            and not Object:IsA("UIPadding") then
+
+            Object:Destroy()
+        end
+    end
 end
 
 --========================================================
--- TOGGLE VISUAL
+-- TOGGLE CREATOR
 --========================================================
 
 local function CreateToggle(Name, Key)
 
-	local Row = Instance.new("Frame")
+    local Row = Instance.new("Frame")
 
-	Row.Size = UDim2.new(1, 0, 0, 31)
+    Row.Size =
+        UDim2.new(1, 0, 0, 52)
 
-	Row.BackgroundColor3 = C.Panel2
-	Row.BorderSizePixel = 0
+    Row.BackgroundColor3 =
+        Colors.Panel2
 
-	Row.Parent = Options
+    Row.BorderSizePixel = 0
 
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 6)
-	Corner.Parent = Row
+    Row.ZIndex = 13
 
-	local Label = Instance.new("TextLabel")
+    Row.Parent = Options
 
-	Label.Size = UDim2.new(1, -55, 1, 0)
-	Label.Position = UDim2.fromOffset(8, 0)
+    local Corner = Instance.new("UICorner")
 
-	Label.BackgroundTransparency = 1
-	Label.Text = Name
+    Corner.CornerRadius =
+        UDim.new(0, 10)
 
-	Label.TextColor3 = C.Text
-	Label.TextSize = 8
-	Label.Font = Enum.Font.GothamMedium
+    Corner.Parent = Row
 
-	Label.TextXAlignment = Enum.TextXAlignment.Left
-	Label.Parent = Row
+    local Label = Instance.new("TextLabel")
 
-	local Switch = Instance.new("TextButton")
+    Label.Size =
+        UDim2.new(1, -75, 1, 0)
 
-	Switch.Size = UDim2.fromOffset(27, 14)
-	Switch.Position = UDim2.new(1, -35, 0.5, -7)
+    Label.Position =
+        UDim2.fromOffset(13, 0)
 
-	Switch.BackgroundColor3 = C.Off
-	Switch.BorderSizePixel = 0
+    Label.BackgroundTransparency = 1
 
-	Switch.Text = ""
-	Switch.AutoButtonColor = false
+    Label.Text = Name
 
-	Switch.Parent = Row
+    Label.TextColor3 =
+        Colors.Text
 
-	local SwitchCorner = Instance.new("UICorner")
-	SwitchCorner.CornerRadius = UDim.new(1, 0)
-	SwitchCorner.Parent = Switch
+    Label.TextSize = 11
 
-	local Knob = Instance.new("Frame")
+    Label.Font =
+        Enum.Font.GothamMedium
 
-	Knob.Size = UDim2.fromOffset(10, 10)
-	Knob.Position = UDim2.fromOffset(2, 2)
+    Label.TextXAlignment =
+        Enum.TextXAlignment.Left
 
-	Knob.BackgroundColor3 = C.White
-	Knob.BorderSizePixel = 0
+    Label.ZIndex = 14
 
-	Knob.Parent = Switch
+    Label.Parent = Row
 
-	local KnobCorner = Instance.new("UICorner")
-	KnobCorner.CornerRadius = UDim.new(1, 0)
-	KnobCorner.Parent = Knob
+    local Switch = Instance.new("TextButton")
 
-	local function UpdateVisual()
-		if State[Key] then
-			Switch.BackgroundColor3 = C.On
-			Knob.Position = UDim2.new(1, -12, 0, 2)
-		else
-			Switch.BackgroundColor3 = C.Off
-			Knob.Position = UDim2.fromOffset(2, 2)
-		end
-	end
+    Switch.Size =
+        UDim2.fromOffset(42, 22)
 
-	Switch.MouseButton1Click:Connect(function()
+    Switch.Position =
+        UDim2.new(
+            1,
+            -55,
+            0.5,
+            -11
+        )
 
-		State[Key] = not State[Key]
+    Switch.BackgroundColor3 =
+        Colors.Off
 
-		UpdateVisual()
+    Switch.BorderSizePixel = 0
 
-		-- Movement
-		if Key == "Speed"
-			or Key == "CustomSpeed" then
+    Switch.Text = ""
 
-			ApplySpeed()
-		end
+    Switch.AutoButtonColor = false
 
-		if Key == "CustomJump" then
-			ApplyJump()
-		end
+    Switch.ZIndex = 15
 
-		-- Infinite jump
-		if Key == "InfiniteJump" then
-			ApplyJump()
-		end
+    Switch.Parent = Row
 
-		-- ESP
-		if Key == "ESP"
-			or Key == "ESPLines"
-			or Key == "ESPRainbow"
-			or Key == "ESPTrack" then
+    local SwitchCorner = Instance.new("UICorner")
 
-			RefreshESP()
-		end
+    SwitchCorner.CornerRadius =
+        UDim.new(1, 0)
 
-		-- Animations
-		if Key == "AnimZombie" and State[Key] then
-			PlayAnimation("Zombie")
-		end
+    SwitchCorner.Parent = Switch
 
-		if Key == "AnimGhost" and State[Key] then
-			PlayAnimation("Ghost")
-		end
+    local Knob = Instance.new("Frame")
 
-		if Key == "AnimGoat" and State[Key] then
-			PlayAnimation("Goat")
-		end
+    Knob.Size =
+        UDim2.fromOffset(18, 18)
 
-		print(
-			"[Violet Core]",
-			Name,
-			State[Key] and "ON" or "OFF"
-		)
-	end)
+    Knob.Position =
+        UDim2.fromOffset(2, 2)
 
-	UpdateVisual()
+    Knob.BackgroundColor3 =
+        Colors.White
+
+    Knob.BorderSizePixel = 0
+
+    Knob.ZIndex = 16
+
+    Knob.Parent = Switch
+
+    local KnobCorner = Instance.new("UICorner")
+
+    KnobCorner.CornerRadius =
+        UDim.new(1, 0)
+
+    KnobCorner.Parent = Knob
+
+    local function UpdateVisual()
+
+        if State[Key] then
+
+            Switch.BackgroundColor3 =
+                Colors.On
+
+            Knob.Position =
+                UDim2.new(
+                    1,
+                    -20,
+                    0,
+                    2
+                )
+
+        else
+
+            Switch.BackgroundColor3 =
+                Colors.Off
+
+            Knob.Position =
+                UDim2.fromOffset(2, 2)
+        end
+    end
+
+    Switch.Activated:Connect(function()
+
+        State[Key] =
+            not State[Key]
+
+        UpdateVisual()
+
+        ApplyOption(Key)
+
+        print(
+            "[Violet Core FX]",
+            Name,
+            State[Key] and "ON" or "OFF"
+        )
+    end)
+
+    UpdateVisual()
 end
 
 --========================================================
@@ -832,76 +1445,134 @@ end
 
 local function CreateSelector(Name)
 
-	local Row = Instance.new("Frame")
+    local Row = Instance.new("Frame")
 
-	Row.Size = UDim2.new(1, 0, 0, 31)
+    Row.Size =
+        UDim2.new(1, 0, 0, 52)
 
-	Row.BackgroundColor3 = C.Panel2
-	Row.BorderSizePixel = 0
+    Row.BackgroundColor3 =
+        Colors.Panel2
 
-	Row.Parent = Options
+    Row.BorderSizePixel = 0
 
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 6)
-	Corner.Parent = Row
+    Row.ZIndex = 13
 
-	local Label = Instance.new("TextLabel")
+    Row.Parent = Options
 
-	Label.Size = UDim2.new(0.5, 0, 1, 0)
-	Label.Position = UDim2.fromOffset(8, 0)
+    local Corner = Instance.new("UICorner")
 
-	Label.BackgroundTransparency = 1
-	Label.Text = Name
+    Corner.CornerRadius =
+        UDim.new(0, 10)
 
-	Label.TextColor3 = C.Text
-	Label.TextSize = 8
-	Label.Font = Enum.Font.GothamMedium
-	Label.TextXAlignment = Enum.TextXAlignment.Left
+    Corner.Parent = Row
 
-	Label.Parent = Row
+    local Label = Instance.new("TextLabel")
 
-	local Button = Instance.new("TextButton")
+    Label.Size =
+        UDim2.new(
+            1,
+            -150,
+            1,
+            0
+        )
 
-	Button.Size = UDim2.fromOffset(72, 21)
-	Button.Position = UDim2.new(1, -80, 0.5, -10)
+    Label.Position =
+        UDim2.fromOffset(13, 0)
 
-	Button.BackgroundColor3 = C.Panel
-	Button.BorderSizePixel = 0
+    Label.BackgroundTransparency = 1
 
-	Button.Text = State.TargetPart
-	Button.TextColor3 = C.Accent
+    Label.Text = Name
 
-	Button.TextSize = 8
-	Button.Font = Enum.Font.GothamBold
+    Label.TextColor3 =
+        Colors.Text
 
-	Button.AutoButtonColor = false
-	Button.Parent = Row
+    Label.TextSize = 11
 
-	local ButtonCorner = Instance.new("UICorner")
-	ButtonCorner.CornerRadius = UDim.new(0, 5)
-	ButtonCorner.Parent = Button
+    Label.Font =
+        Enum.Font.GothamMedium
 
-	local Values = {
-		"Head",
-		"Torso",
-		"Feet"
-	}
+    Label.TextXAlignment =
+        Enum.TextXAlignment.Left
 
-	local Index = 1
+    Label.ZIndex = 14
 
-	Button.MouseButton1Click:Connect(function()
+    Label.Parent = Row
 
-		Index += 1
+    local Button = Instance.new("TextButton")
 
-		if Index > #Values then
-			Index = 1
-		end
+    Button.Size =
+        UDim2.fromOffset(105, 32)
 
-		State.TargetPart = Values[Index]
-		Button.Text = State.TargetPart
+    Button.Position =
+        UDim2.new(
+            1,
+            -118,
+            0.5,
+            -16
+        )
 
-		print("[Violet Core] Target:", State.TargetPart)
-	end)
+    Button.BackgroundColor3 =
+        Colors.Panel3
+
+    Button.BorderSizePixel = 0
+
+    Button.Text =
+        State.TargetPart
+
+    Button.TextColor3 =
+        Colors.Accent
+
+    Button.TextSize = 10
+
+    Button.Font =
+        Enum.Font.GothamBold
+
+    Button.AutoButtonColor = false
+
+    Button.ZIndex = 15
+
+    Button.Parent = Row
+
+    local ButtonCorner = Instance.new("UICorner")
+
+    ButtonCorner.CornerRadius =
+        UDim.new(0, 8)
+
+    ButtonCorner.Parent = Button
+
+    local Values = {
+        "Head",
+        "Torso",
+        "Feet"
+    }
+
+    local Index = 1
+
+    for Number, Value in ipairs(Values) do
+        if Value == State.TargetPart then
+            Index = Number
+        end
+    end
+
+    Button.Activated:Connect(function()
+
+        Index += 1
+
+        if Index > #Values then
+            Index = 1
+        end
+
+        State.TargetPart =
+            Values[Index]
+
+        Button.Text =
+            State.TargetPart
+
+        print(
+            "[Violet Core FX] Target:",
+            State.TargetPart
+        )
+    end)
 end
 
 --========================================================
@@ -910,89 +1581,152 @@ end
 
 local function CreateInfo(Name, Value)
 
-	local Row = Instance.new("Frame")
+    local Row = Instance.new("Frame")
 
-	Row.Size = UDim2.new(1, 0, 0, 40)
+    Row.Size =
+        UDim2.new(1, 0, 0, 58)
 
-	Row.BackgroundColor3 = C.Panel2
-	Row.BorderSizePixel = 0
+    Row.BackgroundColor3 =
+        Colors.Panel2
 
-	Row.Parent = Options
+    Row.BorderSizePixel = 0
 
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 6)
-	Corner.Parent = Row
+    Row.ZIndex = 13
 
-	local NameLabel = Instance.new("TextLabel")
+    Row.Parent = Options
 
-	NameLabel.Size = UDim2.new(1, -16, 0, 13)
-	NameLabel.Position = UDim2.fromOffset(8, 4)
+    local Corner = Instance.new("UICorner")
 
-	NameLabel.BackgroundTransparency = 1
-	NameLabel.Text = Name
+    Corner.CornerRadius =
+        UDim.new(0, 10)
 
-	NameLabel.TextColor3 = C.SubText
-	NameLabel.TextSize = 7
-	NameLabel.Font = Enum.Font.GothamMedium
+    Corner.Parent = Row
 
-	NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	NameLabel.Parent = Row
+    local NameLabel = Instance.new("TextLabel")
 
-	local ValueLabel = Instance.new("TextLabel")
+    NameLabel.Size =
+        UDim2.new(
+            1,
+            -26,
+            0,
+            18
+        )
 
-	ValueLabel.Size = UDim2.new(1, -16, 0, 16)
-	ValueLabel.Position = UDim2.fromOffset(8, 19)
+    NameLabel.Position =
+        UDim2.fromOffset(13, 8)
 
-	ValueLabel.BackgroundTransparency = 1
-	ValueLabel.Text = Value
+    NameLabel.BackgroundTransparency = 1
 
-	ValueLabel.TextColor3 = C.Text
-	ValueLabel.TextSize = 8
-	ValueLabel.Font = Enum.Font.GothamBold
+    NameLabel.Text = Name
 
-	ValueLabel.TextXAlignment = Enum.TextXAlignment.Left
-	ValueLabel.Parent = Row
+    NameLabel.TextColor3 =
+        Colors.SubText
+
+    NameLabel.TextSize = 9
+
+    NameLabel.Font =
+        Enum.Font.GothamMedium
+
+    NameLabel.TextXAlignment =
+        Enum.TextXAlignment.Left
+
+    NameLabel.Parent = Row
+
+    local ValueLabel = Instance.new("TextLabel")
+
+    ValueLabel.Size =
+        UDim2.new(
+            1,
+            -26,
+            0,
+            22
+        )
+
+    ValueLabel.Position =
+        UDim2.fromOffset(13, 29)
+
+    ValueLabel.BackgroundTransparency = 1
+
+    ValueLabel.Text = Value
+
+    ValueLabel.TextColor3 =
+        Colors.Text
+
+    ValueLabel.TextSize = 11
+
+    ValueLabel.Font =
+        Enum.Font.GothamBold
+
+    ValueLabel.TextXAlignment =
+        Enum.TextXAlignment.Left
+
+    ValueLabel.Parent = Row
 end
 
 --========================================================
--- SHOW SECTION
+-- SECTION DISPLAY
 --========================================================
 
 local function ShowSection(Section)
 
-	ClearOptions()
+    ClearOptions()
 
-	local SectionTitle = Instance.new("TextLabel")
+    local HeaderLabel =
+        Instance.new("TextLabel")
 
-	SectionTitle.Size = UDim2.new(1, 0, 0, 25)
+    HeaderLabel.Size =
+        UDim2.new(1, 0, 0, 30)
 
-	SectionTitle.BackgroundTransparency = 1
+    HeaderLabel.BackgroundTransparency = 1
 
-	SectionTitle.Text =
-		Section.Icon .. "   " .. Section.Name
+    HeaderLabel.Text =
+        Section.Icon
+        .. "   "
+        .. Section.Name
 
-	SectionTitle.TextColor3 = C.Text
-	SectionTitle.TextSize = 11
-	SectionTitle.Font = Enum.Font.GothamBold
+    HeaderLabel.TextColor3 =
+        Colors.Text
 
-	SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
+    HeaderLabel.TextSize = 15
 
-	SectionTitle.Parent = Options
+    HeaderLabel.Font =
+        Enum.Font.GothamBold
 
-	for _, Item in ipairs(Section.Items) do
+    HeaderLabel.TextXAlignment =
+        Enum.TextXAlignment.Left
 
-		if Item[1] == "toggle" then
-			CreateToggle(Item[2], Item[3])
+    HeaderLabel.ZIndex = 14
 
-		elseif Item[1] == "selector" then
-			CreateSelector(Item[2])
+    HeaderLabel.Parent = Options
 
-		elseif Item[1] == "info" then
-			CreateInfo(Item[2], Item[3])
-		end
-	end
+    for _, Item in ipairs(Section.Items) do
 
-	Options.CanvasPosition = Vector2.new(0, 0)
+        if Item[1] == "toggle" then
+
+            CreateToggle(
+                Item[2],
+                Item[3]
+            )
+
+        elseif Item[1] == "selector" then
+
+            CreateSelector(
+                Item[2]
+            )
+
+        elseif Item[1] == "info" then
+
+            CreateInfo(
+                Item[2],
+                Item[3]
+            )
+        end
+    end
+
+    task.defer(function()
+        Options.CanvasPosition =
+            Vector2.new(0, 0)
+    end)
 end
 
 --========================================================
@@ -1003,63 +1737,102 @@ local CategoryButtons = {}
 
 for Index, Section in ipairs(Sections) do
 
-	local Button = Instance.new("TextButton")
+    local Button =
+        Instance.new("TextButton")
 
-	Button.Size = UDim2.new(1, 0, 0, 30)
+    Button.Size =
+        UDim2.new(1, 0, 0, 39)
 
-	Button.BackgroundColor3 = C.Panel
-	Button.BorderSizePixel = 0
+    Button.BackgroundColor3 =
+        Colors.Panel
 
-	Button.Text =
-		Section.Icon .. "   " .. Section.Name
+    Button.BorderSizePixel = 0
 
-	Button.TextColor3 = C.SubText
-	Button.TextSize = 8
-	Button.Font = Enum.Font.GothamMedium
+    Button.Text =
+        Section.Icon
+        .. "   "
+        .. Section.Name
 
-	Button.TextXAlignment = Enum.TextXAlignment.Left
+    Button.TextColor3 =
+        Colors.SubText
 
-	Button.AutoButtonColor = false
-	Button.LayoutOrder = Index
+    Button.TextSize = 10
 
-	Button.Parent = Categories
+    Button.Font =
+        Enum.Font.GothamMedium
 
-	local Padding = Instance.new("UIPadding")
-	Padding.PaddingLeft = UDim.new(0, 8)
-	Padding.Parent = Button
+    Button.TextXAlignment =
+        Enum.TextXAlignment.Left
 
-	local Corner = Instance.new("UICorner")
-	Corner.CornerRadius = UDim.new(0, 6)
-	Corner.Parent = Button
+    Button.AutoButtonColor = false
 
-	CategoryButtons[Section.Name] = Button
+    Button.LayoutOrder = Index
 
-	Button.MouseButton1Click:Connect(function()
+    Button.ZIndex = 13
 
-		for _, Other in pairs(CategoryButtons) do
-			Other.BackgroundColor3 = C.Panel
-			Other.TextColor3 = C.SubText
-		end
+    Button.Parent = Categories
 
-		Button.BackgroundColor3 = C.AccentDark
-		Button.TextColor3 = C.White
+    local Padding =
+        Instance.new("UIPadding")
 
-		ShowSection(Section)
-	end)
+    Padding.PaddingLeft =
+        UDim.new(0, 12)
+
+    Padding.Parent = Button
+
+    local Corner =
+        Instance.new("UICorner")
+
+    Corner.CornerRadius =
+        UDim.new(0, 8)
+
+    Corner.Parent = Button
+
+    CategoryButtons[Section.Name] =
+        Button
+
+    Button.Activated:Connect(function()
+
+        for _, Other in pairs(
+            CategoryButtons
+        ) do
+
+            Other.BackgroundColor3 =
+                Colors.Panel
+
+            Other.TextColor3 =
+                Colors.SubText
+        end
+
+        Button.BackgroundColor3 =
+            Colors.AccentDark
+
+        Button.TextColor3 =
+            Colors.White
+
+        ShowSection(Section)
+    end)
 end
 
 --========================================================
 -- OPEN / CLOSE
 --========================================================
 
-OpenButton.MouseButton1Click:Connect(function()
-	Window.Visible = not Window.Visible
-	OpenButton.Visible = true
+OpenButton.Activated:Connect(function()
+
+    Window.Visible =
+        not Window.Visible
+
+    -- FX BUTTON ALWAYS REMAINS
+    -- VISIBLE.
+    OpenButton.Visible = true
 end)
 
-CloseButton.MouseButton1Click:Connect(function()
-	Window.Visible = false
-	OpenButton.Visible = true
+CloseButton.Activated:Connect(function()
+
+    Window.Visible = false
+
+    OpenButton.Visible = true
 end)
 
 --========================================================
@@ -1068,17 +1841,89 @@ end)
 
 local Minimized = false
 
-MinButton.MouseButton1Click:Connect(function()
+MinButton.Activated:Connect(function()
 
-	Minimized = not Minimized
+    Minimized =
+        not Minimized
 
-	Content.Visible = not Minimized
+    Content.Visible =
+        not Minimized
 
-	if Minimized then
-		Window.Size = UDim2.fromOffset(475, 50)
-	else
-		Window.Size = UDim2.fromOffset(475, 315)
-	end
+    if Minimized then
+
+        Window.Size =
+            UDim2.fromOffset(
+                650,
+                64
+            )
+
+    else
+
+        Window.Size =
+            UDim2.fromOffset(
+                650,
+                430
+            )
+    end
+end)
+
+--========================================================
+-- DRAGGING
+--========================================================
+
+local Dragging = false
+local DragStart = nil
+local StartPosition = nil
+
+Header.InputBegan:Connect(function(Input)
+
+    if Input.UserInputType ==
+        Enum.UserInputType.MouseButton1
+        or Input.UserInputType ==
+        Enum.UserInputType.Touch then
+
+        Dragging = true
+        DragStart = Input.Position
+        StartPosition = Window.Position
+    end
+end)
+
+Header.InputEnded:Connect(function(Input)
+
+    if Input.UserInputType ==
+        Enum.UserInputType.MouseButton1
+        or Input.UserInputType ==
+        Enum.UserInputType.Touch then
+
+        Dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(Input)
+
+    if not Dragging then
+        return
+    end
+
+    if Input.UserInputType ~=
+        Enum.UserInputType.MouseMovement
+        and Input.UserInputType ~=
+        Enum.UserInputType.Touch then
+
+        return
+    end
+
+    local Delta =
+        Input.Position - DragStart
+
+    Window.Position =
+        UDim2.new(
+            StartPosition.X.Scale,
+            StartPosition.X.Offset + Delta.X,
+
+            StartPosition.Y.Scale,
+            StartPosition.Y.Offset + Delta.Y
+        )
 end)
 
 --========================================================
@@ -1087,37 +1932,54 @@ end)
 
 LocalPlayer.CharacterAdded:Connect(function()
 
-	task.wait(0.4)
+    task.wait(0.5)
 
-	ApplySpeed()
-	ApplyJump()
+    UpdateSpeed()
+    UpdateJump()
 
-	if State.ESP then
-		task.wait(0.2)
-		RefreshESP()
-	end
+    if State.ESP then
+        UpdateESP()
+    end
+
+    if State.AnimZombie then
+        PlayAnimation("Zombie")
+    elseif State.AnimGhost then
+        PlayAnimation("Ghost")
+    elseif State.AnimGoat then
+        PlayAnimation("Goat")
+    end
 end)
 
 --========================================================
--- INITIALIZATION
+-- INITIAL STATE
 --========================================================
 
 Window.Visible = false
 OpenButton.Visible = true
 
-local FirstButton = CategoryButtons["Combat"]
+local CombatButton =
+    CategoryButtons["Combat"]
 
-if FirstButton then
-	FirstButton.BackgroundColor3 = C.AccentDark
-	FirstButton.TextColor3 = C.White
+if CombatButton then
+
+    CombatButton.BackgroundColor3 =
+        Colors.AccentDark
+
+    CombatButton.TextColor3 =
+        Colors.White
 end
 
 ShowSection(Sections[1])
 
-print("====================================")
-print("Violet Core B11")
+--========================================================
+-- STARTUP
+--========================================================
+
+print("----------------------------------------")
+print("Violet Core FX")
 print("Created by José FX")
-print("UI initialized successfully")
-print("Menu starts CLOSED")
-print("Open button remains visible")
-print("====================================")
+print("UI initialized")
+print("FX button initialized")
+print("Menu initialized CLOSED")
+print("----------------------------------------")
+```
