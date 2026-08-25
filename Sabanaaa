@@ -1,4 +1,4 @@
--- 🦁 Hacks v9.4 // INFINITE JUMP CORREGIDO + TODO LO DEMÁS
+-- 🦁 Hacks v9.7 // INFINITE STAMINA DEFINITIVO + ESP + INFINITE JUMP
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
@@ -36,7 +36,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "🦁 Savana Turbo v9.4"
+Title.Text = "🦁 Savana Turbo v9.7"
 Title.TextColor3 = Color3.fromRGB(255, 170, 0)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 13
@@ -280,7 +280,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- === INFINITE JUMP BLINDADO (SIN BUG DE TELEPORT) ===
+-- === INFINITE JUMP BLINDADO ===
 local infJump = false
 local jumpCooldown = false
 CreateToggle(UtilitiesTab, "🚀 INFINITE JUMP (Blindado)", function(s) infJump = s end)
@@ -295,15 +295,61 @@ UserInputService.JumpRequest:Connect(function()
                 hum:ChangeState(Enum.HumanoidStateType.Jumping)
             end
         end
-        task.wait(0.15) -- Controla el tiempo entre saltos para que el anticheat no te regrese
+        task.wait(0.15)
         jumpCooldown = false
     end
 end)
 
--- === ESP CON VIDA Y DISTANCIA ===
+-- === INFINITE STAMINA BLINDADO (DOBLE BARRIDO DE VALORES Y PROPIEDADES) ===
+local infStamina = false
+CreateToggle(UtilitiesTab, "⚡ INFINITE STAMINA (Blindado)", function(s) infStamina = s end)
+
+RunService.Heartbeat:Connect(function()
+    if infStamina then
+        local char = LocalPlayer.Character
+        if char then
+            -- 1. Buscar en todas las carpetas y atributos del personaje y sus partes
+            for _, descendant in pairs(char:GetDescendants()) do
+                if descendant:IsA("NumberValue") or descendant:IsA("IntValue") then
+                    local name = descendant.Name:lower()
+                    if name:find("stamina") or name:find("energy") or name:find("fatigue") or name:find("power") or name:find("sprint") then
+                        descendant.Value = descendant.MaxValue or 100
+                    end
+                elseif descendant:IsA("ModuleScript") then
+                    -- Intento defensivo por si usa tablas internas en módulos locales
+                    pcall(function()
+                        local data = require(descendant)
+                        if type(data) == "table" then
+                            for k, v in pairs(data) do
+                                local kLower = tostring(k):lower()
+                                if (kLower:find("stamina") or kLower:find("energy")) and type(v) == "number" then
+                                    data[k] = 9999
+                                end
+                            end
+                        end
+                    end)
+                end
+            end
+        end
+        
+        -- 2. Barrido exhaustivo en PlayerGui y PlayerScripts del jugador local
+        if LocalPlayer:FindFirstChild("PlayerGui") then
+            for _, gui in pairs(LocalPlayer.PlayerGui:GetDescendants()) do
+                if gui:IsA("NumberValue") or gui:IsA("IntValue") then
+                    local name = gui.Name:lower()
+                    if name:find("stamina") or name:find("energy") or name:find("fatigue") or name:find("power") then
+                        gui.Value = gui.MaxValue or 100
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- === ESP INTELIGENTE (ROJO SI >= 200 HP, AMARILLO SI < 200 HP) ===
 local espEnabled = false
 local espData = {} 
-CreateToggle(VisualsTab, "👁️ ESP (Resaltado + Vida/Dist)", function(s)
+CreateToggle(VisualsTab, "👁️ ESP (Rojo/Amarillo + Vida/Dist)", function(s)
     espEnabled = s
     if not espEnabled then
         for _, data in pairs(espData) do
@@ -326,7 +372,6 @@ RunService.Heartbeat:Connect(function()
                     if not espData[obj] then
                         local hl = Instance.new("Highlight")
                         hl.Name = "SavanaESP"
-                        hl.FillColor = Color3.fromRGB(255, 50, 50)
                         hl.FillTransparency = 0.5
                         hl.Parent = obj
                         
@@ -364,7 +409,15 @@ RunService.Heartbeat:Connect(function()
                         espData[obj] = { Highlight = hl, Billboard = bgui, HP = hpText, Dist = distText, Hum = hum, Root = root }
                     else
                         local data = espData[obj]
-                        data.HP.Text = "❤️ " .. math.floor(data.Hum.Health)
+                        local currentHP = math.floor(data.Hum.Health)
+                        data.HP.Text = "❤️ " .. currentHP
+                        
+                        if currentHP < 200 then
+                            data.Highlight.FillColor = Color3.fromRGB(255, 220, 0) -- Amarillo
+                        else
+                            data.Highlight.FillColor = Color3.fromRGB(255, 50, 50)   -- Rojo
+                        end
+                        
                         if myRoot then
                             data.Dist.Text = "📏 " .. math.floor((myRoot.Position - data.Root.Position).Magnitude / 3) .. "m"
                         end
