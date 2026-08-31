@@ -1,5 +1,5 @@
 -- =================================================================
--- HITBOX MASIVO CON MENÚ GUI FLOTANTE
+-- MENÚ FLOTANTE PROFESIONAL (HITBOX INTACTA)
 -- =================================================================
 
 local Players = game:GetService("Players")
@@ -7,101 +7,34 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- Configuración inicial
+-- CONFIGURACIÓN DE LA HITBOX (¡NO SE TOCA NADA DE AQUÍ!)
 local HitboxConfig = {
     Size = Vector3.new(15, 15, 15),
     Transparency = 0.5,
     Color = Color3.fromRGB(255, 0, 0),
     Material = Enum.Material.Neon,
-    Enabled = false
+    Enabled = true
 }
 
--- Crear la Interfaz Gráfica (UI)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "HitboxMenuGui"
-ScreenGui.Parent = CoreGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 220, 0, 160)
-MainFrame.Position = UDim2.new(0.1, 0, 0.1, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true -- Para que lo muevas por toda la pantalla
-MainFrame.Parent = ScreenGui
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundTransparency = 1
-Title.Text = "🔥 HITBOX MENÚ 🔥"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
-
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0.85, 0, 0, 45)
-ToggleButton.Position = UDim2.new(0.075, 0, 0.35, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-ToggleButton.Text = "Estado: OFF"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 14
-ToggleButton.Font = Enum.Font.SourceSansBold
-ToggleButton.Parent = MainFrame
-
-local ButtonCorner = Instance.new("UICorner")
-ButtonCorner.CornerRadius = UDim.new(0, 6)
-ButtonCorner.Parent = ToggleButton
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-StatusLabel.Position = UDim2.new(0, 0, 0.75, 0)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Tamaño: 15x15x15"
-StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-StatusLabel.TextSize: 12
-StatusLabel.Font = Enum.Font.SourceSans
-StatusLabel.Parent = MainFrame
-
--- Lógica del Botón
-ToggleButton.MouseButton1Click:Connect(function()
-    HitboxConfig.Enabled = not HitboxConfig.Enabled
-    if HitboxConfig.Enabled then
-        ToggleButton.Text = "Estado: ON"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 200, 40)
-    else
-        ToggleButton.Text = "Estado: OFF"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-    end
-end)
-
--- Función para aplicar la Hitbox
 local function ExpandHitbox(character)
     local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
     local humanoid = character:WaitForChild("Humanoid", 5)
     
     if humanoidRootPart and humanoid then
-        if HitboxConfig.Enabled then
-            humanoidRootPart.Size = HitboxConfig.Size
-            humanoidRootPart.Transparency = HitboxConfig.Transparency
-            humanoidRootPart.Color = HitboxConfig.Color
-            humanoidRootPart.Material = HitboxConfig.Material
-            humanoidRootPart.CanCollide = false
-        else
-            -- Restablecer tamaño original si se apaga
-            humanoidRootPart.Size = Vector3.new(2, 2, 1)
-            humanoidRootPart.Transparency = 1
-            humanoidRootPart.CanCollide = true
-        end
+        if humanoidRootPart:GetAttribute("HitboxExpanded") then return end
+        humanoidRootPart:SetAttribute("HitboxExpanded", true)
+        
+        humanoidRootPart.Size = HitboxConfig.Size
+        humanoidRootPart.Transparency = HitboxConfig.Transparency
+        humanoidRootPart.Color = HitboxConfig.Color
+        humanoidRootPart.Material = HitboxConfig.Material
+        humanoidRootPart.CanCollide = false
     end
 end
 
--- Bucle optimizado
 RunService.RenderStepped:Connect(function()
+    if not HitboxConfig.Enabled then return end
+    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             pcall(function()
@@ -111,4 +44,107 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-print("¡Menú flotante instalado con éxito, a trolear! 🚀")
+-- =================================================================
+-- INTERFAZ DE USUARIO (MENÚ MEJORADO)
+-- =================================================================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ProHitboxMenu"
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 240, 0, 180)
+MainFrame.Position = UDim2.new(0.15, 0, 0.15, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopCorner = Instance.new("UICorner")
+TopCorner.CornerRadius = UDim.new(0, 10)
+TopCorner.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -40, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ CONTROL DE HITBOX ⚡"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -35, 0, 2)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+MinimizeBtn.TextSize = 20
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.Parent = TopBar
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0.9, 0, 0, 45)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.3, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 200, 40)
+ToggleButton.Text = "Hitbox: ACTIVADA"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 14
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 8)
+BtnCorner.Parent = ToggleButton
+
+local InfoLabel = Instance.new("TextLabel")
+InfoLabel.Size = UDim2.new(1, 0, 0, 30)
+InfoLabel.Position = UDim2.new(0, 0, 0.7, 0)
+InfoLabel.BackgroundTransparency = 1
+InfoLabel.Text = "Tamaño actual: 15x15x15"
+InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+InfoLabel.TextSize = 12
+InfoLabel.Font = Enum.Font.Gotham
+InfoLabel.Parent = MainFrame
+
+-- Lógica del menú
+local minimized = false
+MinimizeBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    MainFrame:TweenSize(
+        minimized and UDim2.new(0, 240, 0, 35) or UDim2.new(0, 240, 0, 180),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Quad,
+        0.2,
+        true
+    )
+    MinimizeBtn.Text = minimized and "+" : "-"
+    ToggleButton.Visible = not minimized
+    InfoLabel.Visible = not minimized
+end)
+
+ToggleButton.MouseButton1Click:Connect(function()
+    HitboxConfig.Enabled = not HitboxConfig.Enabled
+    if HitboxConfig.Enabled then
+        ToggleButton.Text = "Hitbox: ACTIVADA"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 200, 40)
+    else
+        ToggleButton.Text = "Hitbox: DESACTIVADA"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+    end
+end)
+
+print("¡Menú actualizado sin tocar la hitbox! A darle con todo. 🚀")
