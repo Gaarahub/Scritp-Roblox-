@@ -1,0 +1,49 @@
+-- =================================================================
+-- SCRIPT HITBOX MASIVO Y ULTRA-OPTIMIZADO
+-- =================================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Configuración chingona de la Hitbox
+local HitboxConfig = {
+    Size = Vector3.new(15, 15, 15), -- Tamaño grandote para no fallar ni un tiro
+    Transparency = 0.5,             -- Semi-transparente para que se vea mamalon
+    Color = Color3.fromRGB(255, 0, 0), -- Rojo sangre
+    Material = Enum.Material.Neon,
+    Enabled = true
+}
+
+local function ExpandHitbox(character)
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    
+    if humanoidRootPart and humanoid then
+        -- Evitamos que se buguee si ya está aplicado
+        if humanoidRootPart:GetAttribute("HitboxExpanded") then return end
+        humanoidRootPart:SetAttribute("HitboxExpanded", true)
+        
+        -- Ajustamos el tamaño a lo bestia
+        humanoidRootPart.Size = HitboxConfig.Size
+        humanoidRootPart.Transparency = HitboxConfig.Transparency
+        humanoidRootPart.Color = HitboxConfig.Color
+        humanoidRootPart.Material = HitboxConfig.Material
+        humanoidRootPart.CanCollide = false
+    end
+end
+
+-- Bucle rápido y optimizado para agarrar a todos los enemigos a la vez
+RunService.RenderStepped:Connect(function()
+    if not HitboxConfig.Enabled then return end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            pcall(function()
+                ExpandHitbox(player.Character)
+            end)
+        end
+    end
+end)
+
+print("¡Hitbox mamalon activada con éxito, a romper el juego! 🔥")
