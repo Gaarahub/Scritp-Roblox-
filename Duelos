@@ -1,12 +1,12 @@
--- =================================================================
--- RAYFIELD UI - ANTICONTADOR DE CUENTA REGRESIVA ⚡🚀
--- =================================================================
+-- ================================================================
+-- RAYFIELD UI - HUB PRO COMPLETO (HITBOX HASTA 100 STUDS) ⚡🚀
+-- ================================================================
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "Hub Pro - Anti Countdown 🛡️",
-   LoadingTitle = "Cargando Bypass alv...",
+   Name = "Hub Pro - Full Version 🛡️",
+   LoadingTitle = "Cargando Hack alv...",
    LoadingSubtitle = "by Tu Mejor Amigo",
    ConfigurationSaving = { Enabled = false },
    Discord = { Enabled = false },
@@ -30,7 +30,10 @@ local Config = {
     HitboxColor = Color3.fromRGB(0, 150, 255),
     ESPEnabled = true,
     InfiniteJump = true,
-    AntiCountdown = true
+    AntiCountdown = true,
+    NoClip = false,
+    WalkSpeedEnabled = false,
+    WalkSpeed = 16
 }
 
 local originalSizes = {}
@@ -78,132 +81,76 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ================================================================
+-- NOCLIP LOOP
+-- ================================================================
+
+RunService.Stepped:Connect(function()
+    if Config.NoClip and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- ================================================================
+-- WALKSPEED LOOP
+-- ================================================================
+
+RunService.Stepped:Connect(function()
+    if not Config.WalkSpeedEnabled then return end
+
+    local character = LocalPlayer.Character
+    if not character then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = Config.WalkSpeed
+    end
+end)
+
+-- ================================================================
 -- ANTI-CONTADOR
--- DETECTA EL CONTADOR AUNQUE NO TENGA TEXTO
--- "EL JUEGO COMIENZA EN..."
 -- ================================================================
 
 task.spawn(function()
-
     local previousValues = {}
 
     while task.wait(0.1) do
-
         if Config.AntiCountdown then
-
             pcall(function()
-
                 local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-
-                if not playerGui then
-                    return
-                end
+                if not playerGui then return end
 
                 for _, gui in ipairs(playerGui:GetDescendants()) do
-
-                    if gui:IsA("TextLabel")
-                    or gui:IsA("TextButton")
-                    or gui:IsA("TextBox") then
-
+                    if gui:IsA("TextLabel") or gui:IsA("TextButton") or gui:IsA("TextBox") then
                         local text = tostring(gui.Text or "")
                         local lowerText = string.lower(text)
-
-                        -- Nombre del objeto/interfaz
                         local objectName = string.lower(gui.Name or "")
-
-                        -- Nombre de los padres
                         local parent = gui.Parent
-                        local parentName = ""
+                        local parentName = parent and string.lower(parent.Name or "") or ""
 
-                        if parent then
-                            parentName = string.lower(parent.Name or "")
-                        end
+                        local countdownName = objectName:find("countdown") or objectName:find("timer") or objectName:find("count") or objectName:find("start") or objectName:find("round") or objectName:find("match") or parentName:find("countdown") or parentName:find("timer") or parentName:find("count") or parentName:find("start") or parentName:find("round") or parentName:find("match")
+                        local countdownText = lowerText:find("comienza") or lowerText:find("comenzando") or lowerText:find("comenzara") or lowerText:find("comenzará") or lowerText:find("empieza") or lowerText:find("inicia") or lowerText:find("starting") or lowerText:find("starts in") or lowerText:find("start in") or lowerText:find("waiting") or lowerText:find("esperando") or lowerText:find("countdown")
 
-                        -- Buscar palabras relacionadas con contador
-                        local countdownName =
-                            objectName:find("countdown")
-                            or objectName:find("timer")
-                            or objectName:find("count")
-                            or objectName:find("start")
-                            or objectName:find("round")
-                            or objectName:find("match")
-                            or parentName:find("countdown")
-                            or parentName:find("timer")
-                            or parentName:find("count")
-                            or parentName:find("start")
-                            or parentName:find("round")
-                            or parentName:find("match")
-
-                        -- Frases conocidas
-                        local countdownText =
-                            lowerText:find("comienza")
-                            or lowerText:find("comenzando")
-                            or lowerText:find("comenzara")
-                            or lowerText:find("comenzará")
-                            or lowerText:find("empieza")
-                            or lowerText:find("inicia")
-                            or lowerText:find("starting")
-                            or lowerText:find("starts in")
-                            or lowerText:find("start in")
-                            or lowerText:find("waiting")
-                            or lowerText:find("esperando")
-                            or lowerText:find("countdown")
-
-                        -- Detectar formatos de tiempo
                         local cleanText = text:gsub("%s+", "")
-
-                        local isTime =
-                            cleanText:match("^%d+:%d+$") ~= nil
-                            or cleanText:match("^%d+:%d+:%d+$") ~= nil
-
-                        -- Detectar números pequeños usados normalmente
-                        -- en cuentas regresivas.
+                        local isTime = cleanText:match("^%d+:%d+$") ~= nil or cleanText:match("^%d+:%d+:%d+$") ~= nil
                         local numberValue = tonumber(cleanText)
+                        local isSmallNumber = numberValue ~= nil and numberValue >= 0 and numberValue <= 60
 
-                        local isSmallNumber =
-                            numberValue ~= nil
-                            and numberValue >= 0
-                            and numberValue <= 60
-
-                        -- Comprobar si el valor está cambiando.
                         local oldValue = previousValues[gui]
                         local valueChanged = oldValue ~= nil and oldValue ~= text
-
                         previousValues[gui] = text
 
-                        -- ====================================================
-                        -- DECISIÓN
-                        -- ====================================================
-
                         local shouldHide = false
-
-                        -- Si el propio nombre indica que es contador
-                        if countdownName then
-                            shouldHide = true
-                        end
-
-                        -- Si contiene una frase de inicio
-                        if countdownText then
-                            shouldHide = true
-                        end
-
-                        -- Si es formato 00:10 / 0:10 y está cambiando
-                        if isTime and valueChanged then
-                            shouldHide = true
-                        end
-
-                        -- Si es un número pequeño que está cambiando
-                        -- y pertenece a una interfaz relacionada con partida.
-                        if isSmallNumber
-                        and valueChanged
-                        and countdownName then
+                        if countdownName or countdownText or (isTime and valueChanged) or (isSmallNumber and valueChanged and countdownName) then
                             shouldHide = true
                         end
 
                         if shouldHide then
                             gui.Visible = false
                         end
-
                     end
                 end
             end)
@@ -216,18 +163,13 @@ end)
 -- ================================================================
 
 UserInputService.JumpRequest:Connect(function()
-
     if Config.InfiniteJump then
-
         pcall(function()
-
             local character = LocalPlayer.Character
             local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-
             if humanoid then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
             end
-
         end)
     end
 end)
@@ -237,21 +179,15 @@ end)
 -- ================================================================
 
 RunService.RenderStepped:Connect(function()
-
     for _, player in ipairs(Players:GetPlayers()) do
-
         if player ~= LocalPlayer and player.Character then
-
             pcall(function()
-
                 local char = player.Character
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 local hl = char:FindFirstChild("Rayfield_Highlight")
 
                 if Config.ESPEnabled and hum and hum.Health > 0 then
-
                     if not hl then
-
                         hl = Instance.new("Highlight")
                         hl.Name = "Rayfield_Highlight"
                         hl.Adornee = char
@@ -259,17 +195,12 @@ RunService.RenderStepped:Connect(function()
                         hl.OutlineTransparency = 0
                         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                         hl.Parent = char
-
                     end
-
                     hl.FillColor = Config.HitboxColor
                     hl.OutlineColor = Config.HitboxColor
                     hl.Enabled = true
-
                 elseif hl then
-
                     hl.Enabled = false
-
                 end
             end)
         end
@@ -284,28 +215,19 @@ TabCombate:CreateToggle({
    Name = "Hitbox Gigante",
    CurrentValue = true,
    Flag = "HitboxToggle",
-
    Callback = function(Value)
-
       Config.HitboxEnabled = Value
-
       if not Value then
-
           for _, player in ipairs(Players:GetPlayers()) do
-
               if player ~= LocalPlayer and player.Character then
-
                   pcall(function()
-
                       local hrp = player.Character:FindFirstChild("HumanoidRootPart")
                       local orig = originalSizes[player.Character]
-
                       if hrp and orig then
                           hrp.Size = orig
                           hrp.Transparency = 1
                           hrp.CanCollide = true
                       end
-
                   end)
               end
           end
@@ -315,16 +237,13 @@ TabCombate:CreateToggle({
 
 TabCombate:CreateSlider({
    Name = "Tamaño de Hitbox",
-   Range = {5, 40},
+   Range = {5, 100},
    Increment = 1,
    Suffix = " studs",
    CurrentValue = 15,
    Flag = "HitboxSizeSlider",
-
    Callback = function(Value)
-
       Config.HitboxSize = Vector3.new(Value, Value, Value)
-
    end,
 })
 
@@ -335,11 +254,8 @@ TabCombate:CreateSlider({
    Suffix = "",
    CurrentValue = 0.1,
    Flag = "HitboxTransparencySlider",
-
    Callback = function(Value)
-
       Config.HitboxTransparency = Value
-
    end,
 })
 
@@ -351,11 +267,8 @@ TabMovimiento:CreateToggle({
    Name = "Salto Infinito",
    CurrentValue = true,
    Flag = "JumpToggle",
-
    Callback = function(Value)
-
       Config.InfiniteJump = Value
-
    end,
 })
 
@@ -363,11 +276,44 @@ TabMovimiento:CreateToggle({
    Name = "Anti-Contador (Cuenta Regresiva)",
    CurrentValue = true,
    Flag = "AntiCountdownToggle",
-
    Callback = function(Value)
-
       Config.AntiCountdown = Value
+   end,
+})
 
+TabMovimiento:CreateToggle({
+    Name = "NoClip 👻",
+    CurrentValue = false,
+    Flag = "NoClipToggle",
+    Callback = function(Value)
+        Config.NoClip = Value
+    end,
+})
+
+TabMovimiento:CreateToggle({
+    Name = "Activar Velocidad ⚡",
+    CurrentValue = false,
+    Flag = "WalkSpeedToggle",
+    Callback = function(Value)
+        Config.WalkSpeedEnabled = Value
+        if not Value and LocalPlayer.Character then
+            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = 16
+            end
+        end
+    end,
+})
+
+TabMovimiento:CreateSlider({
+   Name = "Velocidad (WalkSpeed)",
+   Range = {16, 120},
+   Increment = 1,
+   Suffix = " studs",
+   CurrentValue = 16,
+   Flag = "WalkSpeedSlider",
+   Callback = function(Value)
+      Config.WalkSpeed = Value
    end,
 })
 
@@ -379,76 +325,49 @@ TabVisuales:CreateToggle({
    Name = "ESP Paredes",
    CurrentValue = true,
    Flag = "ESPToggle",
-
    Callback = function(Value)
-
       Config.ESPEnabled = Value
-
       for _, player in ipairs(Players:GetPlayers()) do
-
           if player ~= LocalPlayer and player.Character then
-
               pcall(function()
-
                   local hl = player.Character:FindFirstChild("Rayfield_Highlight")
-
                   if hl then
                       hl.Enabled = Value
                   end
-
               end)
           end
       end
    end,
 })
 
--- ================================================================
--- SELECTOR DE COLOR
--- ================================================================
-
 TabVisuales:CreateDropdown({
    Name = "Color de Hitbox y ESP",
-
    Options = {
       "Azul Eléctrico",
       "Rojo Sangre",
       "Verde Tóxico",
       "Morado Psicodélico"
    },
-
    CurrentOption = {"Azul Eléctrico"},
    Flag = "ColorDropdown",
-
    Callback = function(Option)
-
       if type(Option) == "table" then
           Option = Option[1]
       end
 
       if Option == "Azul Eléctrico" then
-
           Config.HitboxColor = Color3.fromRGB(0, 150, 255)
-
       elseif Option == "Rojo Sangre" then
-
           Config.HitboxColor = Color3.fromRGB(255, 0, 0)
-
       elseif Option == "Verde Tóxico" then
-
           Config.HitboxColor = Color3.fromRGB(50, 255, 50)
-
       elseif Option == "Morado Psicodélico" then
-
           Config.HitboxColor = Color3.fromRGB(180, 0, 255)
-
       end
 
       for _, player in ipairs(Players:GetPlayers()) do
-
           if player ~= LocalPlayer and player.Character then
-
               pcall(function()
-
                   local hrp = player.Character:FindFirstChild("HumanoidRootPart")
                   local hl = player.Character:FindFirstChild("Rayfield_Highlight")
 
@@ -460,7 +379,6 @@ TabVisuales:CreateDropdown({
                       hl.FillColor = Config.HitboxColor
                       hl.OutlineColor = Config.HitboxColor
                   end
-
               end)
           end
       end
@@ -469,4 +387,4 @@ TabVisuales:CreateDropdown({
 
 Rayfield:LoadConfiguration()
 
-print("¡Anti-contador activado! 🚀🔥")
+print("¡Hitbox a 100 studs activada alv! 🚀🔥")
