@@ -2,7 +2,7 @@
 	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
 ]]
 -- =====================================================
---  Stretched Screen, Noclip, Inf Jump, ESP, Hitbox Expander & Rapid Fire by 1AN
+--  Stretched Screen, Noclip, Inf Jump, ESP, Extended Hitbox (Wallbang + Color Customizer), Rapid Fire, No Recoil, Fast Reload & Key System by 1AN
 --  Created by Alex X (ydHldYudti)
 -- =====================================================
 
@@ -12,6 +12,21 @@ local Window = Rayfield:CreateWindow({
     Name = "Stretched Screen by 1AN",
     LoadingTitle = "Cargando script...",
     LoadingSubtitle = "by Alex X",
+    ConfigurationSaving = {
+        Enabled = false,
+        FolderName = nil,
+        FileName = "StretchedScreen1AN"
+    },
+    KeySystem = true,
+    KeySettings = {
+        Title = "Sistema de Key",
+        Subtitle = "Introduce la key para continuar",
+        Note = "",
+        FileName = "1ANKey",
+        SaveKey = true,
+        GrabKeyFromSite = false,
+        Key = {"femboy", "Femboy", "FEMBOY"}
+    }
 })
 
 -- =====================================================
@@ -67,65 +82,124 @@ UIS.JumpRequest:Connect(function()
 end)
 
 -- =====================================================
---  PESTAÑA: COMBATE (Hitbox Expander & Rapid Fire)
+--  PESTAÑA: COMBATE (Hitbox Extendido, Wallbang, Cambios de Color & Armas)
 -- =====================================================
 local CombatTab = Window:CreateTab("⚔️ Combate", 4483362458)
 
-CombatTab:CreateSection("📦 Hitbox Expander (Agrandar Jugadores)")
+CombatTab:CreateSection("📦 Hitbox Extendido (Todo el Cuerpo + A Través de Paredes)")
 
 getgenv().HitboxEnabled = false
-getgenv().HitboxSize = 5
-getgenv().HitboxTransparency = 0.7
+getgenv().HitboxSize = 12
+getgenv().HitboxInvisible = false
+getgenv().HitboxColor = Color3.fromRGB(255, 0, 0) -- Color por defecto: Rojo
 
 CombatTab:CreateToggle({
-    Name = "Activar Hitbox Expander",
+    Name = "Activar Hitbox Extendido",
     CurrentValue = false,
     Callback = function(Value)
         getgenv().HitboxEnabled = Value
     end,
 })
 
+CombatTab:CreateToggle({
+    Name = "Hitbox Invisible (100% Oculta)",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().HitboxInvisible = Value
+    end,
+})
+
 CombatTab:CreateSlider({
     Name = "Tamaño de Hitbox",
-    Range = {2, 20},
+    Range = {5, 40},
     Increment = 1,
-    CurrentValue = 5,
+    CurrentValue = 12,
     Callback = function(Value)
         getgenv().HitboxSize = Value
     end,
 })
 
-CombatTab:CreateSlider({
-    Name = "Transparencia de Hitbox",
-    Range = {0, 1},
-    Increment = 0.1,
-    CurrentValue = 0.7,
-    Callback = function(Value)
-        getgenv().HitboxTransparency = Value
+CombatTab:CreateDropdown({
+    Name = "Color de la Hitbox",
+    Options = {"Rojo", "Azul", "Verde", "Amarillo", "Morado", "Blanco", "Cian", "Arcoíris (RGB)"},
+    CurrentOption = "Rojo",
+    Callback = function(Option)
+        if Option == "Rojo" then
+            getgenv().HitboxColor = Color3.fromRGB(255, 0, 0)
+            getgenv().RainbowHitbox = false
+        elseif Option == "Azul" then
+            getgenv().HitboxColor = Color3.fromRGB(0, 0, 255)
+            getgenv().RainbowHitbox = false
+        elseif Option == "Verde" then
+            getgenv().HitboxColor = Color3.fromRGB(0, 255, 0)
+            getgenv().RainbowHitbox = false
+        elseif Option == "Amarillo" then
+            getgenv().HitboxColor = Color3.fromRGB(255, 255, 0)
+            getgenv().RainbowHitbox = false
+        elseif Option == "Morado" then
+            getgenv().HitboxColor = Color3.fromRGB(128, 0, 128)
+            getgenv().RainbowHitbox = false
+        elseif Option == "Blanco" then
+            getgenv().HitboxColor = Color3.fromRGB(255, 255, 255)
+            getgenv().RainbowHitbox = false
+        elseif Option == "Cian" then
+            getgenv().HitboxColor = Color3.fromRGB(0, 255, 255)
+            getgenv().RainbowHitbox = false
+        elseif Option == "Arcoíris (RGB)" then
+            getgenv().RainbowHitbox = true
+        end
     end,
 })
 
--- Bucle de Hitbox Expander
+-- Bucle ampliado: Cubre todo el cuerpo, desactiva colisiones, soporta wallbang y cambio de color dinámico/arcoíris
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
-        if getgenv().HitboxEnabled then
-            for _, player in ipairs(game.Players:GetPlayers()) do
-                if player ~= game.Players.LocalPlayer and player.Character then
-                    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
-                    if rootPart then
-                        rootPart.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                        rootPart.Transparency = getgenv().HitboxTransparency
-                        rootPart.CanCollide = false
-                    end
-                end
-            end
-        else
-            for _, player in ipairs(game.Players:GetPlayers()) do
-                if player ~= game.Players.LocalPlayer and player.Character then
-                    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
-                    if rootPart then
-                        rootPart.Size = Vector3.new(2, 2, 1)
-                        rootPart.Transparency = 1
+        -- Si está activado el modo arcoíris, calculamos el color en base al tiempo
+        if getgenv().RainbowHitbox then
+            local hue = tick() % 5 / 5
+            getgenv().HitboxColor = Color3.fromHSV(hue, 1, 1)
+        end
+
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character then
+                local character = player.Character
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                
+                if humanoid and humanoid.Health > 0 then
+                    local allParts = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftLowerLeg", "RightLowerLeg", "LeftUpperLeg", "RightUpperLeg"}
+                    for _, partName in ipairs(allParts) do
+                        local part = character:FindFirstChild(partName)
+                        if part and part:IsA("BasePart") then
+                            if getgenv().HitboxEnabled then
+                                part.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                                part.CanCollide = false
+                                part.Massless = true
+                                part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+                                part.CanQuery = false
+                                
+                                if getgenv().HitboxInvisible then
+                                    part.Transparency = 1
+                                    part.Material = Enum.Material.Plastic
+                                else
+                                    part.Transparency = 0.5
+                                    part.Color = getgenv().HitboxColor
+                                    part.Material = Enum.Material.Neon
+                                end
+                            else
+                                part.Material = Enum.Material.Plastic
+                                part.CanQuery = true
+                                if partName == "HumanoidRootPart" then
+                                    part.Size = Vector3.new(2, 2, 1)
+                                    part.Transparency = 1
+                                elseif partName == "Head" then
+                                    part.Size = Vector3.new(2, 1, 1)
+                                    part.Transparency = 0
+                                else
+                                    part.Size = Vector3.new(2, 2, 1)
+                                    part.Transparency = 0
+                                end
+                            end
+                        end
                     end
                 end
             end
@@ -133,9 +207,11 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end)
 end)
 
-CombatTab:CreateSection("🔥 Rapid Fire (Disparo Rápido)")
+CombatTab:CreateSection("🔥 Armas (Rapid Fire, No Recoil & Fast Reload)")
 
 getgenv().RapidFireEnabled = false
+getgenv().NoRecoilEnabled = false
+getgenv().FastReloadEnabled = false
 
 CombatTab:CreateToggle({
     Name = "Rapid Fire (Ametralladora)",
@@ -145,19 +221,46 @@ CombatTab:CreateToggle({
     end,
 })
 
+CombatTab:CreateToggle({
+    Name = "No Recoil (Sin Retroceso)",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().NoRecoilEnabled = Value
+    end,
+})
+
+CombatTab:CreateToggle({
+    Name = "Fast Reload (Recarga Rápida)",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().FastReloadEnabled = Value
+    end,
+})
+
+-- Tarea para Rapid Fire, No Recoil y Fast Reload en armas
 task.spawn(function()
     while true do
         task.wait(0.2)
         pcall(function()
-            if getgenv().RapidFireEnabled then
-                local player = game.Players.LocalPlayer
-                if player.Character then
-                    for _, tool in ipairs(player.Character:GetChildren()) do
-                        if tool:IsA("Tool") then
-                            for _, v in ipairs(tool:GetDescendants()) do
-                                if v:IsA("NumberValue") or v:IsA("IntValue") then
-                                    local name = v.Name:lower()
-                                    if name:find("firerate") or name:find("cooldown") or name:find("delay") or name:find("reload") then
+            local player = game.Players.LocalPlayer
+            if player.Character then
+                for _, tool in ipairs(player.Character:GetChildren()) do
+                    if tool:IsA("Tool") then
+                        for _, v in ipairs(tool:GetDescendants()) do
+                            if v:IsA("NumberValue") or v:IsA("IntValue") then
+                                local name = v.Name:lower()
+                                if getgenv().RapidFireEnabled then
+                                    if name:find("firerate") or name:find("cooldown") or name:find("delay") then
+                                        v.Value = 0.01
+                                    end
+                                end
+                                if getgenv().NoRecoilEnabled then
+                                    if name:find("recoil") or name:find("spread") or name:find("kick") or name:find("shake") or name:find("accuracy") then
+                                        v.Value = 0
+                                    end
+                                end
+                                if getgenv().FastReloadEnabled then
+                                    if name:find("reload") or name:find("reloadtime") then
                                         v.Value = 0.01
                                     end
                                 end
@@ -360,8 +463,8 @@ ApplyStretch()
 
 Rayfield:Notify({
     Title = "Stretched Screen by 1AN",
-    Content = "Script actualizado con Hitbox Expander.",
+    Content = "Key system actualizado correctamente.",
     Duration = 6,
 })
 
-print("✅ Hitbox Expander añadido correctamente por Alex X")
+print("✅ Script actualizado con keys flexibles por Alex X")
