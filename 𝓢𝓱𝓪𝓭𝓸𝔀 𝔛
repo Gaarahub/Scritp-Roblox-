@@ -1,0 +1,367 @@
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+-- =====================================================
+--  Stretched Screen, Noclip, Inf Jump, ESP, Hitbox Expander & Rapid Fire by 1AN
+--  Created by Alex X (ydHldYudti)
+-- =====================================================
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Stretched Screen by 1AN",
+    LoadingTitle = "Cargando script...",
+    LoadingSubtitle = "by Alex X",
+})
+
+-- =====================================================
+--  PESTAÑA: MAIN (Hacks Principales)
+-- =====================================================
+local MainTab = Window:CreateTab("🎮 Main", 4483362458)
+
+MainTab:CreateSection("🚀 Hacks God")
+
+local noclipConnection = nil
+MainTab:CreateToggle({
+    Name = "Noclip (Atraviesa Paredes)",
+    CurrentValue = false,
+    Callback = function(Value)
+        local player = game.Players.LocalPlayer
+        
+        if Value then
+            noclipConnection = game:GetService("RunService").Stepped:Connect(function()
+                if player.Character then
+                    for _, part in pairs(player.Character:GetDescendants()) do
+                        if part:IsA("BasePart") and part.CanCollide then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if noclipConnection then
+                noclipConnection:Disconnect()
+                noclipConnection = nil
+            end
+        end
+    end,
+})
+
+getgenv().InfJumpEnabled = false
+MainTab:CreateToggle({
+    Name = "Infinite Jump (Salto Infinito)",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().InfJumpEnabled = Value
+    end,
+})
+
+local UIS = game:GetService("UserInputService")
+UIS.JumpRequest:Connect(function()
+    if getgenv().InfJumpEnabled then
+        local player = game.Players.LocalPlayer
+        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
+            player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- =====================================================
+--  PESTAÑA: COMBATE (Hitbox Expander & Rapid Fire)
+-- =====================================================
+local CombatTab = Window:CreateTab("⚔️ Combate", 4483362458)
+
+CombatTab:CreateSection("📦 Hitbox Expander (Agrandar Jugadores)")
+
+getgenv().HitboxEnabled = false
+getgenv().HitboxSize = 5
+getgenv().HitboxTransparency = 0.7
+
+CombatTab:CreateToggle({
+    Name = "Activar Hitbox Expander",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().HitboxEnabled = Value
+    end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Tamaño de Hitbox",
+    Range = {2, 20},
+    Increment = 1,
+    CurrentValue = 5,
+    Callback = function(Value)
+        getgenv().HitboxSize = Value
+    end,
+})
+
+CombatTab:CreateSlider({
+    Name = "Transparencia de Hitbox",
+    Range = {0, 1},
+    Increment = 0.1,
+    CurrentValue = 0.7,
+    Callback = function(Value)
+        getgenv().HitboxTransparency = Value
+    end,
+})
+
+-- Bucle de Hitbox Expander
+game:GetService("RunService").RenderStepped:Connect(function()
+    pcall(function()
+        if getgenv().HitboxEnabled then
+            for _, player in ipairs(game.Players:GetPlayers()) do
+                if player ~= game.Players.LocalPlayer and player.Character then
+                    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+                    if rootPart then
+                        rootPart.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                        rootPart.Transparency = getgenv().HitboxTransparency
+                        rootPart.CanCollide = false
+                    end
+                end
+            end
+        else
+            for _, player in ipairs(game.Players:GetPlayers()) do
+                if player ~= game.Players.LocalPlayer and player.Character then
+                    local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+                    if rootPart then
+                        rootPart.Size = Vector3.new(2, 2, 1)
+                        rootPart.Transparency = 1
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+CombatTab:CreateSection("🔥 Rapid Fire (Disparo Rápido)")
+
+getgenv().RapidFireEnabled = false
+
+CombatTab:CreateToggle({
+    Name = "Rapid Fire (Ametralladora)",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().RapidFireEnabled = Value
+    end,
+})
+
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        pcall(function()
+            if getgenv().RapidFireEnabled then
+                local player = game.Players.LocalPlayer
+                if player.Character then
+                    for _, tool in ipairs(player.Character:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            for _, v in ipairs(tool:GetDescendants()) do
+                                if v:IsA("NumberValue") or v:IsA("IntValue") then
+                                    local name = v.Name:lower()
+                                    if name:find("firerate") or name:find("cooldown") or name:find("delay") or name:find("reload") then
+                                        v.Value = 0.01
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- =====================================================
+--  PESTAÑA: ESP (ESP Enemy & ESP NPC)
+-- =====================================================
+local EspTab = Window:CreateTab("👁️ ESP", 4483362458)
+
+EspTab:CreateSection("Configuración de ESP (Wallhack)")
+
+getgenv().EspEnemyEnabled = false
+getgenv().EspNpcEnabled = false
+
+EspTab:CreateToggle({
+    Name = "ESP Enemy (Jugadores)",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().EspEnemyEnabled = Value
+    end,
+})
+
+EspTab:CreateToggle({
+    Name = "ESP NPC (Mobs / Bots)",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().EspNpcEnabled = Value
+    end,
+})
+
+local LocalPlayer = game.Players.LocalPlayer
+
+local function CreateHighlight(model, color)
+    if not model:FindFirstChild("1AN_ESP") then
+        local hl = Instance.new("Highlight")
+        hl.Name = "1AN_ESP"
+        hl.Adornee = model
+        hl.FillColor = color
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.FillTransparency = 0.4
+        hl.OutlineTransparency = 0
+        hl.Parent = model
+    end
+end
+
+local function RemoveHighlight(model)
+    local hl = model:FindFirstChild("1AN_ESP")
+    if hl then hl:Destroy() end
+end
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    pcall(function()
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local isEnemy = true
+                if player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
+                    isEnemy = false
+                end
+                
+                if getgenv().EspEnemyEnabled and isEnemy then
+                    CreateHighlight(player.Character, Color3.fromRGB(255, 0, 0))
+                else
+                    local hl = player.Character:FindFirstChild("1AN_ESP")
+                    if hl and not getgenv().EspEnemyEnabled then hl:Destroy() end
+                end
+            end
+        end
+
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+                local isPlayer = game.Players:GetPlayerFromCharacter(obj)
+                if not isPlayer then
+                    if getgenv().EspNpcEnabled then
+                        CreateHighlight(obj, Color3.fromRGB(0, 255, 255))
+                    else
+                        RemoveHighlight(obj)
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+-- =====================================================
+--  PESTAÑA: PANTALLA (Stretch Settings)
+-- =====================================================
+local ScreenTab = Window:CreateTab("🖥️ Pantalla", 4483362458)
+
+ScreenTab:CreateSection("Configuración de Pantalla Estirada")
+
+ScreenTab:CreateToggle({
+    Name = "Enable Stretched Screen",
+    CurrentValue = true,
+    Callback = function(Value)
+        getgenv().StretchEnabled = Value
+        if Value then ApplyStretch() else
+            if getgenv().StretchConn then getgenv().StretchConn:Disconnect() end
+        end
+    end,
+})
+
+ScreenTab:CreateSlider({
+    Name = "Stretch Intensity",
+    Range = {0.5, 1.2},
+    Increment = 0.01,
+    CurrentValue = 0.75,
+    Callback = function(Value)
+        getgenv().StretchIntensity = Value
+        if getgenv().StretchEnabled then ApplyStretch() end
+    end,
+})
+
+-- =====================================================
+--  PESTAÑA: RENDIMIENTO (Performance Options)
+-- =====================================================
+local PerfTab = Window:CreateTab("⚡ Rendimiento", 4483362458)
+
+PerfTab:CreateSection("Optimización de FPS")
+
+PerfTab:CreateToggle({
+    Name = "Disable Particles",
+    Callback = function(Value)
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Beam") or v:IsA("Smoke") or v:IsA("Fire") then
+                v.Enabled = not Value
+            end
+        end
+    end,
+})
+
+PerfTab:CreateToggle({
+    Name = "Disable Shadows",
+    Callback = function(Value)
+        game:GetService("Lighting").GlobalShadows = not Value
+    end,
+})
+
+PerfTab:CreateToggle({
+    Name = "Low Texture Quality",
+    Callback = function(Value)
+        settings().Rendering.QualityLevel = Value and Enum.QualityLevel.Level01 or Enum.QualityLevel.Automatic
+    end,
+})
+
+PerfTab:CreateToggle({
+    Name = "Remove Textures (PlasticOnly)",
+    Callback = function(Value)
+        pcall(function()
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("Texture") or obj:IsA("Decal") or obj:IsA("SurfaceAppearance") then
+                    obj.Transparency = Value and 1 or 0
+                    obj.Visible = not Value
+                elseif obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") then
+                    if Value then
+                        obj.Material = Enum.Material.Plastic
+                    end
+                end
+            end
+
+            for _, plr in pairs(game.Players:GetPlayers()) do
+                if plr.Character then
+                    for _, obj in pairs(plr.Character:GetDescendants()) do
+                        if obj:IsA("Texture") or obj:IsA("Decal") or obj:IsA("SurfaceAppearance") then
+                            obj.Transparency = Value and 1 or 0
+                            obj.Visible = not Value
+                        elseif obj:IsA("BasePart") or obj:IsA("MeshPart") then
+                            if Value then
+                                obj.Material = Enum.Material.Plastic
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end,
+})
+
+local stretchConnection = nil
+function ApplyStretch()
+    if stretchConnection then stretchConnection:Disconnect() end
+    stretchConnection = game:GetService("RunService").RenderStepped:Connect(function()
+        if getgenv().StretchEnabled and workspace.CurrentCamera then
+            local cam = workspace.CurrentCamera
+            cam.CFrame = cam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, getgenv().StretchIntensity or 0.75, 0, 0, 0, 1)
+        end
+    end)
+end
+
+getgenv().StretchEnabled = true
+getgenv().StretchIntensity = 0.75
+ApplyStretch()
+
+Rayfield:Notify({
+    Title = "Stretched Screen by 1AN",
+    Content = "Script actualizado con Hitbox Expander.",
+    Duration = 6,
+})
+
+print("✅ Hitbox Expander añadido correctamente por Alex X")
