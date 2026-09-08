@@ -1,5 +1,6 @@
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Script Completo)
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ
+--  Creado por Alex X
 -- =====================================================
 
 local success, WindUI = pcall(function()
@@ -13,15 +14,25 @@ end
 
 -- Limpieza previa
 pcall(function()
-    if game:GetService("CoreGui"):FindFirstChild("1AN_Crosshair") then
-        game:GetService("CoreGui"):FindFirstChild("1AN_Crosshair"):Destroy()
+    local coreGui = game:GetService("CoreGui")
+    if coreGui:FindFirstChild("1AN_Crosshair") then
+        coreGui:FindFirstChild("1AN_Crosshair"):Destroy()
     end
     for _, p in ipairs(game.Players:GetPlayers()) do
-        if p.Character and p.Character:FindFirstChild("1AN_TracerPart") then
-            p.Character["1AN_TracerPart"]:Destroy()
+        if p.Character then
+            local tracer = p.Character:FindFirstChild("1AN_TracerPart")
+            if tracer then tracer:Destroy() end
+            local esp = p.Character:FindFirstChild("1AN_ESP")
+            if esp then esp:Destroy() end
         end
     end
 end)
+
+-- Objeto de sonido global en silencio
+local soundInstance = Instance.new("Sound")
+soundInstance.Parent = game:GetService("SoundService")
+soundInstance.Volume = 1
+soundInstance.Looped = true
 
 local Window = WindUI:CreateWindow({
     Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ",
@@ -45,26 +56,24 @@ local Window = WindUI:CreateWindow({
 Window:ToggleTransparency(true)
 Window:SetToggleKey(Enum.KeyCode.RightControl)
 
--- Ajuste de posición inicial del menú
-task.spawn(function()
-    task.wait(0.5)
-    pcall(function()
-        local coreGui = game:GetService("CoreGui")
-        local windMain = coreGui:WaitForChild("WindUI", 3)
-        if windMain then
-            for _, descendant in ipairs(windMain:GetDescendants()) do
-                if descendant:IsA("Frame") and descendant.Size.Y.Offset > 200 and descendant.Position.Y.Scale == 0 then
-                    descendant.Position = UDim2.new(descendant.Position.X.Scale, descendant.Position.X.Offset, 0, 75)
-                end
+-- Apertura directa sin intros ni demoras
+pcall(function()
+    local coreGui = game:GetService("CoreGui")
+    local windMain = coreGui:FindFirstChild("WindUI")
+    if windMain then
+        for _, descendant in ipairs(windMain:GetDescendants()) do
+            if descendant:IsA("Frame") and descendant.Size.Y.Offset > 200 and descendant.Position.Y.Scale == 0 then
+                descendant.Position = UDim2.new(descendant.Position.X.Scale, descendant.Position.X.Offset, 0, 75)
             end
         end
-    end)
+    end
 end)
 
 local Tabs = {
     Combat = Window:Tab({ Title = "Combat", Icon = "swords" }),
     Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
     Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
+    Music = Window:Tab({ Title = "Music", Icon = "music" }),
     Fun = Window:Tab({ Title = "Fun", Icon = "smile" }),
     Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
 }
@@ -92,10 +101,10 @@ Tabs.Combat:Toggle({
     end,
 })
 
-Tabs.Combat:Section({ Title = "Hispos (Hitbox del Pecho)" })
+Tabs.Combat:Section({ Title = "Hitbox (Pecho del Enemigo)" })
 
 Tabs.Combat:Toggle({
-    Title = "Activar Hispos",
+    Title = "Activar Hitbox",
     Value = false,
     Callback = function(v)
         getgenv().HitboxEnabled = v
@@ -103,16 +112,16 @@ Tabs.Combat:Toggle({
 })
 
 Tabs.Combat:Slider({
-    Title = "Tamaño de Hispos",
+    Title = "Tamaño de Hitbox",
     Step = 1,
-    Value = { Min = 2, Max = 15, Default = 5 },
+    Value = { Min = 2, Max = 20, Default = 5 },
     Callback = function(v)
         getgenv().HitboxSize = v
     end,
 })
 
 Tabs.Combat:Slider({
-    Title = "Transparencia Hispos",
+    Title = "Transparencia Hitbox",
     Step = 0.05,
     Value = { Min = 0, Max = 1, Default = 0.5 },
     Callback = function(v)
@@ -121,7 +130,7 @@ Tabs.Combat:Slider({
 })
 
 Tabs.Combat:Dropdown({
-    Title = "Color de Hispos",
+    Title = "Color de Hitbox",
     Values = { "Morado", "Rojo", "Verde", "Azul", "Amarillo", "Rosa" },
     Value = "Morado",
     Callback = function(v)
@@ -268,7 +277,7 @@ Tabs.Visual:Toggle({
 })
 
 Tabs.Visual:Toggle({
-    Title = "ESP Tracers (Naturales Arriba)",
+    Title = "ESP Tracers",
     Value = false,
     Callback = function(v)
         getgenv().TracersEnabled = v
@@ -291,6 +300,108 @@ Tabs.Visual:Dropdown({
     Value = "Cruz",
     Callback = function(v)
         getgenv().CrosshairStyle = v
+    end,
+})
+
+-- =====================================================
+--  PESTAÑA: MUSIC (REPRODUCCIÓN POR SELECCIÓN MANUAL)
+-- =====================================================
+
+Tabs.Music:Section({ Title = "Reproductor Red Davil" })
+
+local currentPlayingLabel = Tabs.Music:Paragraph({
+    Title = "Estado actual",
+    Content = "Sin reproducción activa (selecciona una canción para iniciar)."
+})
+
+local tracks = {
+    ["Ninguna (Silencio)"] = "",
+    ["Luz Track (Corregida)"] = "7022204907",
+    ["Lil Peep - Nuts (Opción 1)"] = "140637230317256",
+    ["Lil Peep - Nuts (Opción 2)"] = "139982007364841",
+    ["Lil Peep - Nuts (Opción 3)"] = "98839453510161",
+    ["Drift Phonk Heavy Bass"] = "1837851340",
+    ["Brazilian Funk Beat"] = "1840807802"
+}
+
+local trackNames = { "Ninguna (Silencio)", "Luz Track (Corregida)", "Lil Peep - Nuts (Opción 1)", "Lil Peep - Nuts (Opción 2)", "Lil Peep - Nuts (Opción 3)", "Drift Phonk Heavy Bass", "Brazilian Funk Beat" }
+
+-- Inicia en "Ninguna (Silencio)" para evitar la reproducción automática
+Tabs.Music:Dropdown({
+    Title = "Seleccionar Pista",
+    Values = trackNames,
+    Value = "Ninguna (Silencio)",
+    Callback = function(v)
+        if v == "Ninguna (Silencio)" then
+            soundInstance:Stop()
+            soundInstance.SoundId = ""
+            currentPlayingLabel:SetContent("Audio detenido.")
+        elseif tracks[v] and tracks[v] ~= "" then
+            soundInstance:Stop()
+            soundInstance.SoundId = "rbxassetid://" .. tracks[v]
+            
+            local ok, _ = pcall(function()
+                soundInstance:Play()
+            end)
+            
+            if ok then
+                currentPlayingLabel:SetContent("Sonando: " .. v)
+            else
+                currentPlayingLabel:SetContent("Error al reproducir el audio.")
+            end
+        end
+    end,
+})
+
+Tabs.Music:Input({
+    Title = "ID Personalizado de Roblox",
+    Placeholder = "Ingresa ID y presiona Enter...",
+    Callback = function(v)
+        if v and v ~= "" then
+            local cleanId = v:gsub("%D", "")
+            if cleanId ~= "" then
+                soundInstance:Stop()
+                soundInstance.SoundId = "rbxassetid://" .. cleanId
+                soundInstance:Play()
+                currentPlayingLabel:SetContent("Sonando ID: " .. cleanId)
+            end
+        end
+    end,
+})
+
+Tabs.Music:Section({ Title = "Controles" })
+
+Tabs.Music:Toggle({
+    Title = "Pausar / Reanudar",
+    Value = true,
+    Callback = function(v)
+        if v then
+            if soundInstance.SoundId ~= "" then
+                soundInstance:Resume()
+                currentPlayingLabel:SetContent("Estado: Reproduciendo")
+            end
+        else
+            soundInstance:Pause()
+            currentPlayingLabel:SetContent("Estado: Pausado")
+        end
+    end,
+})
+
+Tabs.Music:Slider({
+    Title = "Volumen",
+    Step = 0.05,
+    Value = { Min = 0, Max = 1, Default = 1 },
+    Callback = function(v)
+        soundInstance.Volume = v
+    end,
+})
+
+Tabs.Music:Button({
+    Title = "Detener Sonido",
+    Callback = function()
+        soundInstance:Stop()
+        soundInstance.SoundId = ""
+        currentPlayingLabel:SetContent("Audio detenido.")
     end,
 })
 
@@ -328,14 +439,17 @@ Tabs.Settings:Button({
     Title = "Destruir / Cerrar UI",
     Callback = function()
         Window:Unload()
-        if game:GetService("CoreGui"):FindFirstChild("1AN_Crosshair") then
-            game:GetService("CoreGui"):FindFirstChild("1AN_Crosshair"):Destroy()
-        end
+        pcall(function()
+            local coreGui = game:GetService("CoreGui")
+            if coreGui:FindFirstChild("1AN_Crosshair") then
+                coreGui:FindFirstChild("1AN_Crosshair"):Destroy()
+            end
+        end)
     end,
 })
 
 -- =====================================================
---  LÓGICA GENERAL DE FUNCIONES
+--  LÓGICA GENERAL Y SISTEMAS
 -- =====================================================
 
 getgenv().TeamCheckEnabled = true
@@ -356,32 +470,31 @@ local function isTeammate(player)
     if player.Team and localPlayer.Team and player.Team == localPlayer.Team then
         return true
     end
-    pcall(function()
-        if player.TeamColor and localPlayer.TeamColor and player.TeamColor == localPlayer.TeamColor then
-            return true
-        end
+    local successTeam, result = pcall(function()
+        return player.TeamColor and localPlayer.TeamColor and player.TeamColor == localPlayer.TeamColor
     end)
+    if successTeam and result then
+        return true
+    end
     return false
 end
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    pcall(function()
-        if getgenv().SpinBotEnabled then
-            local p = game.Players.LocalPlayer
-            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = p.Character.HumanoidRootPart
-                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(getgenv().SpinSpeed or 120), 0)
-            end
-        end
-    end)
-end)
-
+-- Movimiento
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
         local p = game.Players.LocalPlayer
-        if p.Character and p.Character:FindFirstChildOfClass("Humanoid") then
+        if not p.Character then return end
+        
+        if getgenv().SpinBotEnabled then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(getgenv().SpinSpeed or 120), 0)
+            end
+        end
+        
+        if getgenv().SpeedEnabled then
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
-            if getgenv().SpeedEnabled then
+            if hum then
                 hum.WalkSpeed = getgenv().PlayerSpeedValue or 16
             end
         end
@@ -402,53 +515,64 @@ end)
 local Camera = workspace.CurrentCamera
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
-        if getgenv().StretchEnabled then
+        if getgenv().StretchEnabled and Camera then
             local res = getgenv().StretchResolution or 0.75
             Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, res, 0, 0, 0, 1)
         end
     end)
 end)
 
+-- Hitbox System
 local originalSizes = {}
-local originalTransparencies = {}
-local originalHeadSizes = {}
 
--- Hispos (Hitbox del Pecho / HumanoidRootPart)
-game:GetService("RunService").RenderStepped:Connect(function()
-    pcall(function()
-        for _, p in ipairs(game.Players:GetPlayers()) do
-            if p ~= game.Players.LocalPlayer and p.Character then
-                local ally = isTeammate(p)
-                local char = p.Character
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                
-                if hum and hrp and hum.Health > 0 then
-                    local part = hrp
-                    if not originalSizes[part] then
-                        originalSizes[part] = part.Size
-                        originalTransparencies[part] = part.Transparency
-                    end
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        pcall(function()
+            for _, p in ipairs(game.Players:GetPlayers()) do
+                if p ~= game.Players.LocalPlayer and p.Character then
+                    local ally = isTeammate(p)
+                    local char = p.Character
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    local hum = char:FindFirstChildOfClass("Humanoid")
                     
-                    if getgenv().HitboxEnabled and not ally then
-                        local sizeVal = getgenv().HitboxSize or 5
-                        part.Size = Vector3.new(sizeVal, sizeVal, sizeVal)
-                        part.Transparency = getgenv().HitboxTransparency
-                        part.Color = getgenv().HitboxColor
-                        part.Material = Enum.Material.Neon
-                        part.CanCollide = false
-                    else
-                        part.Material = Enum.Material.Plastic
-                        if originalSizes[part] then part.Size = originalSizes[part] end
-                        if originalTransparencies[part] then part.Transparency = originalTransparencies[part] end
+                    if hrp and hum and hum.Health > 0 then
+                        if not originalSizes[p] or originalSizes[p].Character ~= char then
+                            originalSizes[p] = {
+                                Character = char,
+                                Size = hrp.Size,
+                                Transparency = hrp.Transparency,
+                                Material = hrp.Material,
+                                Massless = hrp.Massless
+                            }
+                        end
+                        
+                        if getgenv().HitboxEnabled and not ally then
+                            local sizeVal = getgenv().HitboxSize or 5
+                            hrp.Size = Vector3.new(sizeVal, sizeVal, sizeVal)
+                            hrp.Transparency = getgenv().HitboxTransparency or 0.5
+                            hrp.Color = getgenv().HitboxColor or Color3.fromRGB(138, 43, 226)
+                            hrp.Material = Enum.Material.Neon
+                            hrp.CanCollide = false
+                            hrp.Massless = true
+                        else
+                            if originalSizes[p] and originalSizes[p].Character == char then
+                                hrp.Size = originalSizes[p].Size
+                                hrp.Transparency = originalSizes[p].Transparency
+                                hrp.Material = originalSizes[p].Material
+                                hrp.Massless = originalSizes[p].Massless
+                            end
+                        end
                     end
                 end
             end
-        end
-    end)
+        end)
+    end
 end)
 
--- Big Head Logic (Soporta hasta 10 seguro)
+-- Big Head Logic
+local originalHeadSizes = {}
+
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
         for _, p in ipairs(game.Players:GetPlayers()) do
@@ -460,7 +584,10 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 
                 if head and hum and hum.Health > 0 then
                     if not originalHeadSizes[head] then
-                        originalHeadSizes[head] = head.Size
+                        originalHeadSizes[head] = {
+                            Size = head.Size,
+                            Massless = head.Massless
+                        }
                     end
                     
                     if getgenv().BigHeadEnabled and not ally then
@@ -468,15 +595,10 @@ game:GetService("RunService").RenderStepped:Connect(function()
                         head.Size = Vector3.new(targetSize, targetSize, targetSize)
                         head.CanCollide = false
                         head.Massless = true
-                        
-                        local neck = char:FindFirstChild("Torso") and char.Torso:FindFirstChild("Neck") or (char:FindFirstChild("UpperTorso") and char.UpperTorso:FindFirstChild("Neck"))
-                        if neck then
-                            neck.C0 = CFrame.new(0, 1, 0) * CFrame.Angles(0, 0, 0)
-                        end
                     else
-                        head.Massless = false
                         if originalHeadSizes[head] then
-                            head.Size = originalHeadSizes[head]
+                            head.Size = originalHeadSizes[head].Size
+                            head.Massless = originalHeadSizes[head].Massless
                         end
                     end
                 end
@@ -491,18 +613,19 @@ local LocalPlayer = Players.LocalPlayer
 
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
-        if not getgenv().TracersEnabled then
+        if not getgenv().TracersEnabled or not Camera then
             for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character and p.Character:FindFirstChild("1AN_TracerPart") then
-                    p.Character["1AN_TracerPart"]:Destroy()
+                if p.Character then
+                    local tracer = p.Character:FindFirstChild("1AN_TracerPart")
+                    if tracer then tracer:Destroy() end
                 end
             end
             return
         end
 
-        local viewport = Camera.ViewportSize
-        local ray = Camera:ScreenPointToRay(viewport.X / 2, 0)
-        local p1 = ray.Origin + (ray.Direction * 0.2)
+        local viewportSize = Camera.ViewportSize
+        local topScreenRay = Camera:ViewportPointToRay(viewportSize.X / 2, 0)
+        local originPos = topScreenRay.Origin
 
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -521,15 +644,15 @@ game:GetService("RunService").RenderStepped:Connect(function()
                         tracerPart.CastShadow = false
                         tracerPart.Material = Enum.Material.Neon
                         tracerPart.Color = Color3.fromRGB(138, 43, 226)
+                        tracerPart.Transparency = 0.3
                         tracerPart.Parent = char
                     end
                     
-                    local p2 = hrp.Position
-                    local distance = (p1 - p2).Magnitude
+                    local targetPos = hrp.Position
+                    local distance = (originPos - targetPos).Magnitude
                     
-                    tracerPart.Size = Vector3.new(0.03, 0.03, distance)
-                    tracerPart.CFrame = CFrame.new(p1, p2) * CFrame.new(0, 0, -distance / 2)
-                    tracerPart.Transparency = 0.3
+                    tracerPart.Size = Vector3.new(0.05, 0.05, distance)
+                    tracerPart.CFrame = CFrame.new(originPos, targetPos) * CFrame.new(0, 0, -distance / 2)
                 else
                     if tracerPart then
                         tracerPart:Destroy()
@@ -600,77 +723,45 @@ game:GetService("RunService").RenderStepped:Connect(function()
         chH.Visible = active
         chV.Visible = active
         
+        local posX, posY
         if openButtonContainer and openButtonContainer.AbsoluteSize.X > 0 then
             local absPos = openButtonContainer.AbsolutePosition
             local absSize = openButtonContainer.AbsoluteSize
-            
-            local posX = absPos.X + (absSize.X / 2)
-            local posY = absPos.Y - 25
-            
-            if style == "Cruz" then
-                chH.Size = UDim2.new(0, 18, 0, 2)
-                chH.Position = UDim2.new(0, posX - 9, 0, posY - 1)
-                chH.BackgroundTransparency = 0
-                
-                chV.Size = UDim2.new(0, 2, 0, 18)
-                chV.Position = UDim2.new(0, posX - 1, 0, posY - 9)
-                chH.BackgroundTransparency = 0
-            elseif style == "Punto" then
-                chH.Size = UDim2.new(0, 6, 0, 6)
-                chH.Position = UDim2.new(0, posX - 3, 0, posY - 3)
-                chH.BackgroundTransparency = 0
-                
-                chV.Visible = false
-            elseif style == "Círculo" then
-                chH.Size = UDim2.new(0, 14, 0, 14)
-                chH.Position = UDim2.new(0, posX - 7, 0, posY - 7)
-                chH.BackgroundTransparency = 0.5
-                
-                chV.Visible = false
-            elseif style == "Cuadrado" then
-                chH.Size = UDim2.new(0, 12, 0, 12)
-                chH.Position = UDim2.new(0, posX - 6, 0, posY - 6)
-                chH.BackgroundTransparency = 0.2
-                
-                chV.Visible = false
-            end
-        else
+            posX = absPos.X + (absSize.X / 2)
+            posY = absPos.Y - 25
+        elseif Camera then
             local screenCenter = Camera.ViewportSize / 2
-            local posX, posY = screenCenter.X, screenCenter.Y - 40
+            posX, posY = screenCenter.X, screenCenter.Y - 40
+        else
+            return
+        end
+        
+        if style == "Cruz" then
+            chH.Size = UDim2.new(0, 18, 0, 2)
+            chH.Position = UDim2.new(0, posX - 9, 0, posY - 1)
+            chH.BackgroundTransparency = 0
             
-            if style == "Cruz" then
-                chH.Size = UDim2.new(0, 18, 0, 2)
-                chH.Position = UDim2.new(0, posX - 9, 0, posY - 1)
-                chH.BackgroundTransparency = 0
-                
-                chV.Size = UDim2.new(0, 2, 0, 18)
-                chV.Position = UDim2.new(0, posX - 1, 0, posY - 9)
-                chH.BackgroundTransparency = 0
-            elseif style == "Punto" then
-                chH.Size = UDim2.new(0, 6, 0, 6)
-                chH.Position = UDim2.new(0, posX - 3, 0, posY - 3)
-                chH.BackgroundTransparency = 0
-                
-                chV.Visible = false
-            elseif style == "Círculo" then
-                chH.Size = UDim2.new(0, 14, 0, 14)
-                chH.Position = UDim2.new(0, posX - 7, 0, posY - 7)
-                chH.BackgroundTransparency = 0.5
-                
-                chV.Visible = false
-            elseif style == "Cuadrado" then
-                chH.Size = UDim2.new(0, 12, 0, 12)
-                chH.Position = UDim2.new(0, posX - 6, 0, posY - 6)
-                chH.BackgroundTransparency = 0.2
-                
-                chV.Visible = false
-            end
+            chV.Size = UDim2.new(0, 2, 0, 18)
+            chV.Position = UDim2.new(0, posX - 1, 0, posY - 9)
+            chV.BackgroundTransparency = 0
+        elseif style == "Punto" then
+            chH.Size = UDim2.new(0, 6, 0, 6)
+            chH.Position = UDim2.new(0, posX - 3, 0, posY - 3)
+            chH.BackgroundTransparency = 0
+            
+            chV.Visible = false
+        elseif style == "Círculo" then
+            chH.Size = UDim2.new(0, 14, 0, 14)
+            chH.Position = UDim2.new(0, posX - 7, 0, posY - 7)
+            chH.BackgroundTransparency = 0.5
+            
+            chV.Visible = false
+        elseif style == "Cuadrado" then
+            chH.Size = UDim2.new(0, 12, 0, 12)
+            chH.Position = UDim2.new(0, posX - 6, 0, posY - 6)
+            chH.BackgroundTransparency = 0.2
+            
+            chV.Visible = false
         end
     end)
 end)
-
-WindUI:Notify({ 
-    Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ", 
-    Content = "¡Hispos del pecho restaurada y optimizada por Alex X!", 
-    Duration = 3 
-})
