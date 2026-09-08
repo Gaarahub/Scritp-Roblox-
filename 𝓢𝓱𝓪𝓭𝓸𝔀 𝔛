@@ -1,1414 +1,527 @@
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Aimbot & Crash Fix v3)
---  Creado por Alex X
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (ESP, Hitboxes & Diseños)
+--  Creado por Alex X (ESP y Hitboxes Reparados)
 -- =====================================================
-
 local success, WindUI = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 end)
-
 if not success or not WindUI then
-    warn("Error al cargar WindUI. Revisa tu conexión o tu ejecutor.")
-    return
+warn("Error al cargar WindUI.")
+return
 end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TeleportService = game:GetService("TeleportService")
-local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
-    if CoreGui:FindFirstChild("1AN_Crosshair") then CoreGui:FindFirstChild("1AN_Crosshair"):Destroy() end
-    if CoreGui:FindFirstChild("1AN_TracersGui") then CoreGui:FindFirstChild("1AN_TracersGui"):Destroy() end
-    if CoreGui:FindFirstChild("1AN_EspExtraGui") then CoreGui:FindFirstChild("1AN_EspExtraGui"):Destroy() end
-    if CoreGui:FindFirstChild("1AN_FlashbangEffect") then CoreGui:FindFirstChild("1AN_FlashbangEffect"):Destroy() end
-    if CoreGui:FindFirstChild("1AN_FovGui") then CoreGui:FindFirstChild("1AN_FovGui"):Destroy() end
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character then
-            local esp = p.Character:FindFirstChild("1AN_ESP")
-            if esp then esp:Destroy() end
-        end
-    end
-    if SoundService:FindFirstChild("RedDavilMusic") then SoundService:FindFirstChild("RedDavilMusic"):Destroy() end
+if SoundService:FindFirstChild("RedDavilMusic") then SoundService:FindFirstChild("RedDavilMusic"):Destroy() end
 end)
-
 local soundInstance = Instance.new("Sound")
 soundInstance.Name = "RedDavilMusic"
 soundInstance.Volume = 1
 soundInstance.Looped = false
 soundInstance.Parent = SoundService
 
+-- Variables Globales
 getgenv().SpinSpeed = 120
 getgenv().SpinBotEnabled = false
 getgenv().PlayerSpeedValue = 16
 getgenv().SpeedEnabled = false
 getgenv().InfJumpEnabled = false
-getgenv().CrosshairEnabled = false
-getgenv().CrosshairStyle = "Venas Cyber"
-getgenv().CrosshairColor = Color3.fromRGB(138, 43, 226)
-getgenv().CustomCrosshairId = ""
 getgenv().TeamCheckEnabled = true
-getgenv().StretchResolution = 0.75
-getgenv().StretchEnabled = true
+getgenv().HitboxEnabled = false
 getgenv().HitboxSize = 5
 getgenv().HitboxTransparency = 0.5
 getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
-getgenv().BigHeadSize = 4
-getgenv().FreezeEnemyEnabled = false
-getgenv().SilentAimMode = "None"
-getgenv().EspEnemyEnabled = false
-getgenv().TracersEnabled = false
-
-getgenv().EspNameEnabled = false
-getgenv().EspBoxEnabled = false
-getgenv().EspHealthEnabled = false
-
+getgenv().FreezePlayersEnabled = false
+getgenv().SilentAimEnabled = false
+getgenv().SilentAimPart = "Head"
 getgenv().AimbotEnabled = false
 getgenv().AimbotSmooth = 5
 getgenv().AimbotPart = "Head"
 getgenv().FovEnabled = false
 getgenv().FovRadius = 120
 getgenv().FovColor = Color3.fromRGB(138, 43, 226)
+getgenv().RapidFireEnabled = false
+getgenv().InfAmmoEnabled = false
 
-local function safeCall(name, callback)
-    local ok, err = pcall(callback)
-    if not ok then
-        warn("[SCRIPT ERROR] " .. tostring(name) .. ": " .. tostring(err))
-    end
-    return ok
-end
+-- ESP Variables Avanzadas
+getgenv().EspEnemyEnabled = false
+getgenv().EspBoxesEnabled = false
+getgenv().EspTracersEnabled = false
+getgenv().EspNamesEnabled = false
+getgenv().EspTeamColor = Color3.fromRGB(0, 255, 0)
+getgenv().EspEnemyColor = Color3.fromRGB(255, 0, 0)
+
+-- Skin Changer Variables
+getgenv().SkinChangerEnabled = false
+getgenv().SelectedWeaponSkin = "Gold"
+getgenv().SelectedWeaponMaterial = "Neon"
+
+-- Variables de Diseños
+getgenv().SkinPatternEnabled = false
+getgenv().SelectedWeaponPattern = "Galaxy"
+
+-- Almacén para guardar el estado original de las armas y restaurarlas al apagar
+local originalWeaponStates = {}
 
 local Window = WindUI:CreateWindow({
-    Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ",
-    Icon = "sparkles",
-    Author = "Alex X",
-    Folder = "StretchedScreen1AN",
-    Size = UDim2.fromOffset(560, 320),
-    Transparent = true,
-    Theme = "Dark",
-    SideBarWidth = 150,
-    HasOutline = true,
-    KeySystem = {
-        Key = { "femboy", "mitio.com", "vip" },
-        Title = "✨ Acceso Exclusivo ✨",
-        Subtitle = "Zona Restringida",
-        Note = "Usa cualquiera de tus llaves autorizadas.",
-        SaveInRoot = true,
-    }
+Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ",
+Icon = "sparkles",
+Author = "Alex X",
+Folder = "StretchedScreen1AN",
+Size = UDim2.fromOffset(560, 320),
+Transparent = true,
+Theme = "Dark",
+SideBarWidth = 150,
+HasOutline = true,
+KeySystem = {
+Key = { "femboy", "mitio.com", "vip" },
+Title = "✨ Acceso Exclusivo ✨",
+Subtitle = "Zona Restringida",
+Note = "Usa cualquiera de tus llaves autorizadas.",
+SaveInRoot = true,
+}
 })
 
 Window:ToggleTransparency(true)
 Window:SetToggleKey(Enum.KeyCode.RightControl)
 
-pcall(function() WindUI:SetTheme("Dark") end)
-
-task.spawn(function()
-    local keySystemGui
-    repeat
-        task.wait(0.1)
-        for _, gui in ipairs(CoreGui:GetChildren()) do
-            if gui:IsA("ScreenGui") and (gui.Name:lower():find("wind") or gui.Name:lower():find("key") or gui:FindFirstChild("KeySystem", true)) then
-                keySystemGui = gui
-            end
-        end
-    until not keySystemGui or not keySystemGui.Parent
-
-    local fbSound = Instance.new("Sound")
-    fbSound.SoundId = "rbxassetid://135680040975059"
-    fbSound.Volume = 3.5
-    fbSound.Parent = SoundService
-    fbSound:Play()
-
-    local flashGui = Instance.new("ScreenGui")
-    flashGui.Name = "1AN_FlashbangEffect"
-    flashGui.IgnoreGuiInset = true
-    flashGui.DisplayOrder = 999999
-    flashGui.Parent = CoreGui
-
-    local flashFrame = Instance.new("Frame")
-    flashFrame.Size = UDim2.new(1, 0, 1, 0)
-    flashFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    flashFrame.BackgroundTransparency = 0
-    flashFrame.BorderSizePixel = 0
-    flashFrame.Parent = flashGui
-
-    task.wait(1.6)
-    TweenService:Create(flashFrame, TweenInfo.new(1.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
-    task.wait(1.2)
-    flashGui:Destroy()
-    fbSound:Destroy()
-end)
-
 local Tabs = {
-    Combat = Window:Tab({ Title = "Combat", Icon = "swords" }),
-    Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
-    Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
-    Music = Window:Tab({ Title = "Music", Icon = "music" }),
-    Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
+Combat = Window:Tab({ Title = "Combat", Icon = "swords" }),
+WeapMod = Window:Tab({ Title = "WeapMod", Icon = "crosshair" }),
+SkinChanger = Window:Tab({ Title = "Skin Changer", Icon = "palette" }),
+Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
+Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
+Music = Window:Tab({ Title = "Music", Icon = "music" }),
+Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
 }
 
-Tabs.Combat:Section({ Title = "Aim & Target" })
+-- [ SECCIÓN COMBAT ]
+Tabs.Combat:Section({ Title = "Aimbot & FOV" })
+Tabs.Combat:Toggle({ Title = "Activar Aimbot", Value = false, Callback = function(v) getgenv().AimbotEnabled = v end })
+Tabs.Combat:Dropdown({ Title = "Parte (Aimbot)", Values = { "Head", "HumanoidRootPart", "UpperTorso" }, Value = "Head", Callback = function(v) getgenv().AimbotPart = v end })
+Tabs.Combat:Slider({ Title = "Suavizado Aimbot (Smooth)", Step = 1, Value = { Min = 1, Max = 20, Default = 5 }, Callback = function(v) getgenv().AimbotSmooth = v end })
+Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = false, Callback = function(v) getgenv().FovEnabled = v end })
+Tabs.Combat:Slider({ Title = "Radio del FOV", Step = 5, Value = { Min = 30, Max = 400, Default = 120 }, Callback = function(v) getgenv().FovRadius = v end })
+Tabs.Combat:Toggle({ Title = "Team Check (Avanzado)", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end })
 
-Tabs.Combat:Dropdown({
-    Title = "Silent Aim",
-    Values = { "None", "Head", "HumanoidRootPart" },
-    Value = "None",
-    Callback = function(v) getgenv().SilentAimMode = v end,
-})
-
-Tabs.Combat:Section({ Title = "Aimbot de Cámara & FOV" })
-
-Tabs.Combat:Toggle({
-    Title = "Activar Aimbot",
-    Value = false,
-    Callback = function(v) getgenv().AimbotEnabled = v end,
-})
-
-Tabs.Combat:Dropdown({
-    Title = "Parte del Cuerpo (Aimbot)",
-    Values = { "Head", "HumanoidRootPart", "UpperTorso" },
-    Value = "Head",
-    Callback = function(v) getgenv().AimbotPart = v end,
-})
-
-Tabs.Combat:Slider({
-    Title = "Suavizado Aimbot (Smooth)",
-    Step = 1,
-    Value = { Min = 1, Max = 20, Default = 5 },
-    Callback = function(v) getgenv().AimbotSmooth = v end,
-})
-
-Tabs.Combat:Toggle({
-    Title = "Mostrar Círculo FOV",
-    Value = false,
-    Callback = function(v) getgenv().FovEnabled = v end,
-})
-
-Tabs.Combat:Slider({
-    Title = "Radio del FOV",
-    Step = 5,
-    Value = { Min = 30, Max = 400, Default = 120 },
-    Callback = function(v) getgenv().FovRadius = v end,
-})
-
-Tabs.Combat:Toggle({
-    Title = "Team Check (Avanzado)",
-    Value = true,
-    Callback = function(v) getgenv().TeamCheckEnabled = v end,
-})
-
-Tabs.Combat:Section({ Title = "Control de Objetivo" })
-
-Tabs.Combat:Toggle({
-    Title = "Congelar Enemigo Cerca (Freeze Target)",
-    Value = false,
-    Callback = function(v)
-        getgenv().FreezeEnemyEnabled = v
-        if not v then
-            pcall(function()
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        p.Character.HumanoidRootPart.Anchored = false
-                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                        if hum then hum.PlatformStand = false end
-                    end
-                end
-            end)
-        end
-    end,
-})
-
-Tabs.Combat:Section({ Title = "Hitbox (Pecho del Enemigo)" })
-
-Tabs.Combat:Toggle({
-    Title = "Activar Hitbox Pecho",
-    Value = false,
-    Callback = function(v) getgenv().HitboxEnabled = v end,
-})
-
-Tabs.Combat:Slider({
-    Title = "Tamaño de Hitbox",
-    Step = 1,
-    Value = { Min = 2, Max = 20, Default = 5 },
-    Callback = function(v) getgenv().HitboxSize = v end,
-})
-
-Tabs.Combat:Slider({
-    Title = "Transparencia Hitbox",
-    Step = 0.05,
-    Value = { Min = 0, Max = 1, Default = 0.5 },
-    Callback = function(v) getgenv().HitboxTransparency = v end,
-})
-
-Tabs.Combat:Dropdown({
-    Title = "Color de Hitbox",
-    Values = { "Morado", "Rojo", "Verde", "Azul", "Amarillo", "Rosa" },
-    Value = "Morado",
-    Callback = function(v)
-        local colors = {
-            ["Morado"] = Color3.fromRGB(138, 43, 226),
-            ["Rojo"] = Color3.fromRGB(255, 50, 50),
-            ["Verde"] = Color3.fromRGB(0, 255, 100),
-            ["Azul"] = Color3.fromRGB(0, 150, 255),
-            ["Amarillo"] = Color3.fromRGB(255, 220, 0),
-            ["Rosa"] = Color3.fromRGB(255, 105, 180)
-        }
-        getgenv().HitboxColor = colors[v] or Color3.fromRGB(138, 43, 226)
-    end,
-})
-
-Tabs.Combat:Section({ Title = "Head Extendido (Big Head)" })
-
-Tabs.Combat:Toggle({
-    Title = "Activar Cabeza Grande",
-    Value = false,
-    Callback = function(v) getgenv().BigHeadEnabled = v end,
-})
-
-Tabs.Combat:Slider({
-    Title = "Tamaño de Cabeza",
-    Step = 0.5,
-    Value = { Min = 2, Max = 10, Default = 4 },
-    Callback = function(v) getgenv().BigHeadSize = v end,
-})
-
-Tabs.Movement:Section({ Title = "Movimiento General" })
-
-Tabs.Movement:Toggle({
-    Title = "Speed",
-    Value = false,
-    Callback = function(v)
-        getgenv().SpeedEnabled = v
-        local character = LocalPlayer.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = v and (tonumber(getgenv().PlayerSpeedValue) or 16) or 16
-            end
-        end
-    end,
-})
-
-Tabs.Movement:Slider({
-    Title = "Velocidad de Player",
-    Step = 1,
-    Value = { Min = 16, Max = 200, Default = 16 },
-    Callback = function(v) getgenv().PlayerSpeedValue = v end,
-})
-
-Tabs.Movement:Toggle({
-    Title = "Infinite Jump",
-    Value = false,
-    Callback = function(v) getgenv().InfJumpEnabled = v end,
-})
-
-local noclipConn = nil
-local originalCollision = {}
-
-local function disableNoClip()
-    if noclipConn then
-        noclipConn:Disconnect()
-        noclipConn = nil
-    end
-    for part, originalValue in pairs(originalCollision) do
-        if part and part.Parent and part:IsA("BasePart") then
-            part.CanCollide = originalValue
-        end
-    end
-    table.clear(originalCollision)
+Tabs.Combat:Section({ Title = "Hitbox & Utilidades" })
+Tabs.Combat:Toggle({ Title = "Activar Hitbox", Value = false, Callback = function(v)
+getgenv().HitboxEnabled = v
+if not v then
+for _, p in ipairs(Players:GetPlayers()) do
+if p ~= LocalPlayer and p.Character then
+for _, partName in ipairs({"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}) do
+local part = p.Character:FindFirstChild(partName)
+if part then
+part.Size = (partName == "Head" and Vector3.new(2, 1, 1)) or (partName == "HumanoidRootPart" and Vector3.new(2, 2, 1)) or Vector3.new(2, 1, 1)
+part.Transparency = (partName == "HumanoidRootPart" and 1) or 0
+part.CanCollide = true
 end
-
-local function enableNoClip()
-    disableNoClip()
-    noclipConn = RunService.Stepped:Connect(function()
-        local character = LocalPlayer.Character
-        if not character then return end
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                if originalCollision[part] == nil then
-                    originalCollision[part] = part.CanCollide
-                end
-                part.CanCollide = false
-            end
-        end
-    end)
 end
-
-Tabs.Movement:Toggle({
-    Title = "No Clip",
-    Value = false,
-    Callback = function(v)
-        if v then enableNoClip() else disableNoClip() end
-    end,
-})
-
-Tabs.Movement:Section({ Title = "SpinBot" })
-
-Tabs.Movement:Toggle({
-    Title = "Activar SpinBot Rápido",
-    Value = false,
-    Callback = function(v) getgenv().SpinBotEnabled = v end,
-})
-
-Tabs.Movement:Slider({
-    Title = "Velocidad SpinBot",
-    Step = 5,
-    Value = { Min = 20, Max = 2000, Default = 120 },
-    Callback = function(v) getgenv().SpinSpeed = v end,
-})
-
-Tabs.Visual:Section({ Title = "Pantalla Estirada (Stretched Real)" })
-
-Tabs.Visual:Toggle({
-    Title = "Enable Stretched Screen",
-    Value = true,
-    Callback = function(v) getgenv().StretchEnabled = v end,
-})
-
-Tabs.Visual:Slider({
-    Title = "Resolución de Estiramiento",
-    Step = 0.05,
-    Value = { Min = 0.5, Max = 1.2, Default = 0.75 },
-    Callback = function(v) getgenv().StretchResolution = v end,
-})
-
-Tabs.Visual:Section({ Title = "ESP & Tracers" })
-
-Tabs.Visual:Toggle({
-    Title = "ESP Enemy (Highlight)",
-    Value = false,
-    Callback = function(v) getgenv().EspEnemyEnabled = v end,
-})
-
-Tabs.Visual:Toggle({
-    Title = "ESP Nombres (Names)",
-    Value = false,
-    Callback = function(v) getgenv().EspNameEnabled = v end,
-})
-
-Tabs.Visual:Toggle({
-    Title = "ESP Cajas (Boxes 2D)",
-    Value = false,
-    Callback = function(v) getgenv().EspBoxEnabled = v end,
-})
-
-Tabs.Visual:Toggle({
-    Title = "ESP Barra de Vida (Health)",
-    Value = false,
-    Callback = function(v) getgenv().EspHealthEnabled = v end,
-})
-
-Tabs.Visual:Toggle({
-    Title = "ESP Tracers (Top Screen)",
-    Value = false,
-    Callback = function(v) getgenv().TracersEnabled = v end,
-})
-
-Tabs.Visual:Section({ Title = "Estilos de Mira Avanzados & Multicolor" })
-
-Tabs.Visual:Toggle({
-    Title = "Activar Crosshair",
-    Value = false,
-    Callback = function(v) getgenv().CrosshairEnabled = v end,
-})
-
-Tabs.Visual:Dropdown({
-    Title = "Diseño de Mira Avanzado",
-    Values = { 
-        "Venas Cyber", 
-        "Muñeco Neón Kawaii", 
-        "Calavera Táctica Neón", 
-        "Corazón Brillante Doble", 
-        "Estrella Mágica Galaxia", 
-        "Cruz Moderna Multicolor", 
-        "Punto Central con Anillo Láser" 
-    },
-    Value = "Venas Cyber",
-    Callback = function(v) getgenv().CrosshairStyle = v end,
-})
-
-Tabs.Visual:Dropdown({
-    Title = "Color Base de Mira",
-    Values = { "Morado", "Rosa Neón", "Rojo Sangre", "Verde Matrix", "Azul Eléctrico", "Amarillo Oro", "Blanco Puro", "Multicolor RGB" },
-    Value = "Morado",
-    Callback = function(v)
-        local colors = {
-            ["Morado"] = Color3.fromRGB(138, 43, 226),
-            ["Rosa Neón"] = Color3.fromRGB(255, 20, 147),
-            ["Rojo Sangre"] = Color3.fromRGB(255, 30, 30),
-            ["Verde Matrix"] = Color3.fromRGB(0, 255, 100),
-            ["Azul Eléctrico"] = Color3.fromRGB(0, 200, 255),
-            ["Amarillo Oro"] = Color3.fromRGB(255, 215, 0),
-            ["Blanco Puro"] = Color3.fromRGB(255, 255, 255),
-            ["Multicolor RGB"] = Color3.fromRGB(255, 255, 255)
-        }
-        getgenv().CrosshairColor = colors[v] or Color3.fromRGB(138, 43, 226)
-    end,
-})
-
-Tabs.Visual:Input({
-    Title = "Código de Mira (ID Imagen Roblox)",
-    Placeholder = "Ej: 12323570810, 12683488595...",
-    Callback = function(v)
-        local cleanId = tostring(v):gsub("%D", "")
-        if cleanId ~= "" then
-            getgenv().CustomCrosshairId = cleanId
-            getgenv().CrosshairStyle = "Código Personalizado (ID)"
-        end
-    end,
-})
-
-Tabs.Music:Section({ Title = "Reproductor Red Davil (Modo Pegar Todo Rojo 🔥)" })
-
-local currentPlayingLabel = Tabs.Music:Paragraph({
-    Title = "Estado actual",
-    Content = "Sin reproducción activa (selecciona la canción funcional)."
-})
-
-local tracks = {
-    ["Ninguna (Silencio)"] = "",
-    ["✨ Canción Principal (Funcionando)"] = "139982007364841"
-}
-
-local trackNames = { 
-    "Ninguna (Silencio)", 
-    "✨ Canción Principal (Funcionando)" 
-}
-
-local function cleanAudioId(audioId)
-    if audioId == nil then return "" end
-    return tostring(audioId):gsub("%D", "")
 end
-
-local function stopMusic()
-    if soundInstance and soundInstance.Parent then
-        soundInstance:Stop()
-        soundInstance.TimePosition = 0
-    end
 end
-
-local function playMusic(audioId)
-    local cleanId = cleanAudioId(audioId)
-    if cleanId == "" then return false end
-    stopMusic()
-    soundInstance.SoundId = "rbxassetid://" .. cleanId
-    local ok, err = pcall(function() soundInstance:Play() end)
-    if not ok then
-        warn("Error reproduciendo audio: " .. tostring(err))
-        return false
-    end
-    return true
 end
+end })
+Tabs.Combat:Slider({ Title = "Tamaño de Hitbox", Step = 1, Value = { Min = 2, Max = 20, Default = 5 }, Callback = function(v) getgenv().HitboxSize = v end })
+Tabs.Combat:Slider({ Title = "Transparencia Hitbox", Step = 0.1, Value = { Min = 0, Max = 1, Default = 0.5 }, Callback = function(v) getgenv().HitboxTransparency = v end })
 
-Tabs.Music:Dropdown({
-    Title = "Seleccionar Pista 'Pegar Rojo'",
-    Values = trackNames,
-    Value = "Ninguna (Silencio)",
-    Callback = function(v)
-        if v == "Ninguna (Silencio)" then
-            stopMusic()
-            soundInstance.SoundId = ""
-            currentPlayingLabel:SetContent("Audio detenido.")
-        elseif tracks[v] and tracks[v] ~= "" then
-            if playMusic(tracks[v]) then
-                currentPlayingLabel:SetContent("Sonando: " .. v)
-            else
-                currentPlayingLabel:SetContent("Error al reproducir el audio.")
-            end
-        end
-    end,
+-- [ SECCIÓN WEAPMOD ]
+Tabs.WeapMod:Section({ Title = "Modificaciones de Armamento (Valores locales)" })
+Tabs.WeapMod:Toggle({ Title = "Rapid Fire (Disparo Rápido)", Value = false, Callback = function(v) getgenv().RapidFireEnabled = v end })
+Tabs.WeapMod:Toggle({ Title = "Infinite Ammo", Value = false, Callback = function(v) getgenv().InfAmmoEnabled = v end })
+
+-- [ SECCIÓN SKIN CHANGER (INTACTA) ]
+Tabs.SkinChanger:Section({ Title = "Colores y Materiales" })
+Tabs.SkinChanger:Toggle({ Title = "Activar Colores Sólidos", Value = false, Callback = function(v) getgenv().SkinChangerEnabled = v end })
+Tabs.SkinChanger:Dropdown({
+Title = "Estilo / Color",
+Values = { "Gold", "Diamond", "Ruby", "Emerald", "Obsidian", "Rainbow", "Amethyst", "Sapphire", "Topaz", "Pearl", "NeonPink", "Cyan" },
+Value = "Gold",
+Callback = function(v) getgenv().SelectedWeaponSkin = v end
+})
+Tabs.SkinChanger:Dropdown({
+Title = "Material Visual",
+Values = { "Neon", "Glass", "Metal", "SmoothPlastic", "ForceField", "Foil", "Ice", "Wood", "Marble" },
+Value = "Neon",
+Callback = function(v) getgenv().SelectedWeaponMaterial = v end
+})
+Tabs.SkinChanger:Section({ Title = "Diseños Dinámicos" })
+Tabs.SkinChanger:Toggle({ Title = "Activar Diseños", Value = false, Callback = function(v) getgenv().SkinPatternEnabled = v end })
+Tabs.SkinChanger:Dropdown({
+Title = "Seleccionar Diseño",
+Values = { "Galaxy", "Camo", "Carbon Fiber", "Lava", "Lightning", "Checkerboard", "Anime" },
+Value = "Galaxy",
+Callback = function(v) getgenv().SelectedWeaponPattern = v end
 })
 
-Tabs.Music:Input({
-    Title = "ID Personalizado de Roblox",
-    Placeholder = "Ingresa ID y presiona Enter...",
-    Callback = function(v)
-        local cleanId = cleanAudioId(v)
-        if cleanId ~= "" then
-            if playMusic(cleanId) then
-                currentPlayingLabel:SetContent("Sonando ID: " .. cleanId)
-            end
-        end
-    end,
-})
-
-Tabs.Music:Section({ Title = "Controles" })
-
-Tabs.Music:Toggle({
-    Title = "Pausar / Reanudar",
-    Value = true,
-    Callback = function(v)
-        if v then
-            if soundInstance.SoundId ~= "" and not soundInstance.IsPlaying then
-                safeCall("Reanudar música", function() soundInstance:Resume() end)
-                currentPlayingLabel:SetContent("Estado: Reproduciendo")
-            end
-        else
-            if soundInstance and soundInstance.IsPlaying then
-                soundInstance:Pause()
-                currentPlayingLabel:SetContent("Estado: Pausado")
-            end
-        end
-    end,
-})
-
-Tabs.Music:Slider({
-    Title = "Volumen",
-    Step = 0.05,
-    Value = { Min = 0, Max = 1, Default = 1 },
-    Callback = function(v) soundInstance.Volume = math.clamp(tonumber(v) or 1, 0, 1) end,
-})
-
-Tabs.Music:Button({
-    Title = "Detener Sonido",
-    Callback = function()
-        stopMusic()
-        soundInstance.SoundId = ""
-        currentPlayingLabel:SetContent("Audio detenido.")
-    end,
-})
-
-Tabs.Settings:Section({ Title = "Interfaz y Temas" })
-
-Tabs.Settings:Dropdown({
-    Title = "Tema de la Interfaz",
-    Values = { "Dark", "Light", "Rose", "Plant", "Indigo", "Violet", "Amber" },
-    Value = "Dark",
-    Callback = function(themeName)
-        pcall(function() WindUI:SetTheme(themeName) end)
-    end,
-})
-
-Tabs.Settings:Button({
-    Title = "Rejoin Server",
-    Callback = function()
-        safeCall("Rejoin", function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-        end)
-    end,
-})
-
-local function cleanupScript()
-    disableNoClip()
-    getgenv().SpeedEnabled = false
-    pcall(function()
-        local char = LocalPlayer.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if hum then hum.WalkSpeed = 16 end
-        end
-    end)
-    if soundInstance then
-        soundInstance:Stop()
-        soundInstance:Destroy()
-        soundInstance = nil
-    end
+-- [ SECCIÓN MOVEMENT ]
+Tabs.Movement:Toggle({ Title = "Speed", Value = false, Callback = function(v)
+getgenv().SpeedEnabled = v
+if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().PlayerSpeedValue
+elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+LocalPlayer.Character.Humanoid.WalkSpeed = 16
 end
+end })
+Tabs.Movement:Slider({ Title = "Velocidad", Step = 1, Value = { Min = 16, Max = 200, Default = 16 }, Callback = function(v) getgenv().PlayerSpeedValue = v ; if getgenv().SpeedEnabled and LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = v end end })
+Tabs.Movement:Toggle({ Title = "Infinite Jump", Value = false, Callback = function(v) getgenv().InfJumpEnabled = v end })
+Tabs.Movement:Toggle({ Title = "Activar SpinBot", Value = false, Callback = function(v) getgenv().SpinBotEnabled = v end })
 
-Tabs.Settings:Button({
-    Title = "Destruir / Cerrar UI",
-    Callback = function()
-        cleanupScript()
-        Window:Unload()
-        pcall(function()
-            if CoreGui:FindFirstChild("1AN_Crosshair") then CoreGui:FindFirstChild("1AN_Crosshair"):Destroy() end
-            if CoreGui:FindFirstChild("1AN_TracersGui") then CoreGui:FindFirstChild("1AN_TracersGui"):Destroy() end
-            if CoreGui:FindFirstChild("1AN_EspExtraGui") then CoreGui:FindFirstChild("1AN_EspExtraGui"):Destroy() end
-            if CoreGui:FindFirstChild("1AN_FlashbangEffect") then CoreGui:FindFirstChild("1AN_FlashbangEffect"):Destroy() end
-            if CoreGui:FindFirstChild("1AN_FovGui") then CoreGui:FindFirstChild("1AN_FovGui"):Destroy() end
-        end)
-    end,
-})
+-- [ SECCIÓN VISUAL (REPARADA) ]
+Tabs.Visual:Section({ Title = "Wallhack & Chams" })
+Tabs.Visual:Toggle({ Title = "ESP Chams (Highlight)", Value = false, Callback = function(v) getgenv().EspEnemyEnabled = v end })
+Tabs.Visual:Toggle({ Title = "ESP Cajas (Boxes)", Value = false, Callback = function(v)
+getgenv().EspBoxesEnabled = v
+if not v then
+for _, drawings in pairs(espDrawings or {}) do
+if drawings.Box then drawings.Box.Visible = false end
+end
+end
+end })
+Tabs.Visual:Toggle({ Title = "ESP Nombres", Value = false, Callback = function(v)
+getgenv().EspNamesEnabled = v
+if not v then
+for _, drawings in pairs(espDrawings or {}) do
+if drawings.Name then drawings.Name.Visible = false end
+end
+end
+end })
+Tabs.Visual:Toggle({ Title = "ESP Líneas (Tracers)", Value = false, Callback = function(v)
+getgenv().EspTracersEnabled = v
+if not v then
+for _, drawings in pairs(espDrawings or {}) do
+if drawings.Tracer then drawings.Tracer.Visible = false end
+end
+end
+end })
 
-local frozenPositions = {}
+-- [ SISTEMAS INTERNOS Y ESP EXTRA ]
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 1.5
+fovCircle.Filled = false
+fovCircle.Transparency = 1
+espDrawings = {}
 
 local function isTeammate(player)
-    if not getgenv().TeamCheckEnabled then return false end
-    if player == LocalPlayer then return true end
-    if not LocalPlayer.Team or not player.Team then return false end
-    if player.Team == LocalPlayer.Team then return true end
-    local successTeam, result = pcall(function()
-        return player.TeamColor and LocalPlayer.TeamColor and player.TeamColor == LocalPlayer.TeamColor
-    end)
-    return successTeam and result or false
+if not getgenv().TeamCheckEnabled then return false end
+if player == LocalPlayer then return true end
+if not LocalPlayer.Team or not player.Team then return false end
+return player.Team == LocalPlayer.Team
 end
 
--- SELECCIÓN ESTRICTA DENTRO DEL FOV PARA SILENT AIM
-local function getClosestTarget()
-    local cam = workspace.CurrentCamera
-    local viewportSize = cam.ViewportSize
-    local centerScreen = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-    local closestPart = nil
-    local shortestDist = math.huge
-
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            local ally = isTeammate(p)
-            local char = p.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            
-            if hum and hum.Health > 0 and not ally then
-                local targetPartName = getgenv().SilentAimMode
-                local targetPart = char:FindFirstChild(targetPartName) or char:FindFirstChild("Head")
-                
-                if targetPart then
-                    local screenPos, onScreen = cam:WorldToViewportPoint(targetPart.Position)
-                    
-                    if onScreen then
-                        local screenPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                        local dist = (screenPos2D - centerScreen).Magnitude
-                        
-                        if dist <= getgenv().FovRadius and dist < shortestDist then
-                            shortestDist = dist
-                            closestPart = targetPart
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return closestPart
-end
-
--- SELECCIÓN FLUIDA Y ESTRICTA DENTRO DEL FOV PARA AIMBOT DE CÁMARA
-local function getClosestTargetForAimbot()
-    local closestPart = nil
-    local shortestDist = math.huge
-    local cam = workspace.CurrentCamera
-    local viewportSize = cam.ViewportSize
-    local centerScreen = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            local ally = isTeammate(p)
-            local char = p.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-
-            if hum and hum.Health > 0 and not ally then
-                local targetPartName = getgenv().AimbotPart or "Head"
-                local targetPart = char:FindFirstChild(targetPartName) or char:FindFirstChild("Head")
-
-                if targetPart then
-                    local screenPos, onScreen = cam:WorldToViewportPoint(targetPart.Position)
-                    if onScreen then
-                        local screenPos2D = Vector2.new(screenPos.X, screenPos.Y)
-                        local dist = (screenPos2D - centerScreen).Magnitude
-                        
-                        if dist <= getgenv().FovRadius and dist < shortestDist then
-                            shortestDist = dist
-                            closestPart = targetPart
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return closestPart
-end
-
-local fovGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("1AN_FovGui")
-if not fovGui then
-    fovGui = Instance.new("ScreenGui")
-    fovGui.Name = "1AN_FovGui"
-    fovGui.ResetOnSpawn = false
-    fovGui.IgnoreGuiInset = true
-    fovGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
-local fovCircleFrame = fovGui:FindFirstChild("FovCircle")
-if not fovCircleFrame then
-    fovCircleFrame = Instance.new("Frame")
-    fovCircleFrame.Name = "FovCircle"
-    fovCircleFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    fovCircleFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    fovCircleFrame.BackgroundTransparency = 1
-    fovCircleFrame.BorderSizePixel = 0
-    fovCircleFrame.Parent = fovGui
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = fovCircleFrame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Name = "FovStroke"
-    stroke.Thickness = 1.5
-    stroke.Color = Color3.fromRGB(138, 43, 226)
-    stroke.Parent = fovCircleFrame
-end
-
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        if getgenv().FovEnabled then
-            fovCircleFrame.Visible = true
-            local diameter = getgenv().FovRadius * 2
-            fovCircleFrame.Size = UDim2.fromOffset(diameter, diameter)
-            local stroke = fovCircleFrame:FindFirstChild("FovStroke")
-            if stroke then stroke.Color = getgenv().FovColor or Color3.fromRGB(138, 43, 226) end
-        else
-            fovCircleFrame.Visible = false
-        end
-
-        if getgenv().AimbotEnabled then
-            local target = getClosestTargetForAimbot()
-            if target then
-                local cam = workspace.CurrentCamera
-                local targetCF = CFrame.new(cam.CFrame.Position, target.Position)
-                local smooth = math.clamp(tonumber(getgenv().AimbotSmooth) or 5, 2, 20)
-                cam.CFrame = cam.CFrame:Lerp(targetCF, 1 / smooth)
-            end
-        end
-    end)
-end)
-
--- SILENT AIM BLINDADO CONTRA CRASHES
-pcall(function()
-    local mt = getrawmetatable(game)
-    setreadonly(mt, false)
-    local oldNamecall = mt.__namecall
-
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
-        
-        if getgenv().SilentAimMode and getgenv().SilentAimMode ~= "None" then
-            local targetPart = getClosestTarget()
-            if targetPart and targetPart.Parent then
-                if method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
-                    if typeof(args[1]) == "Ray" then
-                        local ray = args[1]
-                        local newDir = (targetPart.Position - ray.Origin).Unit * ray.Direction.Magnitude
-                        args[1] = Ray.new(ray.Origin, newDir)
-                        return oldNamecall(self, unpack(args))
-                    end
-                elseif method == "Raycast" then
-                    if typeof(args[1]) == "Vector3" and typeof(args[2]) == "Vector3" then
-                        local origin = args[1]
-                        local direction = args[2]
-                        args[2] = (targetPart.Position - origin).Unit * direction.Magnitude
-                        return oldNamecall(self, unpack(args))
-                    end
-                end
-            end
-        end
-        return oldNamecall(self, unpack(args))
-    end)
-    setreadonly(mt, true)
-end)
-
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        local mouse = LocalPlayer:GetMouse()
-        local closestTargetHRP = nil
-        local shortestDist = math.huge
-
-        if getgenv().FreezeEnemyEnabled then
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    local ally = isTeammate(p)
-                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
-
-                    if hrp and hum and hum.Health > 0 and not ally then
-                        local cam = workspace.CurrentCamera
-                        local screenPos, onScreen = cam:WorldToViewportPoint(hrp.Position)
-                        
-                        if onScreen then
-                            local mousePos = Vector2.new(mouse.X, mouse.Y)
-                            local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                            
-                            if dist < shortestDist then
-                                shortestDist = dist
-                                closestTargetHRP = hrp
-                            end
-                        end
-                    end
-                end
-            end
-        end
-
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = p.Character.HumanoidRootPart
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                
-                if getgenv().FreezeEnemyEnabled and closestTargetHRP and hrp == closestTargetHRP then
-                    if not frozenPositions[p] then frozenPositions[p] = hrp.CFrame end
-                    hrp.Anchored = true
-                    hrp.CFrame = frozenPositions[p]
-                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-                    if hum then hum.PlatformStand = true end
-                else
-                    if frozenPositions[p] then frozenPositions[p] = nil end
-                    hrp.Anchored = false
-                    if hum then hum.PlatformStand = false end
-                end
-            end
-        end
-    end)
-end)
-
-RunService.RenderStepped:Connect(function(deltaTime)
-    safeCall("SpinBot", function()
-        if not getgenv().SpinBotEnabled then return end
-        local character = LocalPlayer.Character
-        if not character then return end
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if hrp and humanoid then
-            local speed = tonumber(getgenv().SpinSpeed) or 120
-            local angle = (tick() * speed * 25) % 360
-            hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(angle), 0)
-            humanoid.AutoRotate = false
-        else
-            if humanoid then humanoid.AutoRotate = true end
-        end
-    end)
-end)
-
-RunService.Heartbeat:Connect(function()
-    safeCall("Speed", function()
-        if getgenv().SpeedEnabled then
-            local character = LocalPlayer.Character
-            if character then
-                local humanoid = character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    humanoid.WalkSpeed = tonumber(getgenv().PlayerSpeedValue) or 16
-                end
-            end
-        end
-    end)
-end)
-
-UIS.JumpRequest:Connect(function()
-    if not getgenv().InfJumpEnabled then return end
-    local character = LocalPlayer.Character
-    if character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
-    end
-end)
-
+local function getClosestTargetUniversal()
 local Camera = workspace.CurrentCamera
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        if getgenv().StretchEnabled and Camera then
-            local res = getgenv().StretchResolution or 0.75
-            Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, res, 0, 0, 0, 1)
-        end
-    end)
-end)
-
-local originalSizes = {}
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local ally = isTeammate(p)
-                local char = p.Character
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local torsoPart = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
-                
-                if torsoPart and hum and hum.Health > 0 then
-                    if not originalSizes[torsoPart] then
-                        originalSizes[torsoPart] = {
-                            Size = torsoPart.Size,
-                            Transparency = torsoPart.Transparency,
-                            Material = torsoPart.Material,
-                            Massless = torsoPart.Massless,
-                            CanCollide = torsoPart.CanCollide
-                        }
-                    end
-                    
-                    if getgenv().HitboxEnabled and not ally then
-                        local sizeVal = getgenv().HitboxSize or 5
-                        torsoPart.Size = Vector3.new(sizeVal, sizeVal, sizeVal)
-                        torsoPart.Transparency = getgenv().HitboxTransparency or 0.5
-                        torsoPart.Color = getgenv().HitboxColor or Color3.fromRGB(138, 43, 226)
-                        torsoPart.Material = Enum.Material.Neon
-                        torsoPart.CanCollide = false
-                        torsoPart.Massless = true
-                    else
-                        if originalSizes[torsoPart] then
-                            torsoPart.Size = originalSizes[torsoPart].Size
-                            torsoPart.Transparency = originalSizes[torsoPart].Transparency
-                            torsoPart.Material = originalSizes[torsoPart].Material
-                            torsoPart.Massless = originalSizes[torsoPart].Massless
-                            torsoPart.CanCollide = originalSizes[torsoPart].CanCollide
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end)
-
-local originalHeadSizes = {}
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local ally = isTeammate(p)
-                local char = p.Character
-                local head = char:FindFirstChild("Head")
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                
-                if head and hum and hum.Health > 0 then
-                    if not originalHeadSizes[head] then
-                        originalHeadSizes[head] = {
-                            Size = head.Size,
-                            CanCollide = head.CanCollide,
-                            Massless = head.Massless
-                        }
-                    end
-                    
-                    if getgenv().BigHeadEnabled and not ally then
-                        local targetSize = getgenv().BigHeadSize or 4
-                        head.Size = Vector3.new(targetSize, targetSize, targetSize)
-                        head.CanCollide = true
-                        head.Transparency = 0.5
-                        head.Massless = true
-                    else
-                        if originalHeadSizes[head] then
-                            head.Size = originalHeadSizes[head].Size
-                            head.CanCollide = originalHeadSizes[head].CanCollide
-                            head.Transparency = 0
-                            head.Massless = originalHeadSizes[head].Massless
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end)
-
-local tracersGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("1AN_TracersGui")
-if not tracersGui then
-    tracersGui = Instance.new("ScreenGui")
-    tracersGui.Name = "1AN_TracersGui"
-    tracersGui.ResetOnSpawn = false
-    tracersGui.IgnoreGuiInset = true
-    tracersGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local closestPart = nil
+local shortestDist = getgenv().FovRadius
+local centerScreen = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+for _, p in ipairs(Players:GetPlayers()) do
+if p ~= LocalPlayer and p.Character and not isTeammate(p) then
+local hum = p.Character:FindFirstChildOfClass("Humanoid")
+local targetPart = p.Character:FindFirstChild(getgenv().AimbotPart)
+if hum and hum.Health > 0 and targetPart then
+local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+if onScreen then
+local dist = (Vector2.new(screenPos.X, screenPos.Y) - centerScreen).Magnitude
+if dist < shortestDist then
+shortestDist = dist
+closestPart = targetPart
+end
+end
+end
+end
+end
+return closestPart
 end
 
-local tracersContainer = tracersGui:FindFirstChild("TracersContainer")
-if not tracersContainer then
-    tracersContainer = Instance.new("Frame")
-    tracersContainer.Name = "TracersContainer"
-    tracersContainer.BackgroundTransparency = 1
-    tracersContainer.Size = UDim2.new(1, 0, 1, 0)
-    tracersContainer.Parent = tracersGui
-end
-
-local espGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("1AN_EspExtraGui")
-if not espGui then
-    espGui = Instance.new("ScreenGui")
-    espGui.Name = "1AN_EspExtraGui"
-    espGui.ResetOnSpawn = false
-    espGui.IgnoreGuiInset = true
-    espGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
-local espContainer = espGui:FindFirstChild("EspContainer")
-if not espContainer then
-    espContainer = Instance.new("Frame")
-    espContainer.Name = "EspContainer"
-    espContainer.BackgroundTransparency = 1
-    espContainer.Size = UDim2.new(1, 0, 1, 0)
-    espContainer.Parent = espGui
-end
-
-local espElements = {}
-
-local function getEspDrawings(player)
-    if not espElements[player] then
-        local holder = Instance.new("Folder")
-        holder.Name = player.Name .. "_EspHolder"
-        holder.Parent = espContainer
-
-        local box = Instance.new("Frame")
-        box.Name = "Box"
-        box.BackgroundTransparency = 1
-        box.BorderSizePixel = 0
-        box.Visible = false
-        box.Parent = holder
-
-        local bTop = Instance.new("Frame") bTop.Name = "BTop" bTop.BorderSizePixel = 0 bTop.BackgroundColor3 = Color3.fromRGB(138, 43, 226) bTop.Parent = box
-        local bBottom = Instance.new("Frame") bBottom.Name = "BBottom" bBottom.BorderSizePixel = 0 bBottom.BackgroundColor3 = Color3.fromRGB(138, 43, 226) bBottom.Parent = box
-        local bLeft = Instance.new("Frame") bLeft.Name = "BLeft" bLeft.BorderSizePixel = 0 bLeft.BackgroundColor3 = Color3.fromRGB(138, 43, 226) bLeft.Parent = box
-        local bRight = Instance.new("Frame") bRight.Name = "BRight" bRight.BorderSizePixel = 0 bRight.BackgroundColor3 = Color3.fromRGB(138, 43, 226) bRight.Parent = box
-
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Name = "NameLabel"
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Size = UDim2.new(0, 200, 0, 20)
-        nameLabel.AnchorPoint = Vector2.new(0.5, 1)
-        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        nameLabel.TextStrokeTransparency = 0.5
-        nameLabel.TextSize = 13
-        nameLabel.Font = Enum.Font.SourceSansBold
-        nameLabel.Visible = false
-        nameLabel.Parent = holder
-
-        local healthBG = Instance.new("Frame")
-        healthBG.Name = "HealthBG"
-        healthBG.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        healthBG.BorderSizePixel = 0
-        healthBG.Visible = false
-        healthBG.Parent = holder
-
-        local healthFill = Instance.new("Frame")
-        healthFill.Name = "HealthFill"
-        healthFill.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-        healthFill.BorderSizePixel = 0
-        healthFill.Parent = healthBG
-
-        espElements[player] = {
-            Holder = holder,
-            Box = box,
-            BTop = bTop,
-            BBottom = bBottom,
-            BLeft = bLeft,
-            BRight = bRight,
-            NameLabel = nameLabel,
-            HealthBG = healthBG,
-            HealthFill = healthFill
-        }
-    end
-    return espElements[player]
-end
-
+-- RenderStepped Principal (Dibujos 2D y ESP Optimizado)
 RunService.RenderStepped:Connect(function()
-    pcall(function()
-        for _, p in ipairs(Players:GetPlayers()) do
-            local elements = espElements[p]
-            local showEsp = false
+pcall(function()
+local Camera = workspace.CurrentCamera
 
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChildOfClass("Humanoid") then
-                local ally = isTeammate(p)
-                local char = p.Character
-                local hrp = char.HumanoidRootPart
-                local hum = char:FindFirstChildOfClass("Humanoid")
+-- FOV Circle
+if getgenv().FovEnabled then
+fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+fovCircle.Radius = getgenv().FovRadius
+fovCircle.Color = getgenv().FovColor
+fovCircle.Visible = true
+else
+fovCircle.Visible = false
+end
 
-                if hum.Health > 0 and not ally and Camera then
-                    local cf = hrp.CFrame
-                    local size = char:GetExtentsSize()
-                    
-                    local topWorld = (cf + Vector3.new(0, (size.Y / 2) + 0.5, 0)).Position
-                    local bottomWorld = (cf - Vector3.new(0, (size.Y / 2) + 0.5, 0)).Position
-                    
-                    local topScreen, topOn = Camera:WorldToViewportPoint(topWorld)
-                    local bottomScreen, bottomOn = Camera:WorldToViewportPoint(bottomWorld)
+-- Aimbot
+if getgenv().AimbotEnabled then
+local target = getClosestTargetUniversal()
+if target then
+local targetCF = CFrame.new(Camera.CFrame.Position, target.Position)
+Camera.CFrame = Camera.CFrame:Lerp(targetCF, 1 / getgenv().AimbotSmooth)
+end
+end
 
-                    if topOn and bottomOn and topScreen.Z > 0 then
-                        showEsp = true
-                        local visuals = getEspDrawings(p)
-                        local height = math.abs(bottomScreen.Y - topScreen.Y)
-                        local width = height / 2
-                        local posX = topScreen.X - (width / 2)
-                        local posY = topScreen.Y
+-- Spinbot
+if getgenv().SpinBotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(getgenv().SpinSpeed), 0)
+end
 
-                        if getgenv().EspBoxEnabled then
-                            visuals.Box.Visible = true
-                            visuals.Box.Position = UDim2.new(0, posX, 0, posY)
-                            visuals.Box.Size = UDim2.new(0, width, 0, height)
-                            
-                            local thick = 1
-                            visuals.BTop.Size = UDim2.new(1, 0, 0, thick) visuals.BTop.Position = UDim2.new(0, 0, 0, 0)
-                            visuals.BBottom.Size = UDim2.new(1, 0, 0, thick) visuals.BBottom.Position = UDim2.new(0, 0, 1, -thick)
-                            visuals.BLeft.Size = UDim2.new(0, thick, 1, 0) visuals.BLeft.Position = UDim2.new(0, 0, 0, 0)
-                            visuals.BRight.Size = UDim2.new(0, thick, 1, 0) visuals.BRight.Position = UDim2.new(1, -thick, 0, 0)
-                        else
-                            visuals.Box.Visible = false
-                        end
+-- Hitboxes Dinámicas
+for _, p in ipairs(Players:GetPlayers()) do
+if p ~= LocalPlayer and p.Character and not isTeammate(p) then
+local hum = p.Character:FindFirstChildOfClass("Humanoid")
+if hum and hum.Health > 0 then
+for _, partName in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
+local targetPart = p.Character:FindFirstChild(partName)
+if targetPart then
+if getgenv().HitboxEnabled then
+targetPart.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+targetPart.Transparency = getgenv().HitboxTransparency
+targetPart.Color = getgenv().HitboxColor
+targetPart.Material = Enum.Material.Neon
+targetPart.CanCollide = false
+else
+targetPart.Size = (partName == "Head" and Vector3.new(2, 1, 1)) or (partName == "HumanoidRootPart" and Vector3.new(2, 2, 1)) or Vector3.new(2, 1, 1)
+targetPart.Transparency = (partName == "HumanoidRootPart" and 1) or 0
+targetPart.CanCollide = true
+end
+end
+end
+end
+end
+end
 
-                        if getgenv().EspNameEnabled then
-                            visuals.NameLabel.Visible = true
-                            visuals.NameLabel.Position = UDim2.new(0, topScreen.X, 0, posY - 6)
-                            visuals.NameLabel.Text = p.Name
-                        else
-                            visuals.NameLabel.Visible = false
-                        end
+-- Dibujos de ESP Reestructurados y Reparados (Boxes, Tracers y Names calculados de forma precisa)
+for _, p in ipairs(Players:GetPlayers()) do
+if p ~= LocalPlayer then
+if not espDrawings[p] then
+espDrawings[p] = {
+Box = Drawing.new("Square"),
+Tracer = Drawing.new("Line"),
+Name = Drawing.new("Text")
+}
+espDrawings[p].Box.Thickness = 1.5
+espDrawings[p].Box.Filled = false
+espDrawings[p].Tracer.Thickness = 1.5
+espDrawings[p].Name.Size = 14
+espDrawings[p].Name.Center = true
+espDrawings[p].Name.Outline = true
+end
 
-                        if getgenv().EspHealthEnabled then
-                            visuals.HealthBG.Visible = true
-                            visuals.HealthBG.Position = UDim2.new(0, posX - 6, 0, posY)
-                            visuals.HealthBG.Size = UDim2.new(0, 3, 0, height)
+local drawings = espDrawings[p]
+local char = p.Character
+local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+local headPart = char and char:FindFirstChild("Head")
+local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-                            local healthPercent = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-                            visuals.HealthFill.Size = UDim2.new(1, 0, healthPercent, 0)
-                            visuals.HealthFill.Position = UDim2.new(0, 0, 1 - healthPercent, 0)
-                            visuals.HealthFill.BackgroundColor3 = Color3.fromRGB(255 * (1 - healthPercent), 255 * healthPercent, 0)
-                        else
-                            visuals.HealthBG.Visible = false
-                        end
-                    end
-                end
-            end
+if char and rootPart and headPart and hum and hum.Health > 0 and not isTeammate(p) then
+-- Usamos CFrame para proyectar esquinas reales 3D del personaje a 2D de forma robusta
+local cframe, size = char:GetBoundingBox()
+local topCenter = cframe.Position + Vector3.new(0, size.Y / 2 + 0.5, 0)
+local bottomCenter = cframe.Position - Vector3.new(0, size.Y / 2, 0)
 
-            if not showEsp and elements then
-                elements.Box.Visible = false
-                elements.NameLabel.Visible = false
-                elements.HealthBG.Visible = false
-            end
-        end
-    end)
+local topPos, topVisible = Camera:WorldToViewportPoint(topCenter)
+local bottomPos, bottomVisible = Camera:WorldToViewportPoint(bottomCenter)
+local rootPos, rootVisible = Camera:WorldToViewportPoint(rootPart.Position)
+
+if rootVisible then
+local height = math.abs(bottomPos.Y - topPos.Y)
+local width = height / 2
+
+-- Cajas (Boxes)
+if getgenv().EspBoxesEnabled then
+drawings.Box.Size = Vector2.new(width, height)
+drawings.Box.Position = Vector2.new(rootPos.X - width / 2, topPos.Y)
+drawings.Box.Color = getgenv().EspEnemyColor
+drawings.Box.Visible = true
+else
+drawings.Box.Visible = false
+end
+
+-- Tracers (Líneas)
+if getgenv().EspTracersEnabled then
+drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+drawings.Tracer.To = Vector2.new(rootPos.X, bottomPos.Y)
+drawings.Tracer.Color = getgenv().EspEnemyColor
+drawings.Tracer.Visible = true
+else
+drawings.Tracer.Visible = false
+end
+
+-- Nombres
+if getgenv().EspNamesEnabled then
+drawings.Name.Text = p.Name .. " [" .. math.floor(hum.Health) .. "HP]"
+drawings.Name.Position = Vector2.new(rootPos.X, topPos.Y - 18)
+drawings.Name.Color = Color3.fromRGB(255, 255, 255)
+drawings.Name.Visible = true
+else
+drawings.Name.Visible = false
+end
+else
+drawings.Box.Visible = false
+drawings.Tracer.Visible = false
+drawings.Name.Visible = false
+end
+else
+drawings.Box.Visible = false
+drawings.Tracer.Visible = false
+drawings.Name.Visible = false
+end
+end
+end
+end)
 end)
 
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        for _, child in ipairs(tracersContainer:GetChildren()) do
-            child.Visible = false
-        end
-
-        if not getgenv().TracersEnabled or not Camera then return end
-
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local ally = isTeammate(p)
-                local char = p.Character
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                local hum = char:FindFirstChildOfClass("Humanoid")
-
-                if hrp and hum and hum.Health > 0 and not ally then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                    
-                    if onScreen and screenPos.Z > 0 then
-                        local viewportSize = Camera.ViewportSize
-                        local clampedX = math.clamp(screenPos.X, 20, viewportSize.X - 20)
-                        
-                        local tracerFrame = tracersContainer:FindFirstChild(p.Name)
-                        if not tracerFrame then
-                            tracerFrame = Instance.new("Frame")
-                            tracerFrame.Name = p.Name
-                            tracerFrame.AnchorPoint = Vector2.new(0.5, 0)
-                            tracerFrame.Size = UDim2.fromOffset(4, 12)
-                            tracerFrame.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-                            tracerFrame.BorderSizePixel = 0
-                            tracerFrame.Parent = tracersContainer
-
-                            local corner = Instance.new("UICorner")
-                            corner.CornerRadius = UDim.new(1, 0)
-                            corner.Parent = tracerFrame
-                        end
-
-                        tracerFrame.Visible = true
-                        tracerFrame.Position = UDim2.new(0, clampedX, 0, 15)
-                    end
-                end
-            end
-        end
-    end)
+-- Limpieza
+Players.PlayerRemoving:Connect(function(p)
+if espDrawings[p] then
+pcall(function()
+espDrawings[p].Box:Remove()
+espDrawings[p].Tracer:Remove()
+espDrawings[p].Name:Remove()
+end)
+espDrawings[p] = nil
+end
 end)
 
+UserInputService.JumpRequest:Connect(function()
+if getgenv().InfJumpEnabled and LocalPlayer.Character then
+local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+end
+end)
+
+-- Bucle de Escaneo (Skin Changer, Mods, Diseños y Pintura Total - INTACTO)
 task.spawn(function()
-    while true do
-        task.wait(1)
-        pcall(function()
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and p.Character then
-                    local ally = isTeammate(p)
-                    local hl = p.Character:FindFirstChild("1AN_ESP")
-                    
-                    if getgenv().EspEnemyEnabled and not ally then
-                        if not hl then
-                            hl = Instance.new("Highlight")
-                            hl.Name = "1AN_ESP"
-                            hl.Adornee = p.Character
-                            hl.FillTransparency = 0.4
-                            hl.OutlineTransparency = 0
-                            hl.FillColor = Color3.fromRGB(138, 43, 226)
-                            hl.Parent = p.Character
-                        end
-                    else
-                        if hl then hl:Destroy() end
-                    end
-                end
-            end
-        end)
-    end
+while task.wait(0.5) do
+pcall(function()
+local char = LocalPlayer.Character
+local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
+local patternConfigs = {
+["Galaxy"] = { color = Color3.fromRGB(138, 43, 226), material = Enum.Material.ForceField },
+["Camo"] = { color = Color3.fromRGB(85, 95, 60), material = Enum.Material.SmoothPlastic },
+["Carbon Fiber"] = { color = Color3.fromRGB(40, 40, 40), material = Enum.Material.Glass },
+["Lava"] = { color = Color3.fromRGB(255, 69, 0), material = Enum.Material.Neon },
+["Lightning"] = { color = Color3.fromRGB(0, 206, 209), material = Enum.Material.Neon },
+["Checkerboard"] = { color = Color3.fromRGB(240, 240, 240), material = Enum.Material.Foil },
+["Anime"] = { color = Color3.fromRGB(255, 105, 180), material = Enum.Material.Glass }
+}
+
+local function scanAndSkin(container)
+if not container then return end
+for _, item in ipairs(container:GetChildren()) do
+if item:IsA("Tool") then
+if getgenv().InfAmmoEnabled or getgenv().RapidFireEnabled then
+for _, desc in ipairs(item:GetDescendants()) do
+if desc:IsA("NumberValue") or desc:IsA("IntValue") then
+local name = desc.Name:lower()
+if getgenv().RapidFireEnabled and (name:find("cooldown") or name:find("firerate")) then
+desc.Value = 0.01
+end
+if getgenv().InfAmmoEnabled and (name:find("ammo") or name:find("clip")) then
+desc.Value = 999
+end
+end
+end
+end
+
+if not originalWeaponStates[item] then
+originalWeaponStates[item] = {}
+if item:IsA("BasePart") then
+originalWeaponStates[item][item] = {
+Color = item.Color,
+Material = item.Material,
+TextureID = item:IsA("MeshPart") and item.TextureID or ""
+}
+end
+for _, part in ipairs(item:GetDescendants()) do
+if part:IsA("BasePart") then
+originalWeaponStates[item][part] = {
+Color = part.Color,
+Material = part.Material,
+TextureID = part:IsA("MeshPart") and part.TextureID or ""
+}
+end
+end
+end
+
+if getgenv().SkinPatternEnabled then
+local patternData = patternConfigs[getgenv().SelectedWeaponPattern] or patternConfigs["Galaxy"]
+local function applyPattern(p)
+if p:IsA("MeshPart") then p.TextureID = "" end
+local sa = p:FindFirstChildOfClass("SurfaceAppearance")
+if sa then sa:Destroy() end
+p.Color = patternData.color
+p.Material = patternData.material
+end
+if item:IsA("BasePart") then applyPattern(item) end
+for _, part in ipairs(item:GetDescendants()) do
+if part:IsA("BasePart") then applyPattern(part) end
+end
+elseif getgenv().SkinChangerEnabled then
+local skinColors = {
+["Gold"] = Color3.fromRGB(255, 215, 0), ["Diamond"] = Color3.fromRGB(185, 242, 255),
+["Ruby"] = Color3.fromRGB(224, 17, 95), ["Emerald"] = Color3.fromRGB(80, 200, 120),
+["Obsidian"] = Color3.fromRGB(30, 30, 30), ["Rainbow"] = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255)),
+["Amethyst"] = Color3.fromRGB(153, 102, 204), ["Sapphire"] = Color3.fromRGB(15, 82, 186),
+["Topaz"] = Color3.fromRGB(255, 200, 124), ["Pearl"] = Color3.fromRGB(234, 224, 200),
+["NeonPink"] = Color3.fromRGB(255, 20, 147), ["Cyan"] = Color3.fromRGB(0, 255, 255)
+}
+local chosenColor = skinColors[getgenv().SelectedWeaponSkin] or skinColors["Gold"]
+local chosenMaterial = Enum.Material[getgenv().SelectedWeaponMaterial] or Enum.Material.Neon
+local function applySolid(p)
+if p:IsA("MeshPart") then p.TextureID = "" end
+local sa = p:FindFirstChildOfClass("SurfaceAppearance")
+if sa then sa:Destroy() end
+p.Color = chosenColor
+p.Material = chosenMaterial
+end
+if item:IsA("BasePart") then applySolid(item) end
+for _, part in ipairs(item:GetDescendants()) do
+if part:IsA("BasePart") then applySolid(part) end
+end
+else
+if originalWeaponStates[item] then
+for part, data in pairs(originalWeaponStates[item]) do
+if part and part.Parent then
+part.Color = data.Color
+part.Material = data.Material
+if part:IsA("MeshPart") then
+part.TextureID = data.TextureID
+end
+end
+end
+end
+end
+end
+end
+end
+
+scanAndSkin(char)
+scanAndSkin(bp)
+
+-- ESP Chams (Highlight)
+for _, p in ipairs(Players:GetPlayers()) do
+if p ~= LocalPlayer and p.Character and not isTeammate(p) then
+local highlight = p.Character:FindFirstChild("AlexX_ESP")
+if getgenv().EspEnemyEnabled then
+if not highlight then
+highlight = Instance.new("Highlight", p.Character)
+highlight.Name = "AlexX_ESP"
+highlight.FillColor = Color3.fromRGB(255, 0, 0)
+highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+highlight.FillTransparency = 0.4
+highlight.OutlineTransparency = 0
+highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+end
+else
+if highlight then highlight:Destroy() end
+end
+end
+end
 end)
-
-local crosshairGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("1AN_Crosshair")
-if not crosshairGui then
-    crosshairGui = Instance.new("ScreenGui")
-    crosshairGui.Name = "1AN_Crosshair"
-    crosshairGui.ResetOnSpawn = false
-    crosshairGui.IgnoreGuiInset = true
-    crosshairGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
-
-local crosshairMain = crosshairGui:FindFirstChild("CrosshairMain")
-if not crosshairMain then
-    crosshairMain = Instance.new("Frame")
-    crosshairMain.Name = "CrosshairMain"
-    crosshairMain.AnchorPoint = Vector2.new(0.5, 0.5)
-    crosshairMain.Position = UDim2.new(0.5, 0, 0.5, 0)
-    crosshairMain.BackgroundTransparency = 1
-    crosshairMain.Size = UDim2.fromOffset(50, 50)
-    crosshairMain.Parent = crosshairGui
-end
-
-local function getOrCreatePart(name, size, pos, cornerRadius, rotation)
-    local part = crosshairMain:FindFirstChild(name)
-    if not part then
-        part = Instance.new("Frame")
-        part.Name = name
-        part.AnchorPoint = Vector2.new(0.5, 0.5)
-        part.BorderSizePixel = 0
-        part.Parent = crosshairMain
-        if cornerRadius then
-            local corner = Instance.new("UICorner")
-            corner.CornerRadius = cornerRadius
-            corner.Parent = part
-        end
-    end
-    part.Size = size
-    part.Position = pos
-    if rotation then part.Rotation = rotation end
-    return part
-end
-
-local function getOrCreateImage(name, size, pos)
-    local img = crosshairMain:FindFirstChild(name)
-    if not img then
-        img = Instance.new("ImageLabel")
-        img.Name = name
-        img.AnchorPoint = Vector2.new(0.5, 0.5)
-        img.BackgroundTransparency = 1
-        img.Parent = crosshairMain
-    end
-    img.Size = size
-    img.Position = pos
-    return img
-end
-
-RunService.RenderStepped:Connect(function()
-    safeCall("Crosshair", function()
-        local active = getgenv().CrosshairEnabled
-        if not active then
-            crosshairMain.Visible = false
-            return
-        end
-        crosshairMain.Visible = true
-        
-        local style = getgenv().CrosshairStyle or "Venas Cyber"
-        local baseCol = getgenv().CrosshairColor or Color3.fromRGB(138, 43, 226)
-        
-        if baseCol == Color3.fromRGB(255, 255, 255) and style ~= "Código Personalizado (ID)" then
-            local t = tick() * 2
-            baseCol = Color3.fromHSV((t % 5) / 5, 1, 1)
-        end
-
-        for _, child in ipairs(crosshairMain:GetChildren()) do
-            child.Visible = false
-        end
-
-        local dotMain = getOrCreatePart("MainWhiteDot", UDim2.fromOffset(4, 4), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0))
-        dotMain.Visible = true
-        dotMain.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-        if style == "Venas Cyber" then
-            local head = getOrCreatePart("DollHead", UDim2.fromOffset(6, 6), UDim2.new(0.5, 0, 0.5, -7), UDim.new(1, 0))
-            local body = getOrCreatePart("DollBody", UDim2.fromOffset(4, 8), UDim2.new(0.5, 0, 0.5, 0), UDim.new(0, 2))
-            local lArm = getOrCreatePart("DollLArm", UDim2.fromOffset(8, 2), UDim2.new(0.5, -5, 0.5, -2), UDim.new(1, 0), 20)
-            local rArm = getOrCreatePart("DollRArm", UDim2.fromOffset(8, 2), UDim2.new(0.5, 5, 0.5, -2), UDim.new(1, 0), -20)
-            local lLeg = getOrCreatePart("DollLLeg", UDim2.fromOffset(2, 7), UDim2.new(0.5, -2, 0.5, 7), UDim.new(1, 0), 10)
-            local rLeg = getOrCreatePart("DollRLeg", UDim2.fromOffset(2, 7), UDim2.new(0.5, 2, 0.5, 7), UDim.new(1, 0), -10)
-            local vein1 = getOrCreatePart("Vein1", UDim2.fromOffset(2, 14), UDim2.new(0.5, -7, 0.5, 0), UDim.new(1, 0), 15)
-            local vein2 = getOrCreatePart("Vein2", UDim2.fromOffset(2, 14), UDim2.new(0.5, 7, 0.5, 0), UDim.new(1, 0), -15)
-
-            for _, p in ipairs({head, body, lArm, rArm, lLeg, rLeg, vein1, vein2}) do
-                p.Visible = true
-                p.BackgroundColor3 = baseCol
-            end
-            head.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
-            vein1.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-            vein2.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-
-        elseif style == "Muñeco Neón Kawaii" then
-            local head = getOrCreatePart("KHead", UDim2.fromOffset(6, 6), UDim2.new(0.5, 0, 0.5, -6), UDim.new(1, 0))
-            local body = getOrCreatePart("KBody", UDim2.fromOffset(4, 6), UDim2.new(0.5, 0, 0.5, 0), UDim.new(0, 2))
-            local lLeg = getOrCreatePart("KLLeg", UDim2.fromOffset(2, 5), UDim2.new(0.5, -2, 0.5, 5), UDim.new(1, 0))
-            local rLeg = getOrCreatePart("KRLeg", UDim2.fromOffset(2, 5), UDim2.new(0.5, 2, 0.5, 5), UDim.new(1, 0))
-            local dot = getOrCreatePart("KCenter", UDim2.fromOffset(2, 2), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0))
-
-            for _, p in ipairs({head, body, lLeg, rLeg, dot}) do
-                p.Visible = true
-                p.BackgroundColor3 = baseCol
-            end
-            head.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
-            body.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-
-        elseif style == "Calavera Táctica Neón" then
-            local skullHead = getOrCreatePart("SkullH", UDim2.fromOffset(8, 7), UDim2.new(0.5, 0, 0.5, -3), UDim.new(0, 3))
-            local jaw = getOrCreatePart("SkullJ", UDim2.fromOffset(5, 3), UDim2.new(0.5, 0, 0.5, 3), UDim.new(0, 1))
-            local eye1 = getOrCreatePart("Eye1", UDim2.fromOffset(2, 2), UDim2.new(0.5, -2, 0.5, -3), UDim.new(1, 0))
-            local eye2 = getOrCreatePart("Eye2", UDim2.fromOffset(2, 2), UDim2.new(0.5, 2, 0.5, -3), UDim.new(1, 0))
-
-            for _, p in ipairs({skullHead, jaw, eye1, eye2}) do
-                p.Visible = true
-                p.BackgroundColor3 = baseCol
-            end
-            eye1.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-            eye2.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-
-        elseif style == "Corazón Brillante Doble" then
-            local heartOuter = getOrCreatePart("HOuter", UDim2.fromOffset(12, 12), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0), 45)
-            local heartInner = getOrCreatePart("HInner", UDim2.fromOffset(6, 6), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0), 45)
-            
-            heartOuter.Visible, heartInner.Visible = true, true
-            heartOuter.BackgroundColor3 = Color3.fromRGB(255, 20, 147)
-            heartOuter.BackgroundTransparency = 0.4
-            heartInner.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-        elseif style == "Estrella Mágica Galaxia" then
-            local star1 = getOrCreatePart("Star1", UDim2.fromOffset(14, 3), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0), 45)
-            local star2 = getOrCreatePart("Star2", UDim2.fromOffset(14, 3), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0), -45)
-            local starDot = getOrCreatePart("StarDot", UDim2.fromOffset(4, 4), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0))
-
-            star1.Visible, star2.Visible, starDot.Visible = true, true, true
-            star1.BackgroundColor3 = Color3.fromRGB(180, 0, 255)
-            star2.BackgroundColor3 = Color3.fromRGB(0, 255, 255)
-            starDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-        elseif style == "Cruz Moderna Multicolor" then
-            local top = getOrCreatePart("Top", UDim2.fromOffset(2, 12), UDim2.new(0.5, 0, 0.5, -7), UDim.new(0, 1))
-            local bottom = getOrCreatePart("Bottom", UDim2.fromOffset(2, 12), UDim2.new(0.5, 0, 0.5, 7), UDim.new(0, 1))
-            local left = getOrCreatePart("Left", UDim2.fromOffset(12, 2), UDim2.new(0.5, -7, 0.5, 0), UDim.new(0, 1))
-            local right = getOrCreatePart("Right", UDim2.fromOffset(12, 2), UDim2.new(0.5, 7, 0.5, 0), UDim.new(0, 1))
-            local center = getOrCreatePart("Center", UDim2.fromOffset(3, 3), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0))
-
-            for _, p in ipairs({top, bottom, left, right, center}) do
-                p.Visible = true
-            end
-            top.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-            bottom.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-            left.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-            right.BackgroundColor3 = Color3.fromRGB(255, 220, 0)
-            center.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-
-        elseif style == "Punto Central con Anillo Láser" then
-            local ring = getOrCreatePart("LaserRing", UDim2.fromOffset(18, 18), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0))
-            local dot = getOrCreatePart("LaserDot", UDim2.fromOffset(3, 3), UDim2.new(0.5, 0, 0.5, 0), UDim.new(1, 0))
-            
-            ring.Visible, dot.Visible = true, true
-            ring.BackgroundTransparency = 0.5
-            ring.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-            dot.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-
-        elseif style == "Código Personalizado (ID)" then
-            local customImg = getOrCreateImage("CustomCrosshairImage", UDim2.fromOffset(28, 28), UDim2.new(0.5, 0, 0.5, 0))
-            customImg.Visible = true
-            if getgenv().CustomCrosshairId ~= "" then
-                customImg.Image = "rbxassetid://" .. getgenv().CustomCrosshairId
-            else
-                customImg.Image = "rbxassetid://12323570810"
-            end
-        end
-    end)
 end)
