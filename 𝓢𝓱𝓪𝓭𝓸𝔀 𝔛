@@ -1,5 +1,5 @@
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Aimbot & Crash Fix v2)
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Aimbot & Crash Fix v3)
 --  Creado por Alex X
 -- =====================================================
 
@@ -60,7 +60,6 @@ getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
 getgenv().BigHeadSize = 4
 getgenv().FreezeEnemyEnabled = false
 getgenv().SilentAimMode = "None"
-getgenv().AutoClickerEnabled = false
 getgenv().EspEnemyEnabled = false
 getgenv().TracersEnabled = false
 
@@ -149,7 +148,6 @@ local Tabs = {
     Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
     Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
     Music = Window:Tab({ Title = "Music", Icon = "music" }),
-    Fun = Window:Tab({ Title = "Fun", Icon = "smile" }),
     Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
 }
 
@@ -574,23 +572,6 @@ Tabs.Music:Button({
     end,
 })
 
-Tabs.Fun:Section({ Title = "Utilidades" })
-
-Tabs.Fun:Toggle({
-    Title = "Auto Clicker",
-    Value = false,
-    Callback = function(v) getgenv().AutoClickerEnabled = v end,
-})
-
-Tabs.Fun:Button({
-    Title = "Rejoin Server",
-    Callback = function()
-        safeCall("Rejoin", function()
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-        end)
-    end,
-})
-
 Tabs.Settings:Section({ Title = "Interfaz y Temas" })
 
 Tabs.Settings:Dropdown({
@@ -602,10 +583,18 @@ Tabs.Settings:Dropdown({
     end,
 })
 
+Tabs.Settings:Button({
+    Title = "Rejoin Server",
+    Callback = function()
+        safeCall("Rejoin", function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end)
+    end,
+})
+
 local function cleanupScript()
     disableNoClip()
     getgenv().SpeedEnabled = false
-    getgenv().AutoClickerEnabled = false
     pcall(function()
         local char = LocalPlayer.Character
         if char then
@@ -709,7 +698,6 @@ local function getClosestTargetForAimbot()
                         local screenPos2D = Vector2.new(screenPos.X, screenPos.Y)
                         local dist = (screenPos2D - centerScreen).Magnitude
                         
-                        -- Validar estrictamente que esté dentro del FOV en pantalla
                         if dist <= getgenv().FovRadius and dist < shortestDist then
                             shortestDist = dist
                             closestPart = targetPart
@@ -721,12 +709,6 @@ local function getClosestTargetForAimbot()
     end
     return closestPart
 end
-
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        if getgenv().AutoClickerEnabled then mouse1click() end
-    end)
-end)
 
 local fovGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("1AN_FovGui")
 if not fovGui then
@@ -776,14 +758,13 @@ RunService.RenderStepped:Connect(function()
                 local cam = workspace.CurrentCamera
                 local targetCF = CFrame.new(cam.CFrame.Position, target.Position)
                 local smooth = math.clamp(tonumber(getgenv().AimbotSmooth) or 5, 2, 20)
-                -- Aplicar interpolación suave y controlada sin saltos bruscos
                 cam.CFrame = cam.CFrame:Lerp(targetCF, 1 / smooth)
             end
         end
     end)
 end)
 
--- SILENT AIM BLINDADO CONTRA CRASHES (Validación estricta de argumentos)
+-- SILENT AIM BLINDADO CONTRA CRASHES
 pcall(function()
     local mt = getrawmetatable(game)
     setreadonly(mt, false)
