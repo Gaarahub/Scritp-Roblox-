@@ -35,9 +35,10 @@ local Window = Rayfield:CreateWindow({
 getgenv().RainbowHitbox = false
 getgenv().HitboxTransparency = 0.5
 
--- CONEXIÓN DE STRETCH
+-- PANTALLA ESTIRADA ESTABLE (ANTIRRESETEO AL CORRER)
+local Camera = workspace.CurrentCamera
+local originalFOV = Camera.FieldOfView
 local stretchConnection = nil
-local ApplyStretch
 
 -- =====================================================
 --  PESTAÑA: MAIN (Hacks Principales)
@@ -101,7 +102,7 @@ CombatTab:CreateSection("📦 Hitbox Extendido (Todo el Cuerpo + A Través de Pa
 getgenv().HitboxEnabled = false
 getgenv().HitboxSize = 12
 getgenv().HitboxInvisible = false
-getgenv().HitboxColor = Color3.fromRGB(255, 0, 0) -- Color por defecto: Rojo
+getgenv().HitboxColor = Color3.fromRGB(255, 0, 0)
 
 CombatTab:CreateToggle({
     Name = "Activar Hitbox Extendido",
@@ -129,7 +130,6 @@ CombatTab:CreateSlider({
     end,
 })
 
--- SLIDER DE TRANSPARENCIA VISUAL
 CombatTab:CreateSlider({
     Name = "Transparencia",
     Range = {0, 1},
@@ -172,7 +172,6 @@ CombatTab:CreateDropdown({
     end,
 })
 
--- COLOR ARCOÍRIS MÁS ESTABLE
 local function UpdateRainbowColor()
     if getgenv().RainbowHitbox then
         local hue = (time() * 0.15) % 1
@@ -180,11 +179,9 @@ local function UpdateRainbowColor()
     end
 end
 
--- Almacén para guardar los tamaños y transparencias originales de los personajes
 local originalSizes = {}
 local originalTransparencies = {}
 
--- Bucle de Hitbox corregido (Guarda y restaura el tamaño exacto original de cada parte)
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
         UpdateRainbowColor()
@@ -200,7 +197,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
                     for _, partName in ipairs(allParts) do
                         local part = character:FindFirstChild(partName)
                         if part and part:IsA("BasePart") then
-                            -- Guardar tamaño y transparencia original la primera vez que se detectan
                             if not originalSizes[part] then
                                 originalSizes[part] = part.Size
                                 originalTransparencies[part] = part.Transparency
@@ -220,7 +216,6 @@ game:GetService("RunService").RenderStepped:Connect(function()
                                 end
                             else
                                 part.Material = Enum.Material.Plastic
-                                -- Restaurar tamaño y transparencia exacta original
                                 if originalSizes[part] then
                                     part.Size = originalSizes[part]
                                 end
@@ -266,7 +261,6 @@ CombatTab:CreateToggle({
     end,
 })
 
--- Tarea para Rapid Fire, No Recoil y Fast Reload en armas
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -330,7 +324,6 @@ EspTab:CreateToggle({
 
 local LocalPlayer = game.Players.LocalPlayer
 
--- HIGHLIGHT MEJORADO
 local function CreateHighlight(model, color)
     local hl = model:FindFirstChild("1AN_ESP")
 
@@ -355,7 +348,6 @@ local function RemoveHighlight(model)
     end
 end
 
--- ACTUALIZACIÓN DEL ESP SIN ESCANEAR TODO 60 VECES POR SEGUNDO
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -400,67 +392,49 @@ task.spawn(function()
 end)
 
 -- =====================================================
---  PESTAÑA: PANTALLA (Stretch Settings)
+--  PESTAÑA: PANTALLA (Stretch Settings - Bucle Constante)
 -- =====================================================
 local ScreenTab = Window:CreateTab("🖥️ Pantalla", 4483362458)
 
 ScreenTab:CreateSection("Configuración de Pantalla Estirada")
 
--- STRETCH: MANEJO CORRECTO DE LA CONEXIÓN
-ApplyStretch = function()
-
+local function ApplyStretch()
     if stretchConnection then
         stretchConnection:Disconnect()
         stretchConnection = nil
     end
 
-    if not getgenv().StretchEnabled then
-        return
+    if getgenv().StretchEnabled then
+        stretchConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            pcall(function()
+                if getgenv().StretchEnabled then
+                    Camera.FieldOfView = originalFOV * getgenv().StretchIntensity
+                end
+            end)
+        end)
+    else
+        pcall(function()
+            Camera.FieldOfView = originalFOV
+        end)
     end
-
-    stretchConnection = game:GetService("RunService").RenderStepped:Connect(function()
-
-        if not getgenv().StretchEnabled then
-            return
-        end
-
-        -- CFrame no puede escalar la imagen de la cámara.
-        -- Aquí debe ir un método visual compatible con tu juego.
-    end)
 end
 
--- TOGGLE DE STRETCH CORREGIDO
 ScreenTab:CreateToggle({
     Name = "Enable Stretched Screen",
     CurrentValue = true,
-
     Callback = function(Value)
         getgenv().StretchEnabled = Value
-
-        if Value then
-            ApplyStretch()
-        else
-            if stretchConnection then
-                stretchConnection:Disconnect()
-                stretchConnection = nil
-            end
-        end
+        ApplyStretch()
     end,
 })
 
--- SLIDER DE STRETCH
 ScreenTab:CreateSlider({
     Name = "Stretch Intensity",
-    Range = {0.5, 1.2},
-    Increment = 0.01,
-    CurrentValue = 0.75,
-
+    Range = {0.7, 2.0},
+    Increment = 0.05,
+    CurrentValue = 1.50,
     Callback = function(Value)
         getgenv().StretchIntensity = Value
-
-        if getgenv().StretchEnabled then
-            ApplyStretch()
-        end
     end,
 })
 
@@ -496,26 +470,16 @@ PerfTab:CreateToggle({
     end,
 })
 
--- TEXTURAS CORREGIDAS
 PerfTab:CreateToggle({
     Name = "Remove Textures (PlasticOnly)",
-
     Callback = function(Value)
-
         pcall(function()
-
             for _, obj in ipairs(workspace:GetDescendants()) do
-
                 if obj:IsA("Texture") or obj:IsA("Decal") then
-
                     obj.Transparency = Value and 1 or 0
-
                 elseif obj:IsA("SurfaceAppearance") then
-
                     obj.Enabled = not Value
-
                 elseif obj:IsA("BasePart") then
-
                     if Value then
                         obj.Material = Enum.Material.Plastic
                     end
@@ -536,21 +500,20 @@ PerfTab:CreateToggle({
                     end
                 end
             end
-
         end)
     end,
 })
 
 -- INICIALIZACIÓN
 getgenv().StretchEnabled = true
-getgenv().StretchIntensity = 0.75
+getgenv().StretchIntensity = 1.50
 
 ApplyStretch()
 
 Rayfield:Notify({
     Title = "Stretched Screen by 1AN",
-    Content = "Script definitivo configurado correctamente.",
+    Content = "Script actualizado y bloqueado contra reseteos.",
     Duration = 6,
 })
 
-print("✅ Script definitivo cargado por Alex X")
+print("✅ Script definitivo creado por Alex X")
