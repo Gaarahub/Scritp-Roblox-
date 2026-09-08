@@ -109,7 +109,6 @@ Tabs.Combat:Toggle({
     Callback = function(v)
         getgenv().FreezeEnemyEnabled = v
         if not v then
-            -- Unfreeze a todos los jugadores al desactivar
             pcall(function()
                 for _, p in ipairs(game.Players:GetPlayers()) do
                     if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
@@ -481,23 +480,95 @@ getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
 getgenv().BigHeadSize = 4
 getgenv().CrosshairStyle = "Cruz"
 getgenv().FreezeEnemyEnabled = false
+getgenv().SilentAimMode = "None"
 
--- Función de Team Check
+-- Función de Team Check Optimizada
 local function isTeammate(player)
     if not getgenv().TeamCheckEnabled then return false end
     local localPlayer = game.Players.LocalPlayer
     if player == localPlayer then return true end
-    if player.Team and localPlayer.Team and player.Team == localPlayer.Team then
+    
+    if not localPlayer.Team or not player.Team then 
+        return false 
+    end
+    
+    if player.Team == localPlayer.Team then
         return true
     end
+    
     local successTeam, result = pcall(function()
         return player.TeamColor and localPlayer.TeamColor and player.TeamColor == localPlayer.TeamColor
     end)
     if successTeam and result then
         return true
     end
+    
     return false
 end
+
+-- Función para buscar al enemigo más cercano a la mira
+local function getClosestTarget()
+    local localPlayer = game.Players.LocalPlayer
+    local mouse = localPlayer:GetMouse()
+    local closestPart = nil
+    local shortestDist = math.huge
+
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        if p ~= localPlayer and p.Character then
+            local ally = isTeammate(p)
+            local char = p.Character
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            
+            if hum and hum.Health > 0 and not ally then
+                local targetPartName = getgenv().SilentAimMode
+                local targetPart = char:FindFirstChild(targetPartName) or char:FindFirstChild("Head")
+                
+                if targetPart then
+                    local cam = workspace.CurrentCamera
+                    local screenPos, onScreen = cam:WorldToViewportPoint(targetPart.Position)
+                    
+                    if onScreen then
+                        local mousePos = Vector2.new(mouse.X, mouse.Y)
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                        
+                        if dist < shortestDist then
+                            shortestDist = dist
+                            closestPart = targetPart
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestPart
+end
+
+-- Lógica de Silent Aim Optimizada (Redirección de Disparos)
+pcall(function()
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+    local oldNamecall = mt.__namecall
+
+    mt.__namecall = newcclosure(function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
+        
+        if getgenv().SilentAimMode and getgenv().SilentAimMode ~= "None" then
+            if method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" then
+                local targetPart = getClosestTarget()
+                if targetPart then
+                    local ray = args[1]
+                    if typeof(ray) == "Ray" then
+                        args[1] = Ray.new(ray.Origin, (targetPart.Position - ray.Origin).Unit * ray.Direction.Magnitude)
+                        return oldNamecall(self, unpack(args))
+                    end
+                end
+            end
+        end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
+end)
 
 -- Lógica Freeze Target
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -650,6 +721,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
                     if not originalHeadSizes[head] then
                         originalHeadSizes[head] = {
                             Size = head.Size,
+                            CanCollide = head.CanCollide,
                             Massless = head.Massless
                         }
                     end
@@ -657,11 +729,14 @@ game:GetService("RunService").RenderStepped:Connect(function()
                     if getgenv().BigHeadEnabled and not ally then
                         local targetSize = getgenv().BigHeadSize or 4
                         head.Size = Vector3.new(targetSize, targetSize, targetSize)
-                        head.CanCollide = false
+                        head.CanCollide = true
+                        head.Transparency = 0.5
                         head.Massless = true
                     else
                         if originalHeadSizes[head] then
                             head.Size = originalHeadSizes[head].Size
+                            head.CanCollide = originalHeadSizes[head].CanCollide
+                            head.Transparency = 0
                             head.Massless = originalHeadSizes[head].Massless
                         end
                     end
