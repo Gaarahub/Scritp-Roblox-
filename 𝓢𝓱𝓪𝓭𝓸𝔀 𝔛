@@ -30,6 +30,16 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- =====================================================
+--  VARIABLES EXTRA
+-- =====================================================
+getgenv().RainbowHitbox = false
+getgenv().HitboxTransparency = 0.5
+
+-- CONEXIÓN DE STRETCH
+local stretchConnection = nil
+local ApplyStretch
+
+-- =====================================================
 --  PESTAÑA: MAIN (Hacks Principales)
 -- =====================================================
 local MainTab = Window:CreateTab("🎮 Main", 4483362458)
@@ -119,6 +129,17 @@ CombatTab:CreateSlider({
     end,
 })
 
+-- SLIDER DE TRANSPARENCIA VISUAL
+CombatTab:CreateSlider({
+    Name = "Transparencia",
+    Range = {0, 1},
+    Increment = 0.05,
+    CurrentValue = 0.5,
+    Callback = function(Value)
+        getgenv().HitboxTransparency = Value
+    end,
+})
+
 CombatTab:CreateDropdown({
     Name = "Color de la Hitbox",
     Options = {"Rojo", "Azul", "Verde", "Amarillo", "Morado", "Blanco", "Cian", "Arcoíris (RGB)"},
@@ -151,14 +172,22 @@ CombatTab:CreateDropdown({
     end,
 })
 
--- Bucle ampliado: Cubre todo el cuerpo, desactiva colisiones, soporta wallbang y cambio de color dinámico/arcoíris
+-- COLOR ARCOÍRIS MÁS ESTABLE
+local function UpdateRainbowColor()
+    if getgenv().RainbowHitbox then
+        local hue = (time() * 0.15) % 1
+        getgenv().HitboxColor = Color3.fromHSV(hue, 1, 1)
+    end
+end
+
+-- Almacén para guardar los tamaños y transparencias originales de los personajes
+local originalSizes = {}
+local originalTransparencies = {}
+
+-- Bucle de Hitbox corregido (Guarda y restaura el tamaño exacto original de cada parte)
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
-        -- Si está activado el modo arcoíris, calculamos el color en base al tiempo
-        if getgenv().RainbowHitbox then
-            local hue = tick() % 5 / 5
-            getgenv().HitboxColor = Color3.fromHSV(hue, 1, 1)
-        end
+        UpdateRainbowColor()
 
         for _, player in ipairs(game.Players:GetPlayers()) do
             if player ~= game.Players.LocalPlayer and player.Character then
@@ -167,36 +196,36 @@ game:GetService("RunService").RenderStepped:Connect(function()
                 
                 if humanoid and humanoid.Health > 0 then
                     local allParts = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "LeftLowerArm", "RightLowerArm", "LeftUpperArm", "RightUpperArm", "LeftLowerLeg", "RightLowerLeg", "LeftUpperLeg", "RightUpperLeg"}
+                    
                     for _, partName in ipairs(allParts) do
                         local part = character:FindFirstChild(partName)
                         if part and part:IsA("BasePart") then
+                            -- Guardar tamaño y transparencia original la primera vez que se detectan
+                            if not originalSizes[part] then
+                                originalSizes[part] = part.Size
+                                originalTransparencies[part] = part.Transparency
+                            end
+
                             if getgenv().HitboxEnabled then
                                 part.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
                                 part.CanCollide = false
-                                part.Massless = true
-                                part.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
-                                part.CanQuery = false
                                 
                                 if getgenv().HitboxInvisible then
                                     part.Transparency = 1
                                     part.Material = Enum.Material.Plastic
                                 else
-                                    part.Transparency = 0.5
+                                    part.Transparency = getgenv().HitboxTransparency
                                     part.Color = getgenv().HitboxColor
                                     part.Material = Enum.Material.Neon
                                 end
                             else
                                 part.Material = Enum.Material.Plastic
-                                part.CanQuery = true
-                                if partName == "HumanoidRootPart" then
-                                    part.Size = Vector3.new(2, 2, 1)
-                                    part.Transparency = 1
-                                elseif partName == "Head" then
-                                    part.Size = Vector3.new(2, 1, 1)
-                                    part.Transparency = 0
-                                else
-                                    part.Size = Vector3.new(2, 2, 1)
-                                    part.Transparency = 0
+                                -- Restaurar tamaño y transparencia exacta original
+                                if originalSizes[part] then
+                                    part.Size = originalSizes[part]
+                                end
+                                if originalTransparencies[part] then
+                                    part.Transparency = originalTransparencies[part]
                                 end
                             end
                         end
@@ -301,55 +330,73 @@ EspTab:CreateToggle({
 
 local LocalPlayer = game.Players.LocalPlayer
 
+-- HIGHLIGHT MEJORADO
 local function CreateHighlight(model, color)
-    if not model:FindFirstChild("1AN_ESP") then
-        local hl = Instance.new("Highlight")
+    local hl = model:FindFirstChild("1AN_ESP")
+
+    if not hl then
+        hl = Instance.new("Highlight")
         hl.Name = "1AN_ESP"
         hl.Adornee = model
-        hl.FillColor = color
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
         hl.FillTransparency = 0.4
         hl.OutlineTransparency = 0
         hl.Parent = model
     end
+
+    hl.FillColor = color
+    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
 end
 
 local function RemoveHighlight(model)
     local hl = model:FindFirstChild("1AN_ESP")
-    if hl then hl:Destroy() end
+
+    if hl then
+        hl:Destroy()
+    end
 end
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    pcall(function()
-        for _, player in ipairs(game.Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                local isEnemy = true
-                if player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
-                    isEnemy = false
-                end
-                
-                if getgenv().EspEnemyEnabled and isEnemy then
-                    CreateHighlight(player.Character, Color3.fromRGB(255, 0, 0))
-                else
-                    local hl = player.Character:FindFirstChild("1AN_ESP")
-                    if hl and not getgenv().EspEnemyEnabled then hl:Destroy() end
-                end
-            end
-        end
+-- ACTUALIZACIÓN DEL ESP SIN ESCANEAR TODO 60 VECES POR SEGUNDO
+task.spawn(function()
+    while true do
+        task.wait(0.5)
 
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-                local isPlayer = game.Players:GetPlayerFromCharacter(obj)
-                if not isPlayer then
-                    if getgenv().EspNpcEnabled then
-                        CreateHighlight(obj, Color3.fromRGB(0, 255, 255))
+        pcall(function()
+            for _, player in ipairs(game.Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+
+                    local isEnemy = true
+
+                    if player.Team and LocalPlayer.Team then
+                        if player.Team == LocalPlayer.Team then
+                            isEnemy = false
+                        end
+                    end
+
+                    if getgenv().EspEnemyEnabled and isEnemy then
+                        CreateHighlight(
+                            player.Character,
+                            Color3.fromRGB(255, 0, 0)
+                        )
                     else
-                        RemoveHighlight(obj)
+                        RemoveHighlight(player.Character)
                     end
                 end
             end
-        end
-    end)
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
+                    local isPlayer = game.Players:GetPlayerFromCharacter(obj)
+                    if not isPlayer then
+                        if getgenv().EspNpcEnabled then
+                            CreateHighlight(obj, Color3.fromRGB(0, 255, 255))
+                        else
+                            RemoveHighlight(obj)
+                        end
+                    end
+                end
+            end
+        end)
+    end
 end)
 
 -- =====================================================
@@ -359,25 +406,61 @@ local ScreenTab = Window:CreateTab("🖥️ Pantalla", 4483362458)
 
 ScreenTab:CreateSection("Configuración de Pantalla Estirada")
 
+-- STRETCH: MANEJO CORRECTO DE LA CONEXIÓN
+ApplyStretch = function()
+
+    if stretchConnection then
+        stretchConnection:Disconnect()
+        stretchConnection = nil
+    end
+
+    if not getgenv().StretchEnabled then
+        return
+    end
+
+    stretchConnection = game:GetService("RunService").RenderStepped:Connect(function()
+
+        if not getgenv().StretchEnabled then
+            return
+        end
+
+        -- CFrame no puede escalar la imagen de la cámara.
+        -- Aquí debe ir un método visual compatible con tu juego.
+    end)
+end
+
+-- TOGGLE DE STRETCH CORREGIDO
 ScreenTab:CreateToggle({
     Name = "Enable Stretched Screen",
     CurrentValue = true,
+
     Callback = function(Value)
         getgenv().StretchEnabled = Value
-        if Value then ApplyStretch() else
-            if getgenv().StretchConn then getgenv().StretchConn:Disconnect() end
+
+        if Value then
+            ApplyStretch()
+        else
+            if stretchConnection then
+                stretchConnection:Disconnect()
+                stretchConnection = nil
+            end
         end
     end,
 })
 
+-- SLIDER DE STRETCH
 ScreenTab:CreateSlider({
     Name = "Stretch Intensity",
     Range = {0.5, 1.2},
     Increment = 0.01,
     CurrentValue = 0.75,
+
     Callback = function(Value)
         getgenv().StretchIntensity = Value
-        if getgenv().StretchEnabled then ApplyStretch() end
+
+        if getgenv().StretchEnabled then
+            ApplyStretch()
+        end
     end,
 })
 
@@ -413,15 +496,26 @@ PerfTab:CreateToggle({
     end,
 })
 
+-- TEXTURAS CORREGIDAS
 PerfTab:CreateToggle({
     Name = "Remove Textures (PlasticOnly)",
+
     Callback = function(Value)
+
         pcall(function()
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("Texture") or obj:IsA("Decal") or obj:IsA("SurfaceAppearance") then
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+
+                if obj:IsA("Texture") or obj:IsA("Decal") then
+
                     obj.Transparency = Value and 1 or 0
-                    obj.Visible = not Value
-                elseif obj:IsA("BasePart") or obj:IsA("MeshPart") or obj:IsA("Part") then
+
+                elseif obj:IsA("SurfaceAppearance") then
+
+                    obj.Enabled = not Value
+
+                elseif obj:IsA("BasePart") then
+
                     if Value then
                         obj.Material = Enum.Material.Plastic
                     end
@@ -442,23 +536,15 @@ PerfTab:CreateToggle({
                     end
                 end
             end
+
         end)
     end,
 })
 
-local stretchConnection = nil
-function ApplyStretch()
-    if stretchConnection then stretchConnection:Disconnect() end
-    stretchConnection = game:GetService("RunService").RenderStepped:Connect(function()
-        if getgenv().StretchEnabled and workspace.CurrentCamera then
-            local cam = workspace.CurrentCamera
-            cam.CFrame = cam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, getgenv().StretchIntensity or 0.75, 0, 0, 0, 1)
-        end
-    end)
-end
-
+-- INICIALIZACIÓN
 getgenv().StretchEnabled = true
 getgenv().StretchIntensity = 0.75
+
 ApplyStretch()
 
 Rayfield:Notify({
