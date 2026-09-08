@@ -17,13 +17,13 @@ local Window = Rayfield:CreateWindow({
         FolderName = nil,
         FileName = "StretchedScreen1AN"
     },
-    KeySystem = true,
+    KeySystem = true ,
     KeySettings = {
         Title = "Sistema de Key",
         Subtitle = "Introduce la key para continuar",
         Note = "",
         FileName = "1ANKey",
-        SaveKey = true,
+        SaveKey = false ,
         GrabKeyFromSite = false,
         Key = {"femboy", "Femboy", "FEMBOY"}
     }
