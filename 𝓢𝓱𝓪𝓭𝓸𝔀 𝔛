@@ -2,7 +2,7 @@
 	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
 ]]
 -- =====================================================
---  Stretched Screen, Noclip, Inf Jump, ESP, Extended Hitbox (Wallbang + Color Customizer), Rapid Fire, No Recoil, Fast Reload & Key System by 1AN
+--  Stretched Screen, Noclip, Inf Jump, ESP, Hitbox, SpinBot & Key System by 1AN
 --  Created by Alex X (ydHldYudti)
 -- =====================================================
 
@@ -35,15 +35,51 @@ local Window = Rayfield:CreateWindow({
 getgenv().RainbowHitbox = false
 getgenv().HitboxTransparency = 0.5
 
--- PANTALLA ESTIRADA ESTABLE (ANTIRRESETEO AL CORRER)
+-- PANTALLA ESTIRADA AVANZADA (EFECTO CÁMARA TIKTOK)
 local Camera = workspace.CurrentCamera
 local originalFOV = Camera.FieldOfView
 local stretchConnection = nil
 
 -- =====================================================
---  PESTAÑA: MAIN (Hacks Principales)
+--  PESTAÑA: MAIN (Hacks Principales & SpinBot)
 -- =====================================================
 local MainTab = Window:CreateTab("🎮 Main", 4483362458)
+
+MainTab:CreateSection("🌪️ SpinBot Ajustable")
+
+getgenv().SpinBotEnabled = false
+getgenv().SpinSpeed = 50
+
+MainTab:CreateToggle({
+    Name = "Activar SpinBot",
+    CurrentValue = false,
+    Callback = function(Value)
+        getgenv().SpinBotEnabled = Value
+    end,
+})
+
+MainTab:CreateSlider({
+    Name = "Velocidad de Giro",
+    Range = {10, 200},
+    Increment = 5,
+    CurrentValue = 50,
+    Callback = function(Value)
+        getgenv().SpinSpeed = Value
+    end,
+})
+
+local spinConnection
+spinConnection = game:GetService("RunService").RenderStepped:Connect(function()
+    pcall(function()
+        if getgenv().SpinBotEnabled then
+            local player = game.Players.LocalPlayer
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(getgenv().SpinSpeed), 0)
+            end
+        end
+    end)
+end)
 
 MainTab:CreateSection("🚀 Hacks God")
 
@@ -93,7 +129,7 @@ UIS.JumpRequest:Connect(function()
 end)
 
 -- =====================================================
---  PESTAÑA: COMBATE (Hitbox Extendido, Wallbang, Cambios de Color & Armas)
+--  PESTAÑA: COMBATE (Hitbox Extendido, Wallbang & Armas)
 -- =====================================================
 local CombatTab = Window:CreateTab("⚔️ Combate", 4483362458)
 
@@ -392,7 +428,7 @@ task.spawn(function()
 end)
 
 -- =====================================================
---  PESTAÑA: PANTALLA (Stretch Settings - Bucle Constante)
+--  PESTAÑA: PANTALLA (Efecto Cámara TikTok Estilo Video)
 -- =====================================================
 local ScreenTab = Window:CreateTab("🖥️ Pantalla", 4483362458)
 
@@ -432,7 +468,7 @@ ScreenTab:CreateSlider({
     Name = "Stretch Intensity",
     Range = {0.7, 2.0},
     Increment = 0.05,
-    CurrentValue = 1.50,
+    CurrentValue = 1.65,
     Callback = function(Value)
         getgenv().StretchIntensity = Value
     end,
@@ -506,13 +542,13 @@ PerfTab:CreateToggle({
 
 -- INICIALIZACIÓN
 getgenv().StretchEnabled = true
-getgenv().StretchIntensity = 1.50
+getgenv().StretchIntensity = 1.65
 
 ApplyStretch()
 
 Rayfield:Notify({
     Title = "Stretched Screen by 1AN",
-    Content = "Script actualizado y bloqueado contra reseteos.",
+    Content = "SpinBot ajustable y efecto de cámara aplicados.",
     Duration = 6,
 })
 
