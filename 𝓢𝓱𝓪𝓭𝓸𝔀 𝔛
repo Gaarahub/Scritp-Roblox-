@@ -45,7 +45,7 @@ local Window = WindUI:CreateWindow({
 Window:ToggleTransparency(true)
 Window:SetToggleKey(Enum.KeyCode.RightControl)
 
--- Ajuste de posición inicial del menú para que quede abajo de los botones de Roblox
+-- Ajuste de posición inicial del menú
 task.spawn(function()
     task.wait(0.5)
     pcall(function()
@@ -84,10 +84,18 @@ Tabs.Combat:Dropdown({
     end,
 })
 
-Tabs.Combat:Section({ Title = "Hitbox Extendido" })
+Tabs.Combat:Toggle({
+    Title = "Team Check (Avanzado)",
+    Value = true,
+    Callback = function(v)
+        getgenv().TeamCheckEnabled = v
+    end,
+})
+
+Tabs.Combat:Section({ Title = "Hispos (Hitbox del Pecho)" })
 
 Tabs.Combat:Toggle({
-    Title = "Activar Hitbox",
+    Title = "Activar Hispos",
     Value = false,
     Callback = function(v)
         getgenv().HitboxEnabled = v
@@ -95,16 +103,16 @@ Tabs.Combat:Toggle({
 })
 
 Tabs.Combat:Slider({
-    Title = "Tamaño de Hitbox",
+    Title = "Tamaño de Hispos",
     Step = 1,
-    Value = { Min = 5, Max = 40, Default = 12 },
+    Value = { Min = 2, Max = 15, Default = 5 },
     Callback = function(v)
         getgenv().HitboxSize = v
     end,
 })
 
 Tabs.Combat:Slider({
-    Title = "Transparencia Hitbox",
+    Title = "Transparencia Hispos",
     Step = 0.05,
     Value = { Min = 0, Max = 1, Default = 0.5 },
     Callback = function(v)
@@ -113,7 +121,7 @@ Tabs.Combat:Slider({
 })
 
 Tabs.Combat:Dropdown({
-    Title = "Color de Hitbox",
+    Title = "Color de Hispos",
     Values = { "Morado", "Rojo", "Verde", "Azul", "Amarillo", "Rosa" },
     Value = "Morado",
     Callback = function(v)
@@ -126,6 +134,25 @@ Tabs.Combat:Dropdown({
             ["Rosa"] = Color3.fromRGB(255, 105, 180)
         }
         getgenv().HitboxColor = colors[v] or Color3.fromRGB(138, 43, 226)
+    end,
+})
+
+Tabs.Combat:Section({ Title = "Head Extendido (Big Head)" })
+
+Tabs.Combat:Toggle({
+    Title = "Activar Cabeza Grande",
+    Value = false,
+    Callback = function(v)
+        getgenv().BigHeadEnabled = v
+    end,
+})
+
+Tabs.Combat:Slider({
+    Title = "Tamaño de Cabeza",
+    Step = 0.5,
+    Value = { Min = 2, Max = 10, Default = 4 },
+    Callback = function(v)
+        getgenv().BigHeadSize = v
     end,
 })
 
@@ -273,14 +300,6 @@ Tabs.Visual:Dropdown({
 
 Tabs.Fun:Section({ Title = "Utilidades" })
 
-Tabs.Fun:Toggle({
-    Title = "Fullbright",
-    Value = false,
-    Callback = function(v)
-        getgenv().FullbrightEnabled = v
-    end,
-})
-
 Tabs.Fun:Button({
     Title = "Rejoin Server",
     Callback = function()
@@ -319,23 +338,31 @@ Tabs.Settings:Button({
 --  LÓGICA GENERAL DE FUNCIONES
 -- =====================================================
 
+getgenv().TeamCheckEnabled = true
 getgenv().SpinSpeed = 120
 getgenv().StretchResolution = 0.75
 getgenv().StretchEnabled = true
-getgenv().HitboxSize = 12
+getgenv().HitboxSize = 5
 getgenv().HitboxTransparency = 0.5
 getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
+getgenv().BigHeadSize = 4
 getgenv().CrosshairStyle = "Cruz"
 
-game:GetService("RunService").RenderStepped:Connect(function()
-    if getgenv().FullbrightEnabled then
-        local l = game:GetService("Lighting")
-        l.Brightness = 2
-        l.ClockTime = 14
-        l.GlobalShadows = false
-        l.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+-- Función de Team Check
+local function isTeammate(player)
+    if not getgenv().TeamCheckEnabled then return false end
+    local localPlayer = game.Players.LocalPlayer
+    if player == localPlayer then return true end
+    if player.Team and localPlayer.Team and player.Team == localPlayer.Team then
+        return true
     end
-end)
+    pcall(function()
+        if player.TeamColor and localPlayer.TeamColor and player.TeamColor == localPlayer.TeamColor then
+            return true
+        end
+    end)
+    return false
+end
 
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
@@ -371,7 +398,7 @@ UIS.JumpRequest:Connect(function()
     end
 end)
 
--- Sistema real de Stretched Screen por matriz de cámara
+-- Stretched Screen
 local Camera = workspace.CurrentCamera
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
@@ -384,33 +411,72 @@ end)
 
 local originalSizes = {}
 local originalTransparencies = {}
+local originalHeadSizes = {}
 
+-- Hispos (Hitbox del Pecho / HumanoidRootPart)
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
         for _, p in ipairs(game.Players:GetPlayers()) do
             if p ~= game.Players.LocalPlayer and p.Character then
+                local ally = isTeammate(p)
                 local char = p.Character
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                if hum and hum.Health > 0 then
-                    local parts = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}
-                    for _, partName in ipairs(parts) do
-                        local part = char:FindFirstChild(partName)
-                        if part and part:IsA("BasePart") then
-                            if not originalSizes[part] then
-                                originalSizes[part] = part.Size
-                                originalTransparencies[part] = part.Transparency
-                            end
-                            if getgenv().HitboxEnabled then
-                                part.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                                part.CanCollide = false
-                                part.Transparency = getgenv().HitboxTransparency
-                                part.Color = getgenv().HitboxColor
-                                part.Material = Enum.Material.Neon
-                            else
-                                part.Material = Enum.Material.Plastic
-                                if originalSizes[part] then part.Size = originalSizes[part] end
-                                if originalTransparencies[part] then part.Transparency = originalTransparencies[part] end
-                            end
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                
+                if hum and hrp and hum.Health > 0 then
+                    local part = hrp
+                    if not originalSizes[part] then
+                        originalSizes[part] = part.Size
+                        originalTransparencies[part] = part.Transparency
+                    end
+                    
+                    if getgenv().HitboxEnabled and not ally then
+                        local sizeVal = getgenv().HitboxSize or 5
+                        part.Size = Vector3.new(sizeVal, sizeVal, sizeVal)
+                        part.Transparency = getgenv().HitboxTransparency
+                        part.Color = getgenv().HitboxColor
+                        part.Material = Enum.Material.Neon
+                        part.CanCollide = false
+                    else
+                        part.Material = Enum.Material.Plastic
+                        if originalSizes[part] then part.Size = originalSizes[part] end
+                        if originalTransparencies[part] then part.Transparency = originalTransparencies[part] end
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+-- Big Head Logic (Soporta hasta 10 seguro)
+game:GetService("RunService").RenderStepped:Connect(function()
+    pcall(function()
+        for _, p in ipairs(game.Players:GetPlayers()) do
+            if p ~= game.Players.LocalPlayer and p.Character then
+                local ally = isTeammate(p)
+                local char = p.Character
+                local head = char:FindFirstChild("Head")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                
+                if head and hum and hum.Health > 0 then
+                    if not originalHeadSizes[head] then
+                        originalHeadSizes[head] = head.Size
+                    end
+                    
+                    if getgenv().BigHeadEnabled and not ally then
+                        local targetSize = getgenv().BigHeadSize or 4
+                        head.Size = Vector3.new(targetSize, targetSize, targetSize)
+                        head.CanCollide = false
+                        head.Massless = true
+                        
+                        local neck = char:FindFirstChild("Torso") and char.Torso:FindFirstChild("Neck") or (char:FindFirstChild("UpperTorso") and char.UpperTorso:FindFirstChild("Neck"))
+                        if neck then
+                            neck.C0 = CFrame.new(0, 1, 0) * CFrame.Angles(0, 0, 0)
+                        end
+                    else
+                        head.Massless = false
+                        if originalHeadSizes[head] then
+                            head.Size = originalHeadSizes[head]
                         end
                     end
                 end
@@ -419,23 +485,34 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end)
 end)
 
--- Tracers Naturales (Fluidos que acompañan el movimiento de la cámara desde arriba)
+-- Tracers Logic
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 game:GetService("RunService").RenderStepped:Connect(function()
     pcall(function()
-        local camCF = Camera.CFrame
-        local dynamicTopOrigin = camCF.Position + (camCF.LookVector * 1.5) + (camCF.UpVector * 3.5)
+        if not getgenv().TracersEnabled then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p.Character:FindFirstChild("1AN_TracerPart") then
+                    p.Character["1AN_TracerPart"]:Destroy()
+                end
+            end
+            return
+        end
+
+        local viewport = Camera.ViewportSize
+        local ray = Camera:ScreenPointToRay(viewport.X / 2, 0)
+        local p1 = ray.Origin + (ray.Direction * 0.2)
 
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
+                local ally = isTeammate(p)
                 local char = p.Character
                 local hrp = char:FindFirstChild("HumanoidRootPart")
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 local tracerPart = char:FindFirstChild("1AN_TracerPart")
                 
-                if getgenv().TracersEnabled and hrp and hum and hum.Health > 0 then
+                if hrp and hum and hum.Health > 0 and not ally then
                     if not tracerPart then
                         tracerPart = Instance.new("Part")
                         tracerPart.Name = "1AN_TracerPart"
@@ -444,15 +521,13 @@ game:GetService("RunService").RenderStepped:Connect(function()
                         tracerPart.CastShadow = false
                         tracerPart.Material = Enum.Material.Neon
                         tracerPart.Color = Color3.fromRGB(138, 43, 226)
-                        tracerPart.Transparency = 0.35
                         tracerPart.Parent = char
                     end
                     
-                    local p1 = dynamicTopOrigin
                     local p2 = hrp.Position
                     local distance = (p1 - p2).Magnitude
                     
-                    tracerPart.Size = Vector3.new(0.05, 0.05, distance)
+                    tracerPart.Size = Vector3.new(0.03, 0.03, distance)
                     tracerPart.CFrame = CFrame.new(p1, p2) * CFrame.new(0, 0, -distance / 2)
                     tracerPart.Transparency = 0.3
                 else
@@ -465,7 +540,36 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end)
 end)
 
--- Sistema de Crosshair Sincronizado
+-- ESP Logic
+task.spawn(function()
+    while true do
+        task.wait(1)
+        pcall(function()
+            for _, p in ipairs(game.Players:GetPlayers()) do
+                if p ~= game.Players.LocalPlayer and p.Character then
+                    local ally = isTeammate(p)
+                    local hl = p.Character:FindFirstChild("1AN_ESP")
+                    
+                    if getgenv().EspEnemyEnabled and not ally then
+                        if not hl then
+                            hl = Instance.new("Highlight")
+                            hl.Name = "1AN_ESP"
+                            hl.Adornee = p.Character
+                            hl.FillTransparency = 0.4
+                            hl.OutlineTransparency = 0
+                            hl.FillColor = Color3.fromRGB(138, 43, 226)
+                            hl.Parent = p.Character
+                        end
+                    else
+                        if hl then hl:Destroy() end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Crosshair System
 local openButtonContainer = nil
 pcall(function()
     openButtonContainer = game:GetService("CoreGui"):WaitForChild("WindUI", 2):WaitForChild("OpenButton", 2)
@@ -565,34 +669,8 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end)
 end)
 
-task.spawn(function()
-    while true do
-        task.wait(1)
-        pcall(function()
-            for _, p in ipairs(game.Players:GetPlayers()) do
-                if p ~= game.Players.LocalPlayer and p.Character then
-                    local hl = p.Character:FindFirstChild("1AN_ESP")
-                    if getgenv().EspEnemyEnabled then
-                        if not hl then
-                            hl = Instance.new("Highlight")
-                            hl.Name = "1AN_ESP"
-                            hl.Adornee = p.Character
-                            hl.FillTransparency = 0.4
-                            hl.OutlineTransparency = 0
-                            hl.FillColor = Color3.fromRGB(138, 43, 226)
-                            hl.Parent = p.Character
-                        end
-                    else
-                        if hl then hl:Destroy() end
-                    end
-                end
-            end
-        end)
-    end
-end)
-
 WindUI:Notify({ 
     Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ", 
-    Content = "¡Todo integrado y listo!", 
+    Content = "¡Hispos del pecho restaurada y optimizada por Alex X!", 
     Duration = 3 
 })
