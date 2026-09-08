@@ -101,10 +101,30 @@ Tabs.Combat:Toggle({
     end,
 })
 
+Tabs.Combat:Section({ Title = "Control de Objetivo" })
+
+Tabs.Combat:Toggle({
+    Title = "Congelar Enemigo Cerca (Freeze Target)",
+    Value = false,
+    Callback = function(v)
+        getgenv().FreezeEnemyEnabled = v
+        if not v then
+            -- Unfreeze a todos los jugadores al desactivar
+            pcall(function()
+                for _, p in ipairs(game.Players:GetPlayers()) do
+                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        p.Character.HumanoidRootPart.Anchored = false
+                    end
+                end
+            end)
+        end
+    end,
+})
+
 Tabs.Combat:Section({ Title = "Hitbox (Pecho del Enemigo)" })
 
 Tabs.Combat:Toggle({
-    Title = "Activar Hitbox",
+    Title = "Activar Hitbox Pecho",
     Value = false,
     Callback = function(v)
         getgenv().HitboxEnabled = v
@@ -304,7 +324,7 @@ Tabs.Visual:Dropdown({
 })
 
 -- =====================================================
---  PESTAÑA: MUSIC (REPRODUCCIÓN POR SELECCIÓN MANUAL)
+--  PESTAÑA: MUSIC
 -- =====================================================
 
 Tabs.Music:Section({ Title = "Reproductor Red Davil" })
@@ -326,7 +346,6 @@ local tracks = {
 
 local trackNames = { "Ninguna (Silencio)", "Luz Track (Corregida)", "Lil Peep - Nuts (Opción 1)", "Lil Peep - Nuts (Opción 2)", "Lil Peep - Nuts (Opción 3)", "Drift Phonk Heavy Bass", "Brazilian Funk Beat" }
 
--- Inicia en "Ninguna (Silencio)" para evitar la reproducción automática
 Tabs.Music:Dropdown({
     Title = "Seleccionar Pista",
     Values = trackNames,
@@ -461,6 +480,7 @@ getgenv().HitboxTransparency = 0.5
 getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
 getgenv().BigHeadSize = 4
 getgenv().CrosshairStyle = "Cruz"
+getgenv().FreezeEnemyEnabled = false
 
 -- Función de Team Check
 local function isTeammate(player)
@@ -478,6 +498,52 @@ local function isTeammate(player)
     end
     return false
 end
+
+-- Lógica Freeze Target
+game:GetService("RunService").RenderStepped:Connect(function()
+    pcall(function()
+        if not getgenv().FreezeEnemyEnabled then return end
+        
+        local localPlayer = game.Players.LocalPlayer
+        local mouse = localPlayer:GetMouse()
+        local closestTarget = nil
+        local shortestDist = math.huge
+
+        for _, p in ipairs(game.Players:GetPlayers()) do
+            if p ~= localPlayer and p.Character then
+                local ally = isTeammate(p)
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+
+                if hrp and hum and hum.Health > 0 and not ally then
+                    local cam = workspace.CurrentCamera
+                    local screenPos, onScreen = cam:WorldToViewportPoint(hrp.Position)
+                    
+                    if onScreen then
+                        local mousePos = Vector2.new(mouse.X, mouse.Y)
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                        
+                        if dist < shortestDist then
+                            shortestDist = dist
+                            closestTarget = hrp
+                        end
+                    end
+                end
+            end
+        end
+
+        for _, p in ipairs(game.Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = p.Character.HumanoidRootPart
+                if closestTarget and hrp == closestTarget then
+                    hrp.Anchored = true
+                else
+                    hrp.Anchored = false
+                end
+            end
+        end
+    end)
+end)
 
 -- Movimiento
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -522,52 +588,50 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end)
 end)
 
--- Hitbox System
+-- Torso Hitbox System (R6 y R15 Compatible)
 local originalSizes = {}
 
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        pcall(function()
-            for _, p in ipairs(game.Players:GetPlayers()) do
-                if p ~= game.Players.LocalPlayer and p.Character then
-                    local ally = isTeammate(p)
-                    local char = p.Character
-                    local hrp = char:FindFirstChild("HumanoidRootPart")
-                    local hum = char:FindFirstChildOfClass("Humanoid")
+game:GetService("RunService").RenderStepped:Connect(function()
+    pcall(function()
+        for _, p in ipairs(game.Players:GetPlayers()) do
+            if p ~= game.Players.LocalPlayer and p.Character then
+                local ally = isTeammate(p)
+                local char = p.Character
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local torsoPart = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+                
+                if torsoPart and hum and hum.Health > 0 then
+                    if not originalSizes[torsoPart] then
+                        originalSizes[torsoPart] = {
+                            Size = torsoPart.Size,
+                            Transparency = torsoPart.Transparency,
+                            Material = torsoPart.Material,
+                            Massless = torsoPart.Massless,
+                            CanCollide = torsoPart.CanCollide
+                        }
+                    end
                     
-                    if hrp and hum and hum.Health > 0 then
-                        if not originalSizes[p] or originalSizes[p].Character ~= char then
-                            originalSizes[p] = {
-                                Character = char,
-                                Size = hrp.Size,
-                                Transparency = hrp.Transparency,
-                                Material = hrp.Material,
-                                Massless = hrp.Massless
-                            }
-                        end
-                        
-                        if getgenv().HitboxEnabled and not ally then
-                            local sizeVal = getgenv().HitboxSize or 5
-                            hrp.Size = Vector3.new(sizeVal, sizeVal, sizeVal)
-                            hrp.Transparency = getgenv().HitboxTransparency or 0.5
-                            hrp.Color = getgenv().HitboxColor or Color3.fromRGB(138, 43, 226)
-                            hrp.Material = Enum.Material.Neon
-                            hrp.CanCollide = false
-                            hrp.Massless = true
-                        else
-                            if originalSizes[p] and originalSizes[p].Character == char then
-                                hrp.Size = originalSizes[p].Size
-                                hrp.Transparency = originalSizes[p].Transparency
-                                hrp.Material = originalSizes[p].Material
-                                hrp.Massless = originalSizes[p].Massless
-                            end
+                    if getgenv().HitboxEnabled and not ally then
+                        local sizeVal = getgenv().HitboxSize or 5
+                        torsoPart.Size = Vector3.new(sizeVal, sizeVal, sizeVal)
+                        torsoPart.Transparency = getgenv().HitboxTransparency or 0.5
+                        torsoPart.Color = getgenv().HitboxColor or Color3.fromRGB(138, 43, 226)
+                        torsoPart.Material = Enum.Material.Neon
+                        torsoPart.CanCollide = false
+                        torsoPart.Massless = true
+                    else
+                        if originalSizes[torsoPart] then
+                            torsoPart.Size = originalSizes[torsoPart].Size
+                            torsoPart.Transparency = originalSizes[torsoPart].Transparency
+                            torsoPart.Material = originalSizes[torsoPart].Material
+                            torsoPart.Massless = originalSizes[torsoPart].Massless
+                            torsoPart.CanCollide = originalSizes[torsoPart].CanCollide
                         end
                     end
                 end
             end
-        end)
-    end
+        end
+    end)
 end)
 
 -- Big Head Logic
