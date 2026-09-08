@@ -17,15 +17,15 @@ local Window = Rayfield:CreateWindow({
         FolderName = nil,
         FileName = "StretchedScreen1AN"
     },
-    KeySystem = true ,
+    KeySystem = true,
     KeySettings = {
         Title = "Sistema de Key",
         Subtitle = "Introduce la key para continuar",
-        Note = "",
+        Note = "Contacta al creador para obtener la key.",
         FileName = "1ANKey",
-        SaveKey = false ,
+        SaveKey = false,
         GrabKeyFromSite = false,
-        Key = {"femboy", "Femboy", "FEMBOY"}
+        Key = {"femboy1", "Femboy1", "FEMBOY1", "femboy", "Femboy", "FEMBOY"}
     }
 })
 
@@ -463,8 +463,8 @@ ApplyStretch()
 
 Rayfield:Notify({
     Title = "Stretched Screen by 1AN",
-    Content = "Key system actualizado correctamente.",
+    Content = "Script definitivo configurado correctamente.",
     Duration = 6,
 })
 
-print("✅ Script actualizado con keys flexibles por Alex X")
+print("✅ Script definitivo cargado por Alex X")
