@@ -1,6 +1,6 @@
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Optimizado & Ultra Agresivo)
---  Creado por Alex X
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Fix Total & Stretched)
+--  Creado por Alex X - Editado para Clean ESP & Stretched Screen
 -- =====================================================
 local success, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -22,7 +22,7 @@ pcall(function()
 end)
 local soundInstance = Instance.new("Sound")
 soundInstance.Name = "RedDavilKillSound"
-soundInstance.Volume = 2
+soundInstance.Volume = 3
 soundInstance.Looped = false
 soundInstance.Parent = SoundService
 
@@ -38,7 +38,7 @@ local KillSoundCodes = {
     ["A Few Moments Later.."] = 122289855001542
 }
 
--- Variables Globales Optimizadas
+-- Variables Globales
 getgenv().KillSoundEnabled = false
 getgenv().SelectedKillSound = 336771379
 
@@ -70,14 +70,11 @@ getgenv().TriggerbotDelay = 0.02
 getgenv().RapidFireEnabled = false
 getgenv().InfAmmoEnabled = false
 
-getgenv().EspEnemyEnabled = false
-getgenv().EspBoxesEnabled = false
-getgenv().EspTracersEnabled = false
-getgenv().EspNamesEnabled = false
-getgenv().EspSkeletonEnabled = false
-getgenv().EspDistanceEnabled = false
-getgenv().EspHealthBarEnabled = false
-getgenv().EspEnemyColor = Color3.fromRGB(255, 0, 0)
+-- NUEVAS VARIABLES VISUALES
+getgenv().EspGlobalEnabled = false
+getgenv().EspMainColor = Color3.fromRGB(255, 255, 255)
+getgenv().StretchedEnabled = false
+getgenv().StretchedValue = 100
 
 getgenv().SkinChangerEnabled = false
 getgenv().SelectedWeaponSkin = "Gold"
@@ -91,9 +88,10 @@ local frozenPlayerPositions = {}
 local espDrawings = {}
 local proxyHitboxes = {}
 local deadPlayers = {}
+local playerHealthTracker = {}
 
 local Window = WindUI:CreateWindow({
-    Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ",
+    Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜB",
     Icon = "sparkles",
     Author = "Alex X",
     Folder = "StretchedScreen1AN",
@@ -213,15 +211,12 @@ Tabs.Movement:Toggle({ Title = "Noclip", Value = false, Callback = function(v) g
 Tabs.Movement:Toggle({ Title = "SpinBot", Value = false, Callback = function(v) getgenv().SpinBotEnabled = v end })
 Tabs.Movement:Slider({ Title = "Velocidad SpinBot", Step = 5, Value = { Min = 10, Max = 500, Default = 120 }, Callback = function(v) getgenv().SpinSpeed = v end })
 
--- [ SECCIÓN VISUAL ]
-Tabs.Visual:Section({ Title = "ESP Avanzado" })
-Tabs.Visual:Toggle({ Title = "ESP Chams", Value = false, Callback = function(v) getgenv().EspEnemyEnabled = v end })
-Tabs.Visual:Toggle({ Title = "ESP Cajas (Boxes)", Value = false, Callback = function(v) getgenv().EspBoxesEnabled = v end })
-Tabs.Visual:Toggle({ Title = "ESP Líneas (Tracers)", Value = false, Callback = function(v) getgenv().EspTracersEnabled = v end })
-Tabs.Visual:Toggle({ Title = "ESP Nombres e Info", Value = false, Callback = function(v) getgenv().EspNamesEnabled = v end })
-Tabs.Visual:Toggle({ Title = "ESP Distancia", Value = false, Callback = function(v) getgenv().EspDistanceEnabled = v end })
-Tabs.Visual:Toggle({ Title = "ESP Barra de Vida", Value = false, Callback = function(v) getgenv().EspHealthBarEnabled = v end })
-Tabs.Visual:Toggle({ Title = "ESP Esqueleto", Value = false, Callback = function(v) getgenv().EspSkeletonEnabled = v end })
+-- [ SECCIÓN VISUAL (LIMPIA Y MEJORADA) ]
+Tabs.Visual:Section({ Title = "Visuales Competitivos" })
+Tabs.Visual:Toggle({ Title = "Activar ESP Global (Limpio)", Value = false, Callback = function(v) getgenv().EspGlobalEnabled = v end })
+Tabs.Visual:Section({ Title = "Modificaciones de Cámara" })
+Tabs.Visual:Toggle({ Title = "Pantalla Estirada (Stretched)", Value = false, Callback = function(v) getgenv().StretchedEnabled = v end })
+Tabs.Visual:Slider({ Title = "Nivel de Estiramiento", Step = 1, Value = { Min = 70, Max = 120, Default = 100 }, Callback = function(v) getgenv().StretchedValue = v end })
 
 -- [ SECCIÓN KILL SOUND ]
 Tabs.KillSound:Section({ Title = "Kill Sound (Efectos Instantáneos de Baja)" })
@@ -273,7 +268,6 @@ function isTeammate(player)
     return player.Team == LocalPlayer.Team
 end
 
--- Función instantánea para reproducir el audio de baja
 local function playKillSound()
     if getgenv().KillSoundEnabled and soundInstance and getgenv().SelectedKillSound then
         soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
@@ -281,36 +275,61 @@ local function playKillSound()
     end
 end
 
--- Listener ultrarrápido para detectar bajas en tiempo real
+-- Rastrear cuándo el LocalPlayer ataca a alguien
+local lastAttackedPlayer = nil
+local lastAttackTime = 0
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        local mouse = LocalPlayer:GetMouse()
+        local target = mouse.Target
+        if target and target.Parent then
+            local p = Players:GetPlayerFromCharacter(target.Parent) or Players:GetPlayerFromCharacter(target.Parent.Parent)
+            if p and p ~= LocalPlayer then
+                lastAttackedPlayer = p
+                lastAttackTime = tick()
+            end
+        end
+    end
+end)
+
 local function setupKillSoundListener(player)
+    if player == LocalPlayer then return end
     local function connectCharacter(char)
         deadPlayers[player] = false
         local hum = char:WaitForChild("Humanoid", 5)
         if hum then
-            -- Se escucha el cambio de salud para reproducir INSTANTÁNEAMENTE al llegar a 0
-            local conn
-            conn = hum.HealthChanged:Connect(function(health)
-                if health <= 0 and not deadPlayers[player] then
+            playerHealthTracker[player] = hum.Health
+            local function checkKill()
+                if deadPlayers[player] then return end
+                local creatorTag = hum:FindFirstChild("creator")
+                local isOurKill = false
+
+                if creatorTag and creatorTag:IsA("ObjectValue") and creatorTag.Value == LocalPlayer then
+                    isOurKill = true
+                elseif lastAttackedPlayer == player and (tick() - lastAttackTime) <= 3 then
+                    isOurKill = true
+                end
+
+                if isOurKill then
                     deadPlayers[player] = true
-                    if not isTeammate(player) then
-                        playKillSound()
-                    end
-                    if conn then conn:Disconnect() end
+                    playKillSound()
+                end
+            end
+
+            hum.HealthChanged:Connect(function(health)
+                if health <= 0 and (playerHealthTracker[player] or 1) > 0 then
+                    playerHealthTracker[player] = 0
+                    checkKill()
+                else
+                    playerHealthTracker[player] = health
                 end
             end)
 
-            hum.Died:Connect(function()
-                if not deadPlayers[player] then
-                    deadPlayers[player] = true
-                    if not isTeammate(player) then
-                        playKillSound()
-                    end
-                end
-                if conn then conn:Disconnect() end
-            end)
+            hum.Died:Connect(function() checkKill() end)
         end
     end
-
     if player.Character then connectCharacter(player.Character) end
     player.CharacterAdded:Connect(connectCharacter)
 end
@@ -354,38 +373,42 @@ local function getClosestTargetUniversal()
     return closestPart
 end
 
+local function applyProxyToCharacter(player, char)
+    if not char then return end
+    if proxyHitboxes[player] then pcall(function() proxyHitboxes[player]:Destroy() end) end
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    if not hrp then return end
+    
+    local proxy = Instance.new("Part")
+    proxy.Name = "ProxyHitbox_" .. player.Name
+    proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
+    proxy.Transparency = 0.85
+    proxy.CanCollide = false
+    proxy.Massless = true
+    proxy.Color = Color3.fromRGB(255, 0, 0)
+    proxy.Material = Enum.Material.Neon
+    proxy.Parent = char
+    
+    for _, part in ipairs(char:GetChildren()) do
+        if part:IsA("BasePart") then
+            local noCol = Instance.new("NoCollisionConstraint")
+            noCol.Part0 = proxy
+            noCol.Part1 = part
+            noCol.Parent = proxy
+        end
+    end
+    local weld = Instance.new("WeldConstraint")
+    weld.Part0 = hrp
+    weld.Part1 = proxy
+    weld.Parent = hrp
+    proxy.CFrame = hrp.CFrame
+    proxyHitboxes[player] = proxy
+end
+
 local function setupProxyHitbox(player)
     if player == LocalPlayer then return end
-    player.CharacterAdded:Connect(function(char)
-        task.wait(1)
-        if proxyHitboxes[player] then pcall(function() proxyHitboxes[player]:Destroy() end) end
-        local hrp = char:WaitForChild("HumanoidRootPart", 5)
-        if not hrp then return end
-        
-        local proxy = Instance.new("Part")
-        proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
-        proxy.Transparency = 0.85
-        proxy.CanCollide = true
-        proxy.Massless = true
-        proxy.Color = Color3.fromRGB(255, 0, 0)
-        proxy.Material = Enum.Material.Neon
-        proxy.Parent = workspace
-        
-        for _, part in ipairs(char:GetChildren()) do
-            if part:IsA("BasePart") then
-                local noCol = Instance.new("NoCollisionConstraint")
-                noCol.Part0 = proxy
-                noCol.Part1 = part
-                noCol.Parent = proxy
-            end
-        end
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = hrp
-        weld.Part1 = proxy
-        weld.Parent = hrp
-        proxy.CFrame = hrp.CFrame
-        proxyHitboxes[player] = proxy
-    end)
+    if player.Character then applyProxyToCharacter(player, player.Character) end
+    player.CharacterAdded:Connect(function(char) applyProxyToCharacter(player, char) end)
 end
 
 for _, p in ipairs(Players:GetPlayers()) do setupProxyHitbox(p) end
@@ -395,26 +418,24 @@ Players.PlayerRemoving:Connect(function(p)
     if proxyHitboxes[p] then pcall(function() proxyHitboxes[p]:Destroy() end); proxyHitboxes[p] = nil end
     if espDrawings[p] then
         pcall(function()
-            for _, d in pairs(espDrawings[p]) do
-                if type(d) == "table" then for _, sub in pairs(d) do sub:Remove() end
-                else d:Remove() end
-            end
+            for _, d in pairs(espDrawings[p]) do d:Remove() end
         end)
         espDrawings[p] = nil
     end
     originalHitboxStates[p] = nil
     frozenPlayerPositions[p] = nil
     deadPlayers[p] = nil
+    playerHealthTracker[p] = nil
 end)
 
--- Triggerbot optimizado
+-- Triggerbot
 task.spawn(function()
     while task.wait(0.04) do
         pcall(function()
             if getgenv().TriggerbotEnabled then
                 local target = LocalPlayer:GetMouse().Target
                 if target and target.Parent then
-                    local enemyPlayer = Players:GetPlayerFromCharacter(target.Parent)
+                    local enemyPlayer = Players:GetPlayerFromCharacter(target.Parent) or Players:GetPlayerFromCharacter(target.Parent.Parent)
                     if enemyPlayer and enemyPlayer ~= LocalPlayer and not isTeammate(enemyPlayer) then
                         local hum = enemyPlayer.Character and enemyPlayer.Character:FindFirstChildOfClass("Humanoid")
                         if hum and hum.Health > 0 then
@@ -430,12 +451,16 @@ task.spawn(function()
     end
 end)
 
--- Bucle Principal en RenderStepped optimizado
+-- Bucle Principal en RenderStepped
 RunService.RenderStepped:Connect(function()
     pcall(function()
         local Camera = workspace.CurrentCamera
 
-        -- Actualización del FOV visual en pantalla
+        -- Lógica de Pantalla Estirada (Stretched Screen)
+        if getgenv().StretchedEnabled then
+            Camera.FieldOfView = getgenv().StretchedValue
+        end
+
         if getgenv().FovEnabled then
             fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
             fovCircle.Radius = getgenv().FovRadius
@@ -468,27 +493,26 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- Proxy Hitbox update
-        for p, proxy in pairs(proxyHitboxes) do
-            if proxy and proxy.Parent then
-                if getgenv().HoodHitboxEnabled and p.Character and p.Character:FindFirstChildOfClass("Humanoid") and p.Character.Humanoid.Health > 0 and not isTeammate(p) then
-                    proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
-                    proxy.Transparency = 0.85
-                    proxy.CanCollide = true
-                else
-                    proxy.Transparency = 1
-                    proxy.CanCollide = false
-                end
-            end
-        end
-
-        -- Hitbox estándar y Freeze
         for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and not isTeammate(p) then
+            if p ~= LocalPlayer and p.Character then
+                local isEnemy = not isTeammate(p)
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+
                 if hum and hum.Health > 0 and hrp then
-                    if getgenv().FreezePlayersEnabled then
+                    local proxy = proxyHitboxes[p]
+                    if proxy and proxy.Parent then
+                        if getgenv().HoodHitboxEnabled and isEnemy then
+                            proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
+                            proxy.Transparency = 0.85
+                        else
+                            proxy.Transparency = 1
+                        end
+                    elseif getgenv().HoodHitboxEnabled then
+                        applyProxyToCharacter(p, p.Character)
+                    end
+
+                    if getgenv().FreezePlayersEnabled and isEnemy then
                         if not frozenPlayerPositions[p] then frozenPlayerPositions[p] = hrp.CFrame end
                         hrp.Anchored = true
                         hrp.CFrame = frozenPlayerPositions[p]
@@ -501,7 +525,7 @@ RunService.RenderStepped:Connect(function()
                         end
                     end
 
-                    if getgenv().HitboxEnabled then
+                    if getgenv().HitboxEnabled and isEnemy then
                         if not originalHitboxStates[p] then
                             originalHitboxStates[p] = {}
                             for _, name in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
@@ -526,41 +550,26 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- Chams ESP
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and not isTeammate(p) then
-                local hl = p.Character:FindFirstChild("AlexX_ESP")
-                if getgenv().EspEnemyEnabled then
-                    if not hl then
-                        hl = Instance.new("Highlight", p.Character)
-                        hl.Name = "AlexX_ESP"
-                        hl.FillColor = Color3.fromRGB(255, 30, 30)
-                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                        hl.FillTransparency = 0.35
-                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    end
-                else
-                    if hl then hl:Destroy() end
-                end
-            end
-        end
-
-        -- ESP Dibujos 2D
+        -- ESP Dibujos 2D Limpio
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer then
                 if not espDrawings[p] then
                     espDrawings[p] = {
+                        BoxOutline = Drawing.new("Square"),
                         Box = Drawing.new("Square"),
-                        Tracer = Drawing.new("Line"),
                         Name = Drawing.new("Text"),
                         HealthBarOutline = Drawing.new("Square"),
-                        HealthBar = Drawing.new("Square"),
-                        Skeleton = { Drawing.new("Line"), Drawing.new("Line"), Drawing.new("Line"), Drawing.new("Line"), Drawing.new("Line") }
+                        HealthBar = Drawing.new("Square")
                     }
+                    espDrawings[p].BoxOutline.Filled = false
+                    espDrawings[p].BoxOutline.Thickness = 3
+                    espDrawings[p].BoxOutline.Color = Color3.new(0,0,0)
                     espDrawings[p].Box.Filled = false
-                    espDrawings[p].Name.Size = 14
+                    espDrawings[p].Box.Thickness = 1
+                    espDrawings[p].Name.Size = 16
                     espDrawings[p].Name.Center = true
                     espDrawings[p].Name.Outline = true
+                    espDrawings[p].Name.Color = Color3.new(1,1,1)
                     espDrawings[p].HealthBarOutline.Filled = true
                     espDrawings[p].HealthBarOutline.Color = Color3.new(0,0,0)
                     espDrawings[p].HealthBar.Filled = true
@@ -569,73 +578,54 @@ RunService.RenderStepped:Connect(function()
                 local d = espDrawings[p]
                 local char = p.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local head = char and char:FindFirstChild("Head")
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-                if char and hrp and head and hum and hum.Health > 0 and not isTeammate(p) then
+                if char and hrp and hum and hum.Health > 0 and not isTeammate(p) then
                     local cf, sz = char:GetBoundingBox()
                     local topPos = Camera:WorldToViewportPoint(cf.Position + Vector3.new(0, sz.Y / 2, 0))
                     local botPos = Camera:WorldToViewportPoint(cf.Position - Vector3.new(0, sz.Y / 2, 0))
                     local rootPos, vis = Camera:WorldToViewportPoint(hrp.Position)
 
-                    if vis then
+                    if vis and getgenv().EspGlobalEnabled then
                         local h = math.abs(botPos.Y - topPos.Y)
                         local w = h / 2
 
-                        d.Box.Visible = getgenv().EspBoxesEnabled
-                        if d.Box.Visible then
-                            d.Box.Size = Vector2.new(w, h)
-                            d.Box.Position = Vector2.new(rootPos.X - w / 2, topPos.Y)
-                            d.Box.Color = getgenv().EspEnemyColor
-                        end
+                        d.BoxOutline.Size = Vector2.new(w, h)
+                        d.BoxOutline.Position = Vector2.new(rootPos.X - w / 2, topPos.Y)
+                        d.BoxOutline.Visible = true
 
-                        d.Tracer.Visible = getgenv().EspTracersEnabled
-                        if d.Tracer.Visible then
-                            d.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                            d.Tracer.To = Vector2.new(rootPos.X, botPos.Y)
-                            d.Tracer.Color = getgenv().EspEnemyColor
-                        end
+                        d.Box.Size = Vector2.new(w, h)
+                        d.Box.Position = Vector2.new(rootPos.X - w / 2, topPos.Y)
+                        d.Box.Color = getgenv().EspMainColor
+                        d.Box.Visible = true
 
-                        d.Name.Visible = getgenv().EspNamesEnabled
-                        if d.Name.Visible then
-                            local distStr = getgenv().EspDistanceEnabled and (" [" .. math.floor((hrp.Position - Camera.CFrame.Position).Magnitude) .. "m]") or ""
-                            d.Name.Text = p.Name .. " [" .. math.floor(hum.Health) .. "HP]" .. distStr
-                            d.Name.Position = Vector2.new(rootPos.X, topPos.Y - 18)
-                        end
+                        d.Name.Text = p.Name
+                        d.Name.Position = Vector2.new(rootPos.X, topPos.Y - 20)
+                        d.Name.Visible = true
 
-                        d.HealthBar.Visible = getgenv().EspHealthBarEnabled
-                        d.HealthBarOutline.Visible = getgenv().EspHealthBarEnabled
-                        if getgenv().EspHealthBarEnabled then
-                            local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-                            local bH = h * hpPct
-                            d.HealthBarOutline.Size = Vector2.new(3, h + 2)
-                            d.HealthBarOutline.Position = Vector2.new(rootPos.X - w / 2 - 6, topPos.Y - 1)
-                            d.HealthBar.Size = Vector2.new(1, bH)
-                            d.HealthBar.Position = Vector2.new(rootPos.X - w / 2 - 5, topPos.Y + (h - bH))
-                            d.HealthBar.Color = Color3.fromRGB(255 - (hpPct * 255), hpPct * 255, 0)
-                        end
+                        local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                        local bH = h * hpPct
+                        d.HealthBarOutline.Size = Vector2.new(4, h + 2)
+                        d.HealthBarOutline.Position = Vector2.new(rootPos.X - w / 2 - 6, topPos.Y - 1)
+                        d.HealthBarOutline.Visible = true
 
-                        if getgenv().EspSkeletonEnabled then
-                            local upperTorso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-                            if head and upperTorso then
-                                local hP = Camera:WorldToViewportPoint(head.Position)
-                                local tP = Camera:WorldToViewportPoint(upperTorso.Position)
-                                d.Skeleton[1].From = Vector2.new(hP.X, hP.Y)
-                                d.Skeleton[1].To = Vector2.new(tP.X, tP.Y)
-                                d.Skeleton[1].Visible = true
-                            else
-                                for _, l in pairs(d.Skeleton) do l.Visible = false end
-                            end
-                        else
-                            for _, l in pairs(d.Skeleton) do l.Visible = false end
-                        end
+                        d.HealthBar.Size = Vector2.new(2, bH)
+                        d.HealthBar.Position = Vector2.new(rootPos.X - w / 2 - 5, topPos.Y + (h - bH))
+                        d.HealthBar.Color = Color3.fromRGB(255 - (hpPct * 255), hpPct * 255, 0)
+                        d.HealthBar.Visible = true
                     else
-                        d.Box.Visible, d.Tracer.Visible, d.Name.Visible, d.HealthBar.Visible, d.HealthBarOutline.Visible = false, false, false, false, false
-                        for _, l in pairs(d.Skeleton) do l.Visible = false end
+                        d.BoxOutline.Visible = false
+                        d.Box.Visible = false
+                        d.Name.Visible = false
+                        d.HealthBarOutline.Visible = false
+                        d.HealthBar.Visible = false
                     end
                 else
-                    d.Box.Visible, d.Tracer.Visible, d.Name.Visible, d.HealthBar.Visible, d.HealthBarOutline.Visible = false, false, false, false, false
-                    if d.Skeleton then for _, l in pairs(d.Skeleton) do l.Visible = false end end
+                    d.BoxOutline.Visible = false
+                    d.Box.Visible = false
+                    d.Name.Visible = false
+                    d.HealthBarOutline.Visible = false
+                    d.HealthBar.Visible = false
                 end
             end
         end
@@ -649,7 +639,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Bucle de Armas optimizado (SkinChanger, Diseños y Mods)
+-- Bucle de Armas (SkinChanger, Diseños y Mods)
 task.spawn(function()
     while task.wait(0.6) do
         pcall(function()
