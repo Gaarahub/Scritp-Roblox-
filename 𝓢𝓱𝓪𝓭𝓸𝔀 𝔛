@@ -18,15 +18,30 @@ local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
-    if SoundService:FindFirstChild("RedDavilMusic") then SoundService:FindFirstChild("RedDavilMusic"):Destroy() end
+    if SoundService:FindFirstChild("RedDavilKillSound") then SoundService:FindFirstChild("RedDavilKillSound"):Destroy() end
 end)
 local soundInstance = Instance.new("Sound")
-soundInstance.Name = "RedDavilMusic"
-soundInstance.Volume = 1
+soundInstance.Name = "RedDavilKillSound"
+soundInstance.Volume = 2
 soundInstance.Looped = false
 soundInstance.Parent = SoundService
 
+-- Códigos de Kill Sound Meme
+local KillSoundCodes = {
+    ["OOOH MY GOD Vine"] = 336771379,
+    ["Laughing Cat Meme"] = 120717906835357,
+    ["EMOTIONAL DAMAGE"] = 8627853380,
+    ["Oh My God! Wow!"] = 130114549451469,
+    ["GET OUT!!!"] = 138093000712523,
+    ["신태일 - 뭐야!!! (Angry Korean Gamer)"] = 5700099982,
+    ["Among Us Intro Sound"] = 7361207035,
+    ["A Few Moments Later.."] = 122289855001542
+}
+
 -- Variables Globales Optimizadas
+getgenv().KillSoundEnabled = false
+getgenv().SelectedKillSound = 336771379
+
 getgenv().SpinSpeed = 120
 getgenv().SpinBotEnabled = false
 getgenv().NoclipEnabled = false
@@ -75,6 +90,7 @@ local originalHitboxStates = {}
 local frozenPlayerPositions = {}
 local espDrawings = {}
 local proxyHitboxes = {}
+local deadPlayers = {}
 
 local Window = WindUI:CreateWindow({
     Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ",
@@ -104,7 +120,7 @@ local Tabs = {
     SkinChanger = Window:Tab({ Title = "Skin Changer", Icon = "palette" }),
     Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
     Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
-    Music = Window:Tab({ Title = "Music", Icon = "music" }),
+    KillSound = Window:Tab({ Title = "Kill Sound", Icon = "volume-2" }),
     Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
 }
 
@@ -207,18 +223,110 @@ Tabs.Visual:Toggle({ Title = "ESP Distancia", Value = false, Callback = function
 Tabs.Visual:Toggle({ Title = "ESP Barra de Vida", Value = false, Callback = function(v) getgenv().EspHealthBarEnabled = v end })
 Tabs.Visual:Toggle({ Title = "ESP Esqueleto", Value = false, Callback = function(v) getgenv().EspSkeletonEnabled = v end })
 
--- [ LÓGICA INTERNA DE FOV Y VISIBILIDAD ]
-local fovCircle = Drawing.new("Circle")
-fovCircle.Thickness = 1.5
-fovCircle.Filled = false
-fovCircle.Transparency = 1
+-- [ SECCIÓN KILL SOUND ]
+Tabs.KillSound:Section({ Title = "Kill Sound (Efectos Instantáneos de Baja)" })
 
-local function isTeammate(player)
+Tabs.KillSound:Toggle({
+    Title = "Activar Kill Sound",
+    Value = false,
+    Callback = function(v)
+        getgenv().KillSoundEnabled = v
+    end
+})
+
+local KillSoundDropdown = Tabs.KillSound:Dropdown({
+    Title = "Seleccionar Kill Sound",
+    Values = {
+        "OOOH MY GOD Vine",
+        "Laughing Cat Meme",
+        "EMOTIONAL DAMAGE",
+        "Oh My God! Wow!",
+        "GET OUT!!!",
+        "신태일 - 뭐야!!! (Angry Korean Gamer)",
+        "Among Us Intro Sound",
+        "A Few Moments Later.."
+    },
+    Value = "OOOH MY GOD Vine",
+    Callback = function(selected)
+        local soundId = KillSoundCodes[selected]
+        if soundId then
+            getgenv().SelectedKillSound = soundId
+        end
+    end
+})
+
+Tabs.KillSound:Button({
+    Title = "🔊 Probar Audio Seleccionado",
+    Callback = function()
+        if soundInstance and getgenv().SelectedKillSound then
+            soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
+            soundInstance:Play()
+        end
+    end
+})
+
+-- Funciones auxiliares globales
+function isTeammate(player)
     if not getgenv().TeamCheckEnabled then return false end
     if player == LocalPlayer then return true end
     if not LocalPlayer.Team or not player.Team then return false end
     return player.Team == LocalPlayer.Team
 end
+
+-- Función instantánea para reproducir el audio de baja
+local function playKillSound()
+    if getgenv().KillSoundEnabled and soundInstance and getgenv().SelectedKillSound then
+        soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
+        soundInstance:Play()
+    end
+end
+
+-- Listener ultrarrápido para detectar bajas en tiempo real
+local function setupKillSoundListener(player)
+    local function connectCharacter(char)
+        deadPlayers[player] = false
+        local hum = char:WaitForChild("Humanoid", 5)
+        if hum then
+            -- Se escucha el cambio de salud para reproducir INSTANTÁNEAMENTE al llegar a 0
+            local conn
+            conn = hum.HealthChanged:Connect(function(health)
+                if health <= 0 and not deadPlayers[player] then
+                    deadPlayers[player] = true
+                    if not isTeammate(player) then
+                        playKillSound()
+                    end
+                    if conn then conn:Disconnect() end
+                end
+            end)
+
+            hum.Died:Connect(function()
+                if not deadPlayers[player] then
+                    deadPlayers[player] = true
+                    if not isTeammate(player) then
+                        playKillSound()
+                    end
+                end
+                if conn then conn:Disconnect() end
+            end)
+        end
+    end
+
+    if player.Character then connectCharacter(player.Character) end
+    player.CharacterAdded:Connect(connectCharacter)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then setupKillSoundListener(p) end
+end
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then setupKillSoundListener(p) end
+end)
+
+-- [ LÓGICA INTERNA DE FOV Y VISIBILIDAD ]
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 1.5
+fovCircle.Filled = false
+fovCircle.Transparency = 1
 
 local function getClosestTargetUniversal()
     local Camera = workspace.CurrentCamera
@@ -296,6 +404,7 @@ Players.PlayerRemoving:Connect(function(p)
     end
     originalHitboxStates[p] = nil
     frozenPlayerPositions[p] = nil
+    deadPlayers[p] = nil
 end)
 
 -- Triggerbot optimizado
@@ -321,7 +430,7 @@ task.spawn(function()
     end
 end)
 
--- Bucle Principal en RenderStepped optimizado (Incluyendo renderizado de FOV en pantalla)
+-- Bucle Principal en RenderStepped optimizado
 RunService.RenderStepped:Connect(function()
     pcall(function()
         local Camera = workspace.CurrentCamera
