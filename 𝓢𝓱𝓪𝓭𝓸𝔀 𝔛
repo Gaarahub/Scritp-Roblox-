@@ -1,25 +1,24 @@
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (ESP, Hitboxes & Diseños)
---  Creado por Alex X (ESP y Hitboxes Reparados)
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Optimizado & Ultra Agresivo)
+--  Creado por Alex X
 -- =====================================================
 local success, WindUI = pcall(function()
-return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 end)
 if not success or not WindUI then
-warn("Error al cargar WindUI.")
-return
+    warn("Error al cargar WindUI.")
+    return
 end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
-local TeleportService = game:GetService("TeleportService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
 
 pcall(function()
-if SoundService:FindFirstChild("RedDavilMusic") then SoundService:FindFirstChild("RedDavilMusic"):Destroy() end
+    if SoundService:FindFirstChild("RedDavilMusic") then SoundService:FindFirstChild("RedDavilMusic"):Destroy() end
 end)
 local soundInstance = Instance.new("Sound")
 soundInstance.Name = "RedDavilMusic"
@@ -27,9 +26,10 @@ soundInstance.Volume = 1
 soundInstance.Looped = false
 soundInstance.Parent = SoundService
 
--- Variables Globales
+-- Variables Globales Optimizadas
 getgenv().SpinSpeed = 120
 getgenv().SpinBotEnabled = false
+getgenv().NoclipEnabled = false
 getgenv().PlayerSpeedValue = 16
 getgenv().SpeedEnabled = false
 getgenv().InfJumpEnabled = false
@@ -38,490 +38,586 @@ getgenv().HitboxEnabled = false
 getgenv().HitboxSize = 5
 getgenv().HitboxTransparency = 0.5
 getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
+
+getgenv().HoodHitboxEnabled = false
+getgenv().HoodHitboxSize = 15
+
 getgenv().FreezePlayersEnabled = false
-getgenv().SilentAimEnabled = false
-getgenv().SilentAimPart = "Head"
 getgenv().AimbotEnabled = false
-getgenv().AimbotSmooth = 5
+getgenv().AimbotSmooth = 1
 getgenv().AimbotPart = "Head"
 getgenv().FovEnabled = false
 getgenv().FovRadius = 120
 getgenv().FovColor = Color3.fromRGB(138, 43, 226)
+
+getgenv().TriggerbotEnabled = false
+getgenv().TriggerbotDelay = 0.02
 getgenv().RapidFireEnabled = false
 getgenv().InfAmmoEnabled = false
 
--- ESP Variables Avanzadas
 getgenv().EspEnemyEnabled = false
 getgenv().EspBoxesEnabled = false
 getgenv().EspTracersEnabled = false
 getgenv().EspNamesEnabled = false
-getgenv().EspTeamColor = Color3.fromRGB(0, 255, 0)
+getgenv().EspSkeletonEnabled = false
+getgenv().EspDistanceEnabled = false
+getgenv().EspHealthBarEnabled = false
 getgenv().EspEnemyColor = Color3.fromRGB(255, 0, 0)
 
--- Skin Changer Variables
 getgenv().SkinChangerEnabled = false
 getgenv().SelectedWeaponSkin = "Gold"
 getgenv().SelectedWeaponMaterial = "Neon"
-
--- Variables de Diseños
 getgenv().SkinPatternEnabled = false
 getgenv().SelectedWeaponPattern = "Galaxy"
 
--- Almacén para guardar el estado original de las armas y restaurarlas al apagar
 local originalWeaponStates = {}
+local originalHitboxStates = {}
+local frozenPlayerPositions = {}
+local espDrawings = {}
+local proxyHitboxes = {}
 
 local Window = WindUI:CreateWindow({
-Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ",
-Icon = "sparkles",
-Author = "Alex X",
-Folder = "StretchedScreen1AN",
-Size = UDim2.fromOffset(560, 320),
-Transparent = true,
-Theme = "Dark",
-SideBarWidth = 150,
-HasOutline = true,
-KeySystem = {
-Key = { "femboy", "mitio.com", "vip" },
-Title = "✨ Acceso Exclusivo ✨",
-Subtitle = "Zona Restringida",
-Note = "Usa cualquiera de tus llaves autorizadas.",
-SaveInRoot = true,
-}
+    Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ",
+    Icon = "sparkles",
+    Author = "Alex X",
+    Folder = "StretchedScreen1AN",
+    Size = UDim2.fromOffset(560, 320),
+    Transparent = true,
+    Theme = "Dark",
+    SideBarWidth = 150,
+    HasOutline = true,
+    KeySystem = {
+        Key = { "femboy", "mitio.com", "vip" },
+        Title = "✨ Acceso Exclusivo ✨",
+        Subtitle = "Zona Restringida",
+        Note = "Usa cualquiera de tus llaves autorizadas.",
+        SaveInRoot = true,
+    }
 })
 
 Window:ToggleTransparency(true)
 Window:SetToggleKey(Enum.KeyCode.RightControl)
 
 local Tabs = {
-Combat = Window:Tab({ Title = "Combat", Icon = "swords" }),
-WeapMod = Window:Tab({ Title = "WeapMod", Icon = "crosshair" }),
-SkinChanger = Window:Tab({ Title = "Skin Changer", Icon = "palette" }),
-Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
-Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
-Music = Window:Tab({ Title = "Music", Icon = "music" }),
-Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
+    Combat = Window:Tab({ Title = "Combat", Icon = "swords" }),
+    WeapMod = Window:Tab({ Title = "WeapMod", Icon = "crosshair" }),
+    SkinChanger = Window:Tab({ Title = "Skin Changer", Icon = "palette" }),
+    Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
+    Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
+    Music = Window:Tab({ Title = "Music", Icon = "music" }),
+    Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
 }
 
 -- [ SECCIÓN COMBAT ]
-Tabs.Combat:Section({ Title = "Aimbot & FOV" })
+Tabs.Combat:Section({ Title = "Aimbot Ultra Agresivo & FOV" })
 Tabs.Combat:Toggle({ Title = "Activar Aimbot", Value = false, Callback = function(v) getgenv().AimbotEnabled = v end })
 Tabs.Combat:Dropdown({ Title = "Parte (Aimbot)", Values = { "Head", "HumanoidRootPart", "UpperTorso" }, Value = "Head", Callback = function(v) getgenv().AimbotPart = v end })
-Tabs.Combat:Slider({ Title = "Suavizado Aimbot (Smooth)", Step = 1, Value = { Min = 1, Max = 20, Default = 5 }, Callback = function(v) getgenv().AimbotSmooth = v end })
+Tabs.Combat:Slider({ Title = "Suavizado Aimbot (1 = Snap)", Step = 1, Value = { Min = 1, Max = 10, Default = 1 }, Callback = function(v) getgenv().AimbotSmooth = v end })
 Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = false, Callback = function(v) getgenv().FovEnabled = v end })
 Tabs.Combat:Slider({ Title = "Radio del FOV", Step = 5, Value = { Min = 30, Max = 400, Default = 120 }, Callback = function(v) getgenv().FovRadius = v end })
-Tabs.Combat:Toggle({ Title = "Team Check (Avanzado)", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end })
 
-Tabs.Combat:Section({ Title = "Hitbox & Utilidades" })
-Tabs.Combat:Toggle({ Title = "Activar Hitbox", Value = false, Callback = function(v)
-getgenv().HitboxEnabled = v
-if not v then
-for _, p in ipairs(Players:GetPlayers()) do
-if p ~= LocalPlayer and p.Character then
-for _, partName in ipairs({"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}) do
-local part = p.Character:FindFirstChild(partName)
-if part then
-part.Size = (partName == "Head" and Vector3.new(2, 1, 1)) or (partName == "HumanoidRootPart" and Vector3.new(2, 2, 1)) or Vector3.new(2, 1, 1)
-part.Transparency = (partName == "HumanoidRootPart" and 1) or 0
-part.CanCollide = true
-end
-end
-end
-end
-end
+Tabs.Combat:Section({ Title = "Triggerbot Automático" })
+Tabs.Combat:Toggle({ Title = "Activar Triggerbot", Value = false, Callback = function(v) getgenv().TriggerbotEnabled = v end })
+Tabs.Combat:Slider({ Title = "Retraso de Disparo", Step = 0.01, Value = { Min = 0, Max = 0.2, Default = 0.02 }, Callback = function(v) getgenv().TriggerbotDelay = v end })
+Tabs.Combat:Toggle({ Title = "Team Check", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end })
+
+Tabs.Combat:Section({ Title = "Hitboxes" })
+Tabs.Combat:Toggle({ Title = "Activar Hitbox Estándar", Value = false, Callback = function(v)
+    getgenv().HitboxEnabled = v
+    if not v then
+        for p, parts in pairs(originalHitboxStates) do
+            if p and p.Character then
+                for _, data in ipairs(parts) do
+                    if data.Part and data.Part.Parent then
+                        data.Part.Size = data.Size
+                        data.Part.Transparency = data.Transparency
+                        data.Part.CanCollide = data.CanCollide
+                        data.Part.Material = data.Material
+                    end
+                end
+            end
+        end
+        table.clear(originalHitboxStates)
+    end
 end })
-Tabs.Combat:Slider({ Title = "Tamaño de Hitbox", Step = 1, Value = { Min = 2, Max = 20, Default = 5 }, Callback = function(v) getgenv().HitboxSize = v end })
+Tabs.Combat:Slider({ Title = "Tamaño Hitbox Estándar", Step = 1, Value = { Min = 2, Max = 20, Default = 5 }, Callback = function(v) getgenv().HitboxSize = v end })
 Tabs.Combat:Slider({ Title = "Transparencia Hitbox", Step = 0.1, Value = { Min = 0, Max = 1, Default = 0.5 }, Callback = function(v) getgenv().HitboxTransparency = v end })
 
+Tabs.Combat:Section({ Title = "Hitbox Proxy (Hood Rivals)" })
+Tabs.Combat:Toggle({ Title = "Activar Hitbox Proxy", Value = false, Callback = function(v) 
+    getgenv().HoodHitboxEnabled = v 
+    if not v then
+        for _, proxy in pairs(proxyHitboxes) do
+            if proxy and proxy.Parent then proxy.Transparency = 1 end
+        end
+    end
+end })
+Tabs.Combat:Slider({ Title = "Tamaño Hitbox Proxy", Step = 1, Value = { Min = 5, Max = 40, Default = 15 }, Callback = function(v) getgenv().HoodHitboxSize = v end })
+
+Tabs.Combat:Toggle({ Title = "Congelar Enemigos (Freeze)", Value = false, Callback = function(v)
+    getgenv().FreezePlayersEnabled = v
+    if not v then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if hrp then hrp.Anchored = false end
+                if hum then hum.WalkSpeed = 16 end
+            end
+        end
+        table.clear(frozenPlayerPositions)
+    end
+end })
+
 -- [ SECCIÓN WEAPMOD ]
-Tabs.WeapMod:Section({ Title = "Modificaciones de Armamento (Valores locales)" })
-Tabs.WeapMod:Toggle({ Title = "Rapid Fire (Disparo Rápido)", Value = false, Callback = function(v) getgenv().RapidFireEnabled = v end })
+Tabs.WeapMod:Section({ Title = "Armas" })
+Tabs.WeapMod:Toggle({ Title = "Rapid Fire", Value = false, Callback = function(v) getgenv().RapidFireEnabled = v end })
 Tabs.WeapMod:Toggle({ Title = "Infinite Ammo", Value = false, Callback = function(v) getgenv().InfAmmoEnabled = v end })
 
--- [ SECCIÓN SKIN CHANGER (INTACTA) ]
-Tabs.SkinChanger:Section({ Title = "Colores y Materiales" })
-Tabs.SkinChanger:Toggle({ Title = "Activar Colores Sólidos", Value = false, Callback = function(v) getgenv().SkinChangerEnabled = v end })
-Tabs.SkinChanger:Dropdown({
-Title = "Estilo / Color",
-Values = { "Gold", "Diamond", "Ruby", "Emerald", "Obsidian", "Rainbow", "Amethyst", "Sapphire", "Topaz", "Pearl", "NeonPink", "Cyan" },
-Value = "Gold",
-Callback = function(v) getgenv().SelectedWeaponSkin = v end
-})
-Tabs.SkinChanger:Dropdown({
-Title = "Material Visual",
-Values = { "Neon", "Glass", "Metal", "SmoothPlastic", "ForceField", "Foil", "Ice", "Wood", "Marble" },
-Value = "Neon",
-Callback = function(v) getgenv().SelectedWeaponMaterial = v end
-})
-Tabs.SkinChanger:Section({ Title = "Diseños Dinámicos" })
-Tabs.SkinChanger:Toggle({ Title = "Activar Diseños", Value = false, Callback = function(v) getgenv().SkinPatternEnabled = v end })
-Tabs.SkinChanger:Dropdown({
-Title = "Seleccionar Diseño",
-Values = { "Galaxy", "Camo", "Carbon Fiber", "Lava", "Lightning", "Checkerboard", "Anime" },
-Value = "Galaxy",
-Callback = function(v) getgenv().SelectedWeaponPattern = v end
-})
+-- [ SECCIÓN SKIN CHANGER ]
+Tabs.SkinChanger:Section({ Title = "Personalización" })
+Tabs.SkinChanger:Toggle({ Title = "Colores Sólidos", Value = false, Callback = function(v) getgenv().SkinChangerEnabled = v end })
+Tabs.SkinChanger:Dropdown({ Title = "Estilo / Color", Values = { "Gold", "Diamond", "Ruby", "Emerald", "Obsidian", "Rainbow", "Amethyst", "Sapphire" }, Value = "Gold", Callback = function(v) getgenv().SelectedWeaponSkin = v end })
+Tabs.SkinChanger:Dropdown({ Title = "Material Visual", Values = { "Neon", "Glass", "Metal", "SmoothPlastic", "ForceField" }, Value = "Neon", Callback = function(v) getgenv().SelectedWeaponMaterial = v end })
+Tabs.SkinChanger:Toggle({ Title = "Diseños Dinámicos", Value = false, Callback = function(v) getgenv().SkinPatternEnabled = v end })
+Tabs.SkinChanger:Dropdown({ Title = "Diseño", Values = { "Galaxy", "Camo", "Carbon Fiber", "Lava", "Lightning" }, Value = "Galaxy", Callback = function(v) getgenv().SelectedWeaponPattern = v end })
 
 -- [ SECCIÓN MOVEMENT ]
 Tabs.Movement:Toggle({ Title = "Speed", Value = false, Callback = function(v)
-getgenv().SpeedEnabled = v
-if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().PlayerSpeedValue
-elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-LocalPlayer.Character.Humanoid.WalkSpeed = 16
-end
+    getgenv().SpeedEnabled = v
+    if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().PlayerSpeedValue
+    elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = 16
+    end
 end })
-Tabs.Movement:Slider({ Title = "Velocidad", Step = 1, Value = { Min = 16, Max = 200, Default = 16 }, Callback = function(v) getgenv().PlayerSpeedValue = v ; if getgenv().SpeedEnabled and LocalPlayer.Character then LocalPlayer.Character.Humanoid.WalkSpeed = v end end })
+Tabs.Movement:Slider({ Title = "Velocidad", Step = 1, Value = { Min = 16, Max = 200, Default = 16 }, Callback = function(v) getgenv().PlayerSpeedValue = v ; if getgenv().SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character.Humanoid.WalkSpeed = v end end })
 Tabs.Movement:Toggle({ Title = "Infinite Jump", Value = false, Callback = function(v) getgenv().InfJumpEnabled = v end })
-Tabs.Movement:Toggle({ Title = "Activar SpinBot", Value = false, Callback = function(v) getgenv().SpinBotEnabled = v end })
+Tabs.Movement:Toggle({ Title = "Noclip", Value = false, Callback = function(v) getgenv().NoclipEnabled = v end })
+Tabs.Movement:Toggle({ Title = "SpinBot", Value = false, Callback = function(v) getgenv().SpinBotEnabled = v end })
+Tabs.Movement:Slider({ Title = "Velocidad SpinBot", Step = 5, Value = { Min = 10, Max = 500, Default = 120 }, Callback = function(v) getgenv().SpinSpeed = v end })
 
--- [ SECCIÓN VISUAL (REPARADA) ]
-Tabs.Visual:Section({ Title = "Wallhack & Chams" })
-Tabs.Visual:Toggle({ Title = "ESP Chams (Highlight)", Value = false, Callback = function(v) getgenv().EspEnemyEnabled = v end })
-Tabs.Visual:Toggle({ Title = "ESP Cajas (Boxes)", Value = false, Callback = function(v)
-getgenv().EspBoxesEnabled = v
-if not v then
-for _, drawings in pairs(espDrawings or {}) do
-if drawings.Box then drawings.Box.Visible = false end
-end
-end
-end })
-Tabs.Visual:Toggle({ Title = "ESP Nombres", Value = false, Callback = function(v)
-getgenv().EspNamesEnabled = v
-if not v then
-for _, drawings in pairs(espDrawings or {}) do
-if drawings.Name then drawings.Name.Visible = false end
-end
-end
-end })
-Tabs.Visual:Toggle({ Title = "ESP Líneas (Tracers)", Value = false, Callback = function(v)
-getgenv().EspTracersEnabled = v
-if not v then
-for _, drawings in pairs(espDrawings or {}) do
-if drawings.Tracer then drawings.Tracer.Visible = false end
-end
-end
-end })
+-- [ SECCIÓN VISUAL ]
+Tabs.Visual:Section({ Title = "ESP Avanzado" })
+Tabs.Visual:Toggle({ Title = "ESP Chams", Value = false, Callback = function(v) getgenv().EspEnemyEnabled = v end })
+Tabs.Visual:Toggle({ Title = "ESP Cajas (Boxes)", Value = false, Callback = function(v) getgenv().EspBoxesEnabled = v end })
+Tabs.Visual:Toggle({ Title = "ESP Líneas (Tracers)", Value = false, Callback = function(v) getgenv().EspTracersEnabled = v end })
+Tabs.Visual:Toggle({ Title = "ESP Nombres e Info", Value = false, Callback = function(v) getgenv().EspNamesEnabled = v end })
+Tabs.Visual:Toggle({ Title = "ESP Distancia", Value = false, Callback = function(v) getgenv().EspDistanceEnabled = v end })
+Tabs.Visual:Toggle({ Title = "ESP Barra de Vida", Value = false, Callback = function(v) getgenv().EspHealthBarEnabled = v end })
+Tabs.Visual:Toggle({ Title = "ESP Esqueleto", Value = false, Callback = function(v) getgenv().EspSkeletonEnabled = v end })
 
--- [ SISTEMAS INTERNOS Y ESP EXTRA ]
+-- [ LÓGICA INTERNA DE FOV Y VISIBILIDAD ]
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 1.5
 fovCircle.Filled = false
 fovCircle.Transparency = 1
-espDrawings = {}
 
 local function isTeammate(player)
-if not getgenv().TeamCheckEnabled then return false end
-if player == LocalPlayer then return true end
-if not LocalPlayer.Team or not player.Team then return false end
-return player.Team == LocalPlayer.Team
+    if not getgenv().TeamCheckEnabled then return false end
+    if player == LocalPlayer then return true end
+    if not LocalPlayer.Team or not player.Team then return false end
+    return player.Team == LocalPlayer.Team
 end
 
 local function getClosestTargetUniversal()
-local Camera = workspace.CurrentCamera
-local closestPart = nil
-local shortestDist = getgenv().FovRadius
-local centerScreen = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-for _, p in ipairs(Players:GetPlayers()) do
-if p ~= LocalPlayer and p.Character and not isTeammate(p) then
-local hum = p.Character:FindFirstChildOfClass("Humanoid")
-local targetPart = p.Character:FindFirstChild(getgenv().AimbotPart)
-if hum and hum.Health > 0 and targetPart then
-local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-if onScreen then
-local dist = (Vector2.new(screenPos.X, screenPos.Y) - centerScreen).Magnitude
-if dist < shortestDist then
-shortestDist = dist
-closestPart = targetPart
-end
-end
-end
-end
-end
-return closestPart
-end
-
--- RenderStepped Principal (Dibujos 2D y ESP Optimizado)
-RunService.RenderStepped:Connect(function()
-pcall(function()
-local Camera = workspace.CurrentCamera
-
--- FOV Circle
-if getgenv().FovEnabled then
-fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-fovCircle.Radius = getgenv().FovRadius
-fovCircle.Color = getgenv().FovColor
-fovCircle.Visible = true
-else
-fovCircle.Visible = false
+    local Camera = workspace.CurrentCamera
+    local closestPart = nil
+    local shortestDist = getgenv().FovRadius
+    local centerScreen = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and not isTeammate(p) and p.Character then
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            local targetPart = p.Character:FindFirstChild(getgenv().AimbotPart)
+            if hum and hum.Health > 0 and targetPart then
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                local predictedPosition = targetPart.Position + (hrp and (hrp.Velocity * 0.08) or Vector3.zero)
+                local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPosition)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - centerScreen).Magnitude
+                    if dist < shortestDist then
+                        shortestDist = dist
+                        closestPart = targetPart
+                    end
+                end
+            end
+        end
+    end
+    return closestPart
 end
 
--- Aimbot
-if getgenv().AimbotEnabled then
-local target = getClosestTargetUniversal()
-if target then
-local targetCF = CFrame.new(Camera.CFrame.Position, target.Position)
-Camera.CFrame = Camera.CFrame:Lerp(targetCF, 1 / getgenv().AimbotSmooth)
-end
-end
-
--- Spinbot
-if getgenv().SpinBotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-LocalPlayer.Character.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(getgenv().SpinSpeed), 0)
-end
-
--- Hitboxes Dinámicas
-for _, p in ipairs(Players:GetPlayers()) do
-if p ~= LocalPlayer and p.Character and not isTeammate(p) then
-local hum = p.Character:FindFirstChildOfClass("Humanoid")
-if hum and hum.Health > 0 then
-for _, partName in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
-local targetPart = p.Character:FindFirstChild(partName)
-if targetPart then
-if getgenv().HitboxEnabled then
-targetPart.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-targetPart.Transparency = getgenv().HitboxTransparency
-targetPart.Color = getgenv().HitboxColor
-targetPart.Material = Enum.Material.Neon
-targetPart.CanCollide = false
-else
-targetPart.Size = (partName == "Head" and Vector3.new(2, 1, 1)) or (partName == "HumanoidRootPart" and Vector3.new(2, 2, 1)) or Vector3.new(2, 1, 1)
-targetPart.Transparency = (partName == "HumanoidRootPart" and 1) or 0
-targetPart.CanCollide = true
-end
-end
-end
-end
-end
+local function setupProxyHitbox(player)
+    if player == LocalPlayer then return end
+    player.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        if proxyHitboxes[player] then pcall(function() proxyHitboxes[player]:Destroy() end) end
+        local hrp = char:WaitForChild("HumanoidRootPart", 5)
+        if not hrp then return end
+        
+        local proxy = Instance.new("Part")
+        proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
+        proxy.Transparency = 0.85
+        proxy.CanCollide = true
+        proxy.Massless = true
+        proxy.Color = Color3.fromRGB(255, 0, 0)
+        proxy.Material = Enum.Material.Neon
+        proxy.Parent = workspace
+        
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                local noCol = Instance.new("NoCollisionConstraint")
+                noCol.Part0 = proxy
+                noCol.Part1 = part
+                noCol.Parent = proxy
+            end
+        end
+        local weld = Instance.new("WeldConstraint")
+        weld.Part0 = hrp
+        weld.Part1 = proxy
+        weld.Parent = hrp
+        proxy.CFrame = hrp.CFrame
+        proxyHitboxes[player] = proxy
+    end)
 end
 
--- Dibujos de ESP Reestructurados y Reparados (Boxes, Tracers y Names calculados de forma precisa)
-for _, p in ipairs(Players:GetPlayers()) do
-if p ~= LocalPlayer then
-if not espDrawings[p] then
-espDrawings[p] = {
-Box = Drawing.new("Square"),
-Tracer = Drawing.new("Line"),
-Name = Drawing.new("Text")
-}
-espDrawings[p].Box.Thickness = 1.5
-espDrawings[p].Box.Filled = false
-espDrawings[p].Tracer.Thickness = 1.5
-espDrawings[p].Name.Size = 14
-espDrawings[p].Name.Center = true
-espDrawings[p].Name.Outline = true
-end
+for _, p in ipairs(Players:GetPlayers()) do setupProxyHitbox(p) end
+Players.PlayerAdded:Connect(setupProxyHitbox)
 
-local drawings = espDrawings[p]
-local char = p.Character
-local rootPart = char and char:FindFirstChild("HumanoidRootPart")
-local headPart = char and char:FindFirstChild("Head")
-local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-if char and rootPart and headPart and hum and hum.Health > 0 and not isTeammate(p) then
--- Usamos CFrame para proyectar esquinas reales 3D del personaje a 2D de forma robusta
-local cframe, size = char:GetBoundingBox()
-local topCenter = cframe.Position + Vector3.new(0, size.Y / 2 + 0.5, 0)
-local bottomCenter = cframe.Position - Vector3.new(0, size.Y / 2, 0)
-
-local topPos, topVisible = Camera:WorldToViewportPoint(topCenter)
-local bottomPos, bottomVisible = Camera:WorldToViewportPoint(bottomCenter)
-local rootPos, rootVisible = Camera:WorldToViewportPoint(rootPart.Position)
-
-if rootVisible then
-local height = math.abs(bottomPos.Y - topPos.Y)
-local width = height / 2
-
--- Cajas (Boxes)
-if getgenv().EspBoxesEnabled then
-drawings.Box.Size = Vector2.new(width, height)
-drawings.Box.Position = Vector2.new(rootPos.X - width / 2, topPos.Y)
-drawings.Box.Color = getgenv().EspEnemyColor
-drawings.Box.Visible = true
-else
-drawings.Box.Visible = false
-end
-
--- Tracers (Líneas)
-if getgenv().EspTracersEnabled then
-drawings.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-drawings.Tracer.To = Vector2.new(rootPos.X, bottomPos.Y)
-drawings.Tracer.Color = getgenv().EspEnemyColor
-drawings.Tracer.Visible = true
-else
-drawings.Tracer.Visible = false
-end
-
--- Nombres
-if getgenv().EspNamesEnabled then
-drawings.Name.Text = p.Name .. " [" .. math.floor(hum.Health) .. "HP]"
-drawings.Name.Position = Vector2.new(rootPos.X, topPos.Y - 18)
-drawings.Name.Color = Color3.fromRGB(255, 255, 255)
-drawings.Name.Visible = true
-else
-drawings.Name.Visible = false
-end
-else
-drawings.Box.Visible = false
-drawings.Tracer.Visible = false
-drawings.Name.Visible = false
-end
-else
-drawings.Box.Visible = false
-drawings.Tracer.Visible = false
-drawings.Name.Visible = false
-end
-end
-end
-end)
-end)
-
--- Limpieza
 Players.PlayerRemoving:Connect(function(p)
-if espDrawings[p] then
-pcall(function()
-espDrawings[p].Box:Remove()
-espDrawings[p].Tracer:Remove()
-espDrawings[p].Name:Remove()
+    if proxyHitboxes[p] then pcall(function() proxyHitboxes[p]:Destroy() end); proxyHitboxes[p] = nil end
+    if espDrawings[p] then
+        pcall(function()
+            for _, d in pairs(espDrawings[p]) do
+                if type(d) == "table" then for _, sub in pairs(d) do sub:Remove() end
+                else d:Remove() end
+            end
+        end)
+        espDrawings[p] = nil
+    end
+    originalHitboxStates[p] = nil
+    frozenPlayerPositions[p] = nil
 end)
-espDrawings[p] = nil
-end
+
+-- Triggerbot optimizado
+task.spawn(function()
+    while task.wait(0.04) do
+        pcall(function()
+            if getgenv().TriggerbotEnabled then
+                local target = LocalPlayer:GetMouse().Target
+                if target and target.Parent then
+                    local enemyPlayer = Players:GetPlayerFromCharacter(target.Parent)
+                    if enemyPlayer and enemyPlayer ~= LocalPlayer and not isTeammate(enemyPlayer) then
+                        local hum = enemyPlayer.Character and enemyPlayer.Character:FindFirstChildOfClass("Humanoid")
+                        if hum and hum.Health > 0 then
+                            task.wait(getgenv().TriggerbotDelay)
+                            VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                            task.wait(0.04)
+                            VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Bucle Principal en RenderStepped optimizado (Incluyendo renderizado de FOV en pantalla)
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        local Camera = workspace.CurrentCamera
+
+        -- Actualización del FOV visual en pantalla
+        if getgenv().FovEnabled then
+            fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            fovCircle.Radius = getgenv().FovRadius
+            fovCircle.Color = getgenv().FovColor
+            fovCircle.Visible = true
+        else
+            fovCircle.Visible = false
+        end
+
+        if getgenv().AimbotEnabled then
+            local target = getClosestTargetUniversal()
+            if target then
+                local targetCF = CFrame.new(Camera.CFrame.Position, target.Position)
+                if getgenv().AimbotSmooth <= 1 then
+                    Camera.CFrame = targetCF
+                else
+                    Camera.CFrame = Camera.CFrame:Lerp(targetCF, 1 / (getgenv().AimbotSmooth * 0.2))
+                end
+            end
+        end
+
+        if getgenv().SpinBotEnabled and LocalPlayer.Character then
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(getgenv().SpinSpeed), 0) end
+        end
+
+        if getgenv().NoclipEnabled and LocalPlayer.Character then
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+
+        -- Proxy Hitbox update
+        for p, proxy in pairs(proxyHitboxes) do
+            if proxy and proxy.Parent then
+                if getgenv().HoodHitboxEnabled and p.Character and p.Character:FindFirstChildOfClass("Humanoid") and p.Character.Humanoid.Health > 0 and not isTeammate(p) then
+                    proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
+                    proxy.Transparency = 0.85
+                    proxy.CanCollide = true
+                else
+                    proxy.Transparency = 1
+                    proxy.CanCollide = false
+                end
+            end
+        end
+
+        -- Hitbox estándar y Freeze
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and not isTeammate(p) then
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                if hum and hum.Health > 0 and hrp then
+                    if getgenv().FreezePlayersEnabled then
+                        if not frozenPlayerPositions[p] then frozenPlayerPositions[p] = hrp.CFrame end
+                        hrp.Anchored = true
+                        hrp.CFrame = frozenPlayerPositions[p]
+                        hum.WalkSpeed = 0
+                    else
+                        if frozenPlayerPositions[p] then
+                            hrp.Anchored = false
+                            hum.WalkSpeed = 16
+                            frozenPlayerPositions[p] = nil
+                        end
+                    end
+
+                    if getgenv().HitboxEnabled then
+                        if not originalHitboxStates[p] then
+                            originalHitboxStates[p] = {}
+                            for _, name in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
+                                local part = p.Character:FindFirstChild(name)
+                                if part then
+                                    table.insert(originalHitboxStates[p], { Part = part, Size = part.Size, Transparency = part.Transparency, CanCollide = part.CanCollide, Material = part.Material })
+                                end
+                            end
+                        end
+                        for _, name in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
+                            local part = p.Character:FindFirstChild(name)
+                            if part then
+                                part.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
+                                part.Transparency = getgenv().HitboxTransparency
+                                part.Color = getgenv().HitboxColor
+                                part.Material = Enum.Material.Neon
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Chams ESP
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and not isTeammate(p) then
+                local hl = p.Character:FindFirstChild("AlexX_ESP")
+                if getgenv().EspEnemyEnabled then
+                    if not hl then
+                        hl = Instance.new("Highlight", p.Character)
+                        hl.Name = "AlexX_ESP"
+                        hl.FillColor = Color3.fromRGB(255, 30, 30)
+                        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        hl.FillTransparency = 0.35
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    end
+                else
+                    if hl then hl:Destroy() end
+                end
+            end
+        end
+
+        -- ESP Dibujos 2D
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                if not espDrawings[p] then
+                    espDrawings[p] = {
+                        Box = Drawing.new("Square"),
+                        Tracer = Drawing.new("Line"),
+                        Name = Drawing.new("Text"),
+                        HealthBarOutline = Drawing.new("Square"),
+                        HealthBar = Drawing.new("Square"),
+                        Skeleton = { Drawing.new("Line"), Drawing.new("Line"), Drawing.new("Line"), Drawing.new("Line"), Drawing.new("Line") }
+                    }
+                    espDrawings[p].Box.Filled = false
+                    espDrawings[p].Name.Size = 14
+                    espDrawings[p].Name.Center = true
+                    espDrawings[p].Name.Outline = true
+                    espDrawings[p].HealthBarOutline.Filled = true
+                    espDrawings[p].HealthBarOutline.Color = Color3.new(0,0,0)
+                    espDrawings[p].HealthBar.Filled = true
+                end
+
+                local d = espDrawings[p]
+                local char = p.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local head = char and char:FindFirstChild("Head")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+                if char and hrp and head and hum and hum.Health > 0 and not isTeammate(p) then
+                    local cf, sz = char:GetBoundingBox()
+                    local topPos = Camera:WorldToViewportPoint(cf.Position + Vector3.new(0, sz.Y / 2, 0))
+                    local botPos = Camera:WorldToViewportPoint(cf.Position - Vector3.new(0, sz.Y / 2, 0))
+                    local rootPos, vis = Camera:WorldToViewportPoint(hrp.Position)
+
+                    if vis then
+                        local h = math.abs(botPos.Y - topPos.Y)
+                        local w = h / 2
+
+                        d.Box.Visible = getgenv().EspBoxesEnabled
+                        if d.Box.Visible then
+                            d.Box.Size = Vector2.new(w, h)
+                            d.Box.Position = Vector2.new(rootPos.X - w / 2, topPos.Y)
+                            d.Box.Color = getgenv().EspEnemyColor
+                        end
+
+                        d.Tracer.Visible = getgenv().EspTracersEnabled
+                        if d.Tracer.Visible then
+                            d.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                            d.Tracer.To = Vector2.new(rootPos.X, botPos.Y)
+                            d.Tracer.Color = getgenv().EspEnemyColor
+                        end
+
+                        d.Name.Visible = getgenv().EspNamesEnabled
+                        if d.Name.Visible then
+                            local distStr = getgenv().EspDistanceEnabled and (" [" .. math.floor((hrp.Position - Camera.CFrame.Position).Magnitude) .. "m]") or ""
+                            d.Name.Text = p.Name .. " [" .. math.floor(hum.Health) .. "HP]" .. distStr
+                            d.Name.Position = Vector2.new(rootPos.X, topPos.Y - 18)
+                        end
+
+                        d.HealthBar.Visible = getgenv().EspHealthBarEnabled
+                        d.HealthBarOutline.Visible = getgenv().EspHealthBarEnabled
+                        if getgenv().EspHealthBarEnabled then
+                            local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                            local bH = h * hpPct
+                            d.HealthBarOutline.Size = Vector2.new(3, h + 2)
+                            d.HealthBarOutline.Position = Vector2.new(rootPos.X - w / 2 - 6, topPos.Y - 1)
+                            d.HealthBar.Size = Vector2.new(1, bH)
+                            d.HealthBar.Position = Vector2.new(rootPos.X - w / 2 - 5, topPos.Y + (h - bH))
+                            d.HealthBar.Color = Color3.fromRGB(255 - (hpPct * 255), hpPct * 255, 0)
+                        end
+
+                        if getgenv().EspSkeletonEnabled then
+                            local upperTorso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+                            if head and upperTorso then
+                                local hP = Camera:WorldToViewportPoint(head.Position)
+                                local tP = Camera:WorldToViewportPoint(upperTorso.Position)
+                                d.Skeleton[1].From = Vector2.new(hP.X, hP.Y)
+                                d.Skeleton[1].To = Vector2.new(tP.X, tP.Y)
+                                d.Skeleton[1].Visible = true
+                            else
+                                for _, l in pairs(d.Skeleton) do l.Visible = false end
+                            end
+                        else
+                            for _, l in pairs(d.Skeleton) do l.Visible = false end
+                        end
+                    else
+                        d.Box.Visible, d.Tracer.Visible, d.Name.Visible, d.HealthBar.Visible, d.HealthBarOutline.Visible = false, false, false, false, false
+                        for _, l in pairs(d.Skeleton) do l.Visible = false end
+                    end
+                else
+                    d.Box.Visible, d.Tracer.Visible, d.Name.Visible, d.HealthBar.Visible, d.HealthBarOutline.Visible = false, false, false, false, false
+                    if d.Skeleton then for _, l in pairs(d.Skeleton) do l.Visible = false end end
+                end
+            end
+        end
+    end)
 end)
 
 UserInputService.JumpRequest:Connect(function()
-if getgenv().InfJumpEnabled and LocalPlayer.Character then
-local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-end
+    if getgenv().InfJumpEnabled and LocalPlayer.Character then
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
 end)
 
--- Bucle de Escaneo (Skin Changer, Mods, Diseños y Pintura Total - INTACTO)
+-- Bucle de Armas optimizado (SkinChanger, Diseños y Mods)
 task.spawn(function()
-while task.wait(0.5) do
-pcall(function()
-local char = LocalPlayer.Character
-local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
-local patternConfigs = {
-["Galaxy"] = { color = Color3.fromRGB(138, 43, 226), material = Enum.Material.ForceField },
-["Camo"] = { color = Color3.fromRGB(85, 95, 60), material = Enum.Material.SmoothPlastic },
-["Carbon Fiber"] = { color = Color3.fromRGB(40, 40, 40), material = Enum.Material.Glass },
-["Lava"] = { color = Color3.fromRGB(255, 69, 0), material = Enum.Material.Neon },
-["Lightning"] = { color = Color3.fromRGB(0, 206, 209), material = Enum.Material.Neon },
-["Checkerboard"] = { color = Color3.fromRGB(240, 240, 240), material = Enum.Material.Foil },
-["Anime"] = { color = Color3.fromRGB(255, 105, 180), material = Enum.Material.Glass }
-}
+    while task.wait(0.6) do
+        pcall(function()
+            local char = LocalPlayer.Character
+            local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
+            local patterns = {
+                ["Galaxy"] = { c = Color3.fromRGB(138, 43, 226), m = Enum.Material.ForceField },
+                ["Camo"] = { c = Color3.fromRGB(85, 95, 60), m = Enum.Material.SmoothPlastic },
+                ["Carbon Fiber"] = { c = Color3.fromRGB(40, 40, 40), m = Enum.Material.Glass },
+                ["Lava"] = { c = Color3.fromRGB(255, 69, 0), m = Enum.Material.Neon },
+                ["Lightning"] = { c = Color3.fromRGB(0, 206, 209), m = Enum.Material.Neon }
+            }
 
-local function scanAndSkin(container)
-if not container then return end
-for _, item in ipairs(container:GetChildren()) do
-if item:IsA("Tool") then
-if getgenv().InfAmmoEnabled or getgenv().RapidFireEnabled then
-for _, desc in ipairs(item:GetDescendants()) do
-if desc:IsA("NumberValue") or desc:IsA("IntValue") then
-local name = desc.Name:lower()
-if getgenv().RapidFireEnabled and (name:find("cooldown") or name:find("firerate")) then
-desc.Value = 0.01
-end
-if getgenv().InfAmmoEnabled and (name:find("ammo") or name:find("clip")) then
-desc.Value = 999
-end
-end
-end
-end
+            local function applyToContainer(cont)
+                if not cont then return end
+                for _, item in ipairs(cont:GetChildren()) do
+                    if item:IsA("Tool") then
+                        if getgenv().InfAmmoEnabled or getgenv().RapidFireEnabled then
+                            for _, desc in ipairs(item:GetDescendants()) do
+                                if desc:IsA("NumberValue") or desc:IsA("IntValue") then
+                                    local name = desc.Name:lower()
+                                    if getgenv().RapidFireEnabled and (name:find("cooldown") or name:find("firerate")) then desc.Value = 0.01 end
+                                    if getgenv().InfAmmoEnabled and (name:find("ammo") or name:find("clip")) then desc.Value = 999 end
+                                end
+                            end
+                        end
 
-if not originalWeaponStates[item] then
-originalWeaponStates[item] = {}
-if item:IsA("BasePart") then
-originalWeaponStates[item][item] = {
-Color = item.Color,
-Material = item.Material,
-TextureID = item:IsA("MeshPart") and item.TextureID or ""
-}
-end
-for _, part in ipairs(item:GetDescendants()) do
-if part:IsA("BasePart") then
-originalWeaponStates[item][part] = {
-Color = part.Color,
-Material = part.Material,
-TextureID = part:IsA("MeshPart") and part.TextureID or ""
-}
-end
-end
-end
+                        if not originalWeaponStates[item] then
+                            originalWeaponStates[item] = {}
+                            for _, part in ipairs(item:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    originalWeaponStates[item][part] = { Color = part.Color, Material = part.Material }
+                                end
+                            end
+                        end
 
-if getgenv().SkinPatternEnabled then
-local patternData = patternConfigs[getgenv().SelectedWeaponPattern] or patternConfigs["Galaxy"]
-local function applyPattern(p)
-if p:IsA("MeshPart") then p.TextureID = "" end
-local sa = p:FindFirstChildOfClass("SurfaceAppearance")
-if sa then sa:Destroy() end
-p.Color = patternData.color
-p.Material = patternData.material
-end
-if item:IsA("BasePart") then applyPattern(item) end
-for _, part in ipairs(item:GetDescendants()) do
-if part:IsA("BasePart") then applyPattern(part) end
-end
-elseif getgenv().SkinChangerEnabled then
-local skinColors = {
-["Gold"] = Color3.fromRGB(255, 215, 0), ["Diamond"] = Color3.fromRGB(185, 242, 255),
-["Ruby"] = Color3.fromRGB(224, 17, 95), ["Emerald"] = Color3.fromRGB(80, 200, 120),
-["Obsidian"] = Color3.fromRGB(30, 30, 30), ["Rainbow"] = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255)),
-["Amethyst"] = Color3.fromRGB(153, 102, 204), ["Sapphire"] = Color3.fromRGB(15, 82, 186),
-["Topaz"] = Color3.fromRGB(255, 200, 124), ["Pearl"] = Color3.fromRGB(234, 224, 200),
-["NeonPink"] = Color3.fromRGB(255, 20, 147), ["Cyan"] = Color3.fromRGB(0, 255, 255)
-}
-local chosenColor = skinColors[getgenv().SelectedWeaponSkin] or skinColors["Gold"]
-local chosenMaterial = Enum.Material[getgenv().SelectedWeaponMaterial] or Enum.Material.Neon
-local function applySolid(p)
-if p:IsA("MeshPart") then p.TextureID = "" end
-local sa = p:FindFirstChildOfClass("SurfaceAppearance")
-if sa then sa:Destroy() end
-p.Color = chosenColor
-p.Material = chosenMaterial
-end
-if item:IsA("BasePart") then applySolid(item) end
-for _, part in ipairs(item:GetDescendants()) do
-if part:IsA("BasePart") then applySolid(part) end
-end
-else
-if originalWeaponStates[item] then
-for part, data in pairs(originalWeaponStates[item]) do
-if part and part.Parent then
-part.Color = data.Color
-part.Material = data.Material
-if part:IsA("MeshPart") then
-part.TextureID = data.TextureID
-end
-end
-end
-end
-end
-end
-end
-end
+                        if getgenv().SkinPatternEnabled then
+                            local pat = patterns[getgenv().SelectedWeaponPattern] or patterns["Galaxy"]
+                            for _, part in ipairs(item:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    if part:IsA("MeshPart") then part.TextureID = "" end
+                                    part.Color = pat.c
+                                    part.Material = pat.m
+                                end
+                            end
+                        elseif getgenv().SkinChangerEnabled then
+                            local colors = {
+                                ["Gold"] = Color3.fromRGB(255, 215, 0), ["Diamond"] = Color3.fromRGB(185, 242, 255),
+                                ["Ruby"] = Color3.fromRGB(224, 17, 95), ["Emerald"] = Color3.fromRGB(80, 200, 120),
+                                ["Obsidian"] = Color3.fromRGB(30, 30, 30), ["Rainbow"] = Color3.fromRGB(math.random(0,255), math.random(0,255), math.random(0,255)),
+                                ["Amethyst"] = Color3.fromRGB(153, 102, 204), ["Sapphire"] = Color3.fromRGB(15, 82, 186)
+                            }
+                            local col = colors[getgenv().SelectedWeaponSkin] or colors["Gold"]
+                            local mat = Enum.Material[getgenv().SelectedWeaponMaterial] or Enum.Material.Neon
+                            for _, part in ipairs(item:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    if part:IsA("MeshPart") then part.TextureID = "" end
+                                    part.Color = col
+                                    part.Material = mat
+                                end
+                            end
+                        else
+                            if originalWeaponStates[item] then
+                                for part, data in pairs(originalWeaponStates[item]) do
+                                    if part and part.Parent then
+                                        part.Color = data.Color
+                                        part.Material = data.Material
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
 
-scanAndSkin(char)
-scanAndSkin(bp)
-
--- ESP Chams (Highlight)
-for _, p in ipairs(Players:GetPlayers()) do
-if p ~= LocalPlayer and p.Character and not isTeammate(p) then
-local highlight = p.Character:FindFirstChild("AlexX_ESP")
-if getgenv().EspEnemyEnabled then
-if not highlight then
-highlight = Instance.new("Highlight", p.Character)
-highlight.Name = "AlexX_ESP"
-highlight.FillColor = Color3.fromRGB(255, 0, 0)
-highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-highlight.FillTransparency = 0.4
-highlight.OutlineTransparency = 0
-highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-end
-else
-if highlight then highlight:Destroy() end
-end
-end
-end
-end)
-end
+            applyToContainer(char)
+            applyToContainer(bp)
+        end)
+    end
 end)
