@@ -1,6 +1,6 @@
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Fix Total & Stretched)
---  Creado por Alex X - Editado para Clean ESP & Stretched Screen
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Fix Total & Stretched REAL + KILLSOUND FIX)
+--  Creado por Alex X - Editado para Clean ESP & Stretched Screen REAL
 -- =====================================================
 local success, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -16,6 +16,7 @@ local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 pcall(function()
     if SoundService:FindFirstChild("RedDavilKillSound") then SoundService:FindFirstChild("RedDavilKillSound"):Destroy() end
@@ -74,13 +75,18 @@ getgenv().InfAmmoEnabled = false
 getgenv().EspGlobalEnabled = false
 getgenv().EspMainColor = Color3.fromRGB(255, 255, 255)
 getgenv().StretchedEnabled = false
-getgenv().StretchedValue = 100
+getgenv().StretchedIntensity = 0.75
 
 getgenv().SkinChangerEnabled = false
 getgenv().SelectedWeaponSkin = "Gold"
 getgenv().SelectedWeaponMaterial = "Neon"
 getgenv().SkinPatternEnabled = false
 getgenv().SelectedWeaponPattern = "Galaxy"
+
+-- Variables para Kill Sound mejorado
+local playerDamageTracker = {}  -- Rastrea cuánto daño le has hecho a cada jugador
+local playerLastHitTime = {}    -- Rastrea cuándo fue tu último golpe a cada jugador
+local playerIsDead = {}         -- Evita sonidos duplicados
 
 local originalWeaponStates = {}
 local originalHitboxStates = {}
@@ -214,12 +220,25 @@ Tabs.Movement:Slider({ Title = "Velocidad SpinBot", Step = 5, Value = { Min = 10
 -- [ SECCIÓN VISUAL (LIMPIA Y MEJORADA) ]
 Tabs.Visual:Section({ Title = "Visuales Competitivos" })
 Tabs.Visual:Toggle({ Title = "Activar ESP Global (Limpio)", Value = false, Callback = function(v) getgenv().EspGlobalEnabled = v end })
-Tabs.Visual:Section({ Title = "Modificaciones de Cámara" })
-Tabs.Visual:Toggle({ Title = "Pantalla Estirada (Stretched)", Value = false, Callback = function(v) getgenv().StretchedEnabled = v end })
-Tabs.Visual:Slider({ Title = "Nivel de Estiramiento", Step = 1, Value = { Min = 70, Max = 120, Default = 100 }, Callback = function(v) getgenv().StretchedValue = v end })
+Tabs.Visual:Section({ Title = "Pantalla Estirada (Stretched REAL)" })
+Tabs.Visual:Toggle({ Title = "Activar Stretched Screen", Value = false, Callback = function(v) 
+    getgenv().StretchedEnabled = v 
+    if v then
+        ApplyRealStretch()
+    else
+        if getgenv().StretchConn then getgenv().StretchConn:Disconnect() end
+        if workspace.CurrentCamera then
+            workspace.CurrentCamera.CFrame = workspace.CurrentCamera.CFrame
+        end
+    end
+end })
+Tabs.Visual:Slider({ Title = "Intensidad Estiramiento", Step = 0.01, Value = { Min = 0.5, Max = 1.2, Default = 0.75 }, Callback = function(v) 
+    getgenv().StretchedIntensity = v 
+    if getgenv().StretchedEnabled then ApplyRealStretch() end
+end })
 
 -- [ SECCIÓN KILL SOUND ]
-Tabs.KillSound:Section({ Title = "Kill Sound (Efectos Instantáneos de Baja)" })
+Tabs.KillSound:Section({ Title = "Kill Sound (Arreglado para PC y Móvil)" })
 
 Tabs.KillSound:Toggle({
     Title = "Activar Kill Sound",
@@ -260,7 +279,150 @@ Tabs.KillSound:Button({
     end
 })
 
--- Funciones auxiliares globales
+-- =====================================================
+--  SISTEMA DE KILL SOUND MEJORADO (PC + MÓVIL)
+-- =====================================================
+
+-- Función para reproducir el sonido
+local function playKillSound()
+    if getgenv().KillSoundEnabled and soundInstance and getgenv().SelectedKillSound then
+        soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
+        soundInstance:Play()
+        -- También vibrar en móvil si es posible
+        pcall(function()
+            if UserInputService.TouchEnabled then
+                UserInputService:SetVibration(Enum.VibrationMotor.Medium, 0.5)
+            end
+        end)
+    end
+end
+
+-- Función para verificar si el LocalPlayer mató al jugador
+local function didLocalPlayerKill(victim)
+    if not victim or not victim.Character then return false end
+    
+    local hum = victim.Character:FindFirstChildOfClass("Humanoid")
+    if not hum then return false end
+    
+    -- Método 1: Verificar la etiqueta "creator" (si el juego la usa)
+    local creatorTag = hum:FindFirstChild("creator")
+    if creatorTag and creatorTag:IsA("ObjectValue") and creatorTag.Value == LocalPlayer then
+        return true
+    end
+    
+    -- Método 2: Verificar si le hicimos daño en los últimos 5 segundos
+    local lastHit = playerLastHitTime[victim]
+    if lastHit and (tick() - lastHit) <= 5 then
+        return true
+    end
+    
+    -- Método 3: Verificar si estamos apuntando a él cuando muere (móvil-friendly)
+    if victim.Character and victim.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = victim.Character.HumanoidRootPart
+        local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+        if onScreen then
+            local mousePos = UserInputService:GetMouseLocation()
+            local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+            if dist < 100 then -- Si el cursor está cerca del enemigo
+                return true
+            end
+        end
+    end
+    
+    -- Método 4: Si el arma está equipada y apuntando al enemigo
+    local char = LocalPlayer.Character
+    if char then
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then
+            local handle = tool:FindFirstChild("Handle")
+            if handle then
+                local ray = Ray.new(Camera.CFrame.Position, Camera.CFrame.LookVector * 200)
+                local hitPart = workspace:Raycast(ray.Origin, ray.Direction)
+                if hitPart and hitPart.Instance then
+                    local hitPlayer = Players:GetPlayerFromCharacter(hitPart.Instance.Parent) or Players:GetPlayerFromCharacter(hitPart.Instance.Parent.Parent)
+                    if hitPlayer == victim then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    
+    return false
+end
+
+-- Función para rastrear daño hecho a cada jugador
+local function setupDamageTracker(player)
+    if player == LocalPlayer then return end
+    
+    playerDamageTracker[player] = 0
+    playerLastHitTime[player] = 0
+    playerIsDead[player] = false
+    
+    local function onCharacterAdded(char)
+        playerIsDead[player] = false
+        playerDamageTracker[player] = 0
+        playerLastHitTime[player] = 0
+        
+        local hum = char:WaitForChild("Humanoid", 10)
+        if not hum then return end
+        
+        -- Rastrear cambios de salud para detectar daño
+        local lastHealth = hum.Health
+        hum.HealthChanged:Connect(function(newHealth)
+            if newHealth < lastHealth then
+                local damage = lastHealth - newHealth
+                -- Si el daño fue reciente y estamos apuntando al jugador, probablemente fuimos nosotros
+                if damage > 0 then
+                    -- Verificar si estamos disparando (mouse presionado)
+                    local isShooting = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+                    if isShooting or getgenv().TriggerbotEnabled then
+                        playerDamageTracker[player] = playerDamageTracker[player] + damage
+                        playerLastHitTime[player] = tick()
+                    end
+                end
+            end
+            lastHealth = newHealth
+            
+            -- Detectar muerte
+            if newHealth <= 0 and lastHealth > 0 and not playerIsDead[player] then
+                playerIsDead[player] = true
+                if didLocalPlayerKill(player) then
+                    playKillSound()
+                end
+            end
+        end)
+        
+        -- También detectar muerte por Died
+        hum.Died:Connect(function()
+            if not playerIsDead[player] then
+                playerIsDead[player] = true
+                if didLocalPlayerKill(player) then
+                    playKillSound()
+                end
+            end
+        end)
+    end
+    
+    if player.Character then onCharacterAdded(player.Character) end
+    player.CharacterAdded:Connect(onCharacterAdded)
+end
+
+-- Registrar todos los jugadores actuales y futuros
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then setupDamageTracker(p) end
+end
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then setupDamageTracker(p) end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    playerDamageTracker[p] = nil
+    playerLastHitTime[p] = nil
+    playerIsDead[p] = nil
+end)
+
+-- Función auxiliar global
 function isTeammate(player)
     if not getgenv().TeamCheckEnabled then return false end
     if player == LocalPlayer then return true end
@@ -268,78 +430,17 @@ function isTeammate(player)
     return player.Team == LocalPlayer.Team
 end
 
-local function playKillSound()
-    if getgenv().KillSoundEnabled and soundInstance and getgenv().SelectedKillSound then
-        soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
-        soundInstance:Play()
-    end
-end
-
--- Rastrear cuándo el LocalPlayer ataca a alguien
-local lastAttackedPlayer = nil
-local lastAttackTime = 0
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        local mouse = LocalPlayer:GetMouse()
-        local target = mouse.Target
-        if target and target.Parent then
-            local p = Players:GetPlayerFromCharacter(target.Parent) or Players:GetPlayerFromCharacter(target.Parent.Parent)
-            if p and p ~= LocalPlayer then
-                lastAttackedPlayer = p
-                lastAttackTime = tick()
-            end
+-- [ FUNCIÓN REAL DE STRETCHED SCREEN ]
+local stretchConnection = nil
+function ApplyRealStretch()
+    if stretchConnection then stretchConnection:Disconnect() end
+    stretchConnection = RunService.RenderStepped:Connect(function()
+        if getgenv().StretchedEnabled and workspace.CurrentCamera then
+            local cam = workspace.CurrentCamera
+            cam.CFrame = cam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, getgenv().StretchedIntensity or 0.75, 0, 0, 0, 1)
         end
-    end
-end)
-
-local function setupKillSoundListener(player)
-    if player == LocalPlayer then return end
-    local function connectCharacter(char)
-        deadPlayers[player] = false
-        local hum = char:WaitForChild("Humanoid", 5)
-        if hum then
-            playerHealthTracker[player] = hum.Health
-            local function checkKill()
-                if deadPlayers[player] then return end
-                local creatorTag = hum:FindFirstChild("creator")
-                local isOurKill = false
-
-                if creatorTag and creatorTag:IsA("ObjectValue") and creatorTag.Value == LocalPlayer then
-                    isOurKill = true
-                elseif lastAttackedPlayer == player and (tick() - lastAttackTime) <= 3 then
-                    isOurKill = true
-                end
-
-                if isOurKill then
-                    deadPlayers[player] = true
-                    playKillSound()
-                end
-            end
-
-            hum.HealthChanged:Connect(function(health)
-                if health <= 0 and (playerHealthTracker[player] or 1) > 0 then
-                    playerHealthTracker[player] = 0
-                    checkKill()
-                else
-                    playerHealthTracker[player] = health
-                end
-            end)
-
-            hum.Died:Connect(function() checkKill() end)
-        end
-    end
-    if player.Character then connectCharacter(player.Character) end
-    player.CharacterAdded:Connect(connectCharacter)
+    end)
 end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then setupKillSoundListener(p) end
-end
-Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then setupKillSoundListener(p) end
-end)
 
 -- [ LÓGICA INTERNA DE FOV Y VISIBILIDAD ]
 local fovCircle = Drawing.new("Circle")
@@ -455,11 +556,6 @@ end)
 RunService.RenderStepped:Connect(function()
     pcall(function()
         local Camera = workspace.CurrentCamera
-
-        -- Lógica de Pantalla Estirada (Stretched Screen)
-        if getgenv().StretchedEnabled then
-            Camera.FieldOfView = getgenv().StretchedValue
-        end
 
         if getgenv().FovEnabled then
             fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
