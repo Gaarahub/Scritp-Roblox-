@@ -1,6 +1,7 @@
 -- =====================================================
 --  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Fix Total & Stretched REAL + KILLSOUND FIX)
 --  Creado por Alex X - Editado para Clean ESP & Stretched Screen REAL
+--  FIX: Team Check CORREGIDO (solo detecta aliados reales)
 -- =====================================================
 local success, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -36,12 +37,13 @@ local KillSoundCodes = {
     ["GET OUT!!!"] = 138093000712523,
     ["신태일 - 뭐야!!! (Angry Korean Gamer)"] = 5700099982,
     ["Among Us Intro Sound"] = 7361207035,
-    ["A Few Moments Later.."] = 122289855001542
+    ["A Few Moments Later.."] = 122289855001542,
+    ["Nuevo Kill Sound"] = 132063528736852
 }
 
 -- Variables Globales
 getgenv().KillSoundEnabled = false
-getgenv().SelectedKillSound = 336771379
+getgenv().SelectedKillSound = 132063528736852
 
 getgenv().SpinSpeed = 120
 getgenv().SpinBotEnabled = false
@@ -54,9 +56,6 @@ getgenv().HitboxEnabled = false
 getgenv().HitboxSize = 5
 getgenv().HitboxTransparency = 0.5
 getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
-
-getgenv().HoodHitboxEnabled = false
-getgenv().HoodHitboxSize = 15
 
 getgenv().FreezePlayersEnabled = false
 getgenv().AimbotEnabled = false
@@ -83,16 +82,15 @@ getgenv().SelectedWeaponMaterial = "Neon"
 getgenv().SkinPatternEnabled = false
 getgenv().SelectedWeaponPattern = "Galaxy"
 
--- Variables para Kill Sound mejorado
-local playerDamageTracker = {}  -- Rastrea cuánto daño le has hecho a cada jugador
-local playerLastHitTime = {}    -- Rastrea cuándo fue tu último golpe a cada jugador
-local playerIsDead = {}         -- Evita sonidos duplicados
+-- Variables para Kill Sound ULTRA ESTRICTO (solo tus kills)
+local myKillTracker = {}
+local myLastHitTime = {}
+local myDamageDealt = {}
 
 local originalWeaponStates = {}
 local originalHitboxStates = {}
 local frozenPlayerPositions = {}
 local espDrawings = {}
-local proxyHitboxes = {}
 local deadPlayers = {}
 local playerHealthTracker = {}
 
@@ -118,6 +116,47 @@ local Window = WindUI:CreateWindow({
 Window:ToggleTransparency(true)
 Window:SetToggleKey(Enum.KeyCode.RightControl)
 
+-- BOTÓN FLOTANTE PARA REABRIR EL MENÚ (cuando se minimiza)
+local reopenButton = Instance.new("ScreenGui")
+reopenButton.Name = "RedDavilReopenButton"
+reopenButton.ResetOnSpawn = false
+reopenButton.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local reopenFrame = Instance.new("TextButton")
+reopenFrame.Name = "ReopenButton"
+reopenFrame.Size = UDim2.fromOffset(50, 50)
+reopenFrame.Position = UDim2.new(1, -60, 1, -60)
+reopenFrame.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+reopenFrame.BackgroundTransparency = 0.3
+reopenFrame.Text = "⚡"
+reopenFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
+reopenFrame.TextSize = 24
+reopenFrame.Font = Enum.Font.GothamBold
+reopenFrame.Parent = reopenButton
+reopenFrame.Visible = false
+
+reopenFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Reabrir el menú
+        pcall(function()
+            Window:ToggleTransparency(false)
+            Window:SetToggleKey(Enum.KeyCode.RightControl)
+        end)
+        reopenFrame.Visible = false
+    end
+end)
+
+-- Detectar cuando el menú se minimiza/cierra y mostrar el botón flotante
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(function()
+            if Window and Window.UI and Window.UI.Visible == false then
+                reopenFrame.Visible = true
+            end
+        end)
+    end
+end)
+
 local Tabs = {
     Combat = Window:Tab({ Title = "Combat", Icon = "swords" }),
     WeapMod = Window:Tab({ Title = "WeapMod", Icon = "crosshair" }),
@@ -142,7 +181,7 @@ Tabs.Combat:Slider({ Title = "Retraso de Disparo", Step = 0.01, Value = { Min = 
 Tabs.Combat:Toggle({ Title = "Team Check", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end })
 
 Tabs.Combat:Section({ Title = "Hitboxes" })
-Tabs.Combat:Toggle({ Title = "Activar Hitbox Estándar", Value = false, Callback = function(v)
+Tabs.Combat:Toggle({ Title = "Activar Hitbox (TODOS)", Value = false, Callback = function(v)
     getgenv().HitboxEnabled = v
     if not v then
         for p, parts in pairs(originalHitboxStates) do
@@ -160,19 +199,8 @@ Tabs.Combat:Toggle({ Title = "Activar Hitbox Estándar", Value = false, Callback
         table.clear(originalHitboxStates)
     end
 end })
-Tabs.Combat:Slider({ Title = "Tamaño Hitbox Estándar", Step = 1, Value = { Min = 2, Max = 20, Default = 5 }, Callback = function(v) getgenv().HitboxSize = v end })
+Tabs.Combat:Slider({ Title = "Tamaño Hitbox", Step = 1, Value = { Min = 2, Max = 20, Default = 5 }, Callback = function(v) getgenv().HitboxSize = v end })
 Tabs.Combat:Slider({ Title = "Transparencia Hitbox", Step = 0.1, Value = { Min = 0, Max = 1, Default = 0.5 }, Callback = function(v) getgenv().HitboxTransparency = v end })
-
-Tabs.Combat:Section({ Title = "Hitbox Proxy (Hood Rivals)" })
-Tabs.Combat:Toggle({ Title = "Activar Hitbox Proxy", Value = false, Callback = function(v) 
-    getgenv().HoodHitboxEnabled = v 
-    if not v then
-        for _, proxy in pairs(proxyHitboxes) do
-            if proxy and proxy.Parent then proxy.Transparency = 1 end
-        end
-    end
-end })
-Tabs.Combat:Slider({ Title = "Tamaño Hitbox Proxy", Step = 1, Value = { Min = 5, Max = 40, Default = 15 }, Callback = function(v) getgenv().HoodHitboxSize = v end })
 
 Tabs.Combat:Toggle({ Title = "Congelar Enemigos (Freeze)", Value = false, Callback = function(v)
     getgenv().FreezePlayersEnabled = v
@@ -258,9 +286,10 @@ local KillSoundDropdown = Tabs.KillSound:Dropdown({
         "GET OUT!!!",
         "신태일 - 뭐야!!! (Angry Korean Gamer)",
         "Among Us Intro Sound",
-        "A Few Moments Later.."
+        "A Few Moments Later..",
+        "Nuevo Kill Sound"
     },
-    Value = "OOOH MY GOD Vine",
+    Value = "Nuevo Kill Sound",
     Callback = function(selected)
         local soundId = KillSoundCodes[selected]
         if soundId then
@@ -280,7 +309,7 @@ Tabs.KillSound:Button({
 })
 
 -- =====================================================
---  SISTEMA DE KILL SOUND MEJORADO (PC + MÓVIL)
+--  SISTEMA DE KILL SOUND ULTRA ESTRICTO (SOLO TUS KILLS)
 -- =====================================================
 
 -- Función para reproducir el sonido
@@ -288,7 +317,6 @@ local function playKillSound()
     if getgenv().KillSoundEnabled and soundInstance and getgenv().SelectedKillSound then
         soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
         soundInstance:Play()
-        -- También vibrar en móvil si es posible
         pcall(function()
             if UserInputService.TouchEnabled then
                 UserInputService:SetVibration(Enum.VibrationMotor.Medium, 0.5)
@@ -297,106 +325,79 @@ local function playKillSound()
     end
 end
 
--- Función para verificar si el LocalPlayer mató al jugador
+-- Función ULTRA ESTRICTA para verificar si TÚ mataste al jugador
 local function didLocalPlayerKill(victim)
     if not victim or not victim.Character then return false end
     
     local hum = victim.Character:FindFirstChildOfClass("Humanoid")
     if not hum then return false end
     
-    -- Método 1: Verificar la etiqueta "creator" (si el juego la usa)
+    -- Método 1: Verificar la etiqueta "creator" (la más confiable)
     local creatorTag = hum:FindFirstChild("creator")
     if creatorTag and creatorTag:IsA("ObjectValue") and creatorTag.Value == LocalPlayer then
         return true
     end
     
-    -- Método 2: Verificar si le hicimos daño en los últimos 5 segundos
-    local lastHit = playerLastHitTime[victim]
-    if lastHit and (tick() - lastHit) <= 5 then
+    -- Método 2: Verificar si le hicimos daño en los últimos 1.5 segundos
+    local lastHit = myLastHitTime[victim]
+    if lastHit and (tick() - lastHit) <= 1.5 then
         return true
     end
     
-    -- Método 3: Verificar si estamos apuntando a él cuando muere (móvil-friendly)
-    if victim.Character and victim.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = victim.Character.HumanoidRootPart
-        local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-        if onScreen then
-            local mousePos = UserInputService:GetMouseLocation()
-            local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-            if dist < 100 then -- Si el cursor está cerca del enemigo
-                return true
-            end
-        end
-    end
-    
-    -- Método 4: Si el arma está equipada y apuntando al enemigo
-    local char = LocalPlayer.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            local handle = tool:FindFirstChild("Handle")
-            if handle then
-                local ray = Ray.new(Camera.CFrame.Position, Camera.CFrame.LookVector * 200)
-                local hitPart = workspace:Raycast(ray.Origin, ray.Direction)
-                if hitPart and hitPart.Instance then
-                    local hitPlayer = Players:GetPlayerFromCharacter(hitPart.Instance.Parent) or Players:GetPlayerFromCharacter(hitPart.Instance.Parent.Parent)
-                    if hitPlayer == victim then
-                        return true
-                    end
-                end
-            end
-        end
+    -- Método 3: Verificar si el daño que hicimos fue significativo (más del 50% de su vida)
+    local damage = myDamageDealt[victim] or 0
+    if damage > (hum.MaxHealth * 0.5) then
+        return true
     end
     
     return false
 end
 
--- Función para rastrear daño hecho a cada jugador
+-- Función para rastrear SOLO el daño que TÚ haces personalmente
 local function setupDamageTracker(player)
     if player == LocalPlayer then return end
     
-    playerDamageTracker[player] = 0
-    playerLastHitTime[player] = 0
-    playerIsDead[player] = false
+    myKillTracker[player] = false
+    myLastHitTime[player] = 0
+    myDamageDealt[player] = 0
     
     local function onCharacterAdded(char)
-        playerIsDead[player] = false
-        playerDamageTracker[player] = 0
-        playerLastHitTime[player] = 0
+        myKillTracker[player] = false
+        myLastHitTime[player] = 0
+        myDamageDealt[player] = 0
         
         local hum = char:WaitForChild("Humanoid", 10)
         if not hum then return end
         
-        -- Rastrear cambios de salud para detectar daño
         local lastHealth = hum.Health
         hum.HealthChanged:Connect(function(newHealth)
             if newHealth < lastHealth then
                 local damage = lastHealth - newHealth
-                -- Si el daño fue reciente y estamos apuntando al jugador, probablemente fuimos nosotros
                 if damage > 0 then
-                    -- Verificar si estamos disparando (mouse presionado)
+                    -- SOLO registrar daño si estamos disparando activamente
                     local isShooting = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-                    if isShooting or getgenv().TriggerbotEnabled then
-                        playerDamageTracker[player] = playerDamageTracker[player] + damage
-                        playerLastHitTime[player] = tick()
+                    if isShooting then
+                        myDamageDealt[player] = myDamageDealt[player] + damage
+                        myLastHitTime[player] = tick()
                     end
                 end
             end
             lastHealth = newHealth
             
-            -- Detectar muerte
-            if newHealth <= 0 and lastHealth > 0 and not playerIsDead[player] then
-                playerIsDead[player] = true
+            -- Cuando el jugador muere
+            if newHealth <= 0 and lastHealth > 0 and not myKillTracker[player] then
+                myKillTracker[player] = true
+                -- SOLO reproducir si TÚ lo mataste
                 if didLocalPlayerKill(player) then
                     playKillSound()
                 end
             end
         end)
         
-        -- También detectar muerte por Died
         hum.Died:Connect(function()
-            if not playerIsDead[player] then
-                playerIsDead[player] = true
+            if not myKillTracker[player] then
+                myKillTracker[player] = true
+                -- SOLO reproducir si TÚ lo mataste
                 if didLocalPlayerKill(player) then
                     playKillSound()
                 end
@@ -408,7 +409,7 @@ local function setupDamageTracker(player)
     player.CharacterAdded:Connect(onCharacterAdded)
 end
 
--- Registrar todos los jugadores actuales y futuros
+-- Limpiar y reconfigurar el rastreo
 for _, p in ipairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then setupDamageTracker(p) end
 end
@@ -417,17 +418,45 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 Players.PlayerRemoving:Connect(function(p)
-    playerDamageTracker[p] = nil
-    playerLastHitTime[p] = nil
-    playerIsDead[p] = nil
+    myKillTracker[p] = nil
+    myLastHitTime[p] = nil
+    myDamageDealt[p] = nil
 end)
 
--- Función auxiliar global
+-- =====================================================
+--  TEAM CHECK CORREGIDO (SOLO DETECTA ALIADOS REALES)
+-- =====================================================
+
+-- Función SIMPLE y EFECTIVA para detectar aliados
 function isTeammate(player)
-    if not getgenv().TeamCheckEnabled then return false end
     if player == LocalPlayer then return true end
-    if not LocalPlayer.Team or not player.Team then return false end
-    return player.Team == LocalPlayer.Team
+    if not getgenv().TeamCheckEnabled then return false end
+    
+    -- SOLO usar el método más confiable: comparar Teams directamente
+    if LocalPlayer.Team and player.Team then
+        if LocalPlayer.Team == player.Team then
+            return true
+        end
+    end
+    
+    -- Si no hay Teams, verificar TeamColor
+    if LocalPlayer.TeamColor and player.TeamColor then
+        if LocalPlayer.TeamColor == player.TeamColor then
+            return true
+        end
+    end
+    
+    -- Si no se detecta ningún equipo, NO son aliados
+    return false
+end
+
+-- Función para obtener el color del equipo (para ESP)
+function getTeamColor(player)
+    if isTeammate(player) then
+        return Color3.fromRGB(0, 255, 0) -- Verde para aliados
+    else
+        return Color3.fromRGB(255, 0, 0) -- Rojo para enemigos
+    end
 end
 
 -- [ FUNCIÓN REAL DE STRETCHED SCREEN ]
@@ -473,61 +502,6 @@ local function getClosestTargetUniversal()
     end
     return closestPart
 end
-
-local function applyProxyToCharacter(player, char)
-    if not char then return end
-    if proxyHitboxes[player] then pcall(function() proxyHitboxes[player]:Destroy() end) end
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if not hrp then return end
-    
-    local proxy = Instance.new("Part")
-    proxy.Name = "ProxyHitbox_" .. player.Name
-    proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
-    proxy.Transparency = 0.85
-    proxy.CanCollide = false
-    proxy.Massless = true
-    proxy.Color = Color3.fromRGB(255, 0, 0)
-    proxy.Material = Enum.Material.Neon
-    proxy.Parent = char
-    
-    for _, part in ipairs(char:GetChildren()) do
-        if part:IsA("BasePart") then
-            local noCol = Instance.new("NoCollisionConstraint")
-            noCol.Part0 = proxy
-            noCol.Part1 = part
-            noCol.Parent = proxy
-        end
-    end
-    local weld = Instance.new("WeldConstraint")
-    weld.Part0 = hrp
-    weld.Part1 = proxy
-    weld.Parent = hrp
-    proxy.CFrame = hrp.CFrame
-    proxyHitboxes[player] = proxy
-end
-
-local function setupProxyHitbox(player)
-    if player == LocalPlayer then return end
-    if player.Character then applyProxyToCharacter(player, player.Character) end
-    player.CharacterAdded:Connect(function(char) applyProxyToCharacter(player, char) end)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do setupProxyHitbox(p) end
-Players.PlayerAdded:Connect(setupProxyHitbox)
-
-Players.PlayerRemoving:Connect(function(p)
-    if proxyHitboxes[p] then pcall(function() proxyHitboxes[p]:Destroy() end); proxyHitboxes[p] = nil end
-    if espDrawings[p] then
-        pcall(function()
-            for _, d in pairs(espDrawings[p]) do d:Remove() end
-        end)
-        espDrawings[p] = nil
-    end
-    originalHitboxStates[p] = nil
-    frozenPlayerPositions[p] = nil
-    deadPlayers[p] = nil
-    playerHealthTracker[p] = nil
-end)
 
 -- Triggerbot
 task.spawn(function()
@@ -589,39 +563,15 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
+        -- HITBOX PARA TODOS LOS JUGADORES (FIX)
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
-                local isEnemy = not isTeammate(p)
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
 
                 if hum and hum.Health > 0 and hrp then
-                    local proxy = proxyHitboxes[p]
-                    if proxy and proxy.Parent then
-                        if getgenv().HoodHitboxEnabled and isEnemy then
-                            proxy.Size = Vector3.new(getgenv().HoodHitboxSize, getgenv().HoodHitboxSize, getgenv().HoodHitboxSize)
-                            proxy.Transparency = 0.85
-                        else
-                            proxy.Transparency = 1
-                        end
-                    elseif getgenv().HoodHitboxEnabled then
-                        applyProxyToCharacter(p, p.Character)
-                    end
-
-                    if getgenv().FreezePlayersEnabled and isEnemy then
-                        if not frozenPlayerPositions[p] then frozenPlayerPositions[p] = hrp.CFrame end
-                        hrp.Anchored = true
-                        hrp.CFrame = frozenPlayerPositions[p]
-                        hum.WalkSpeed = 0
-                    else
-                        if frozenPlayerPositions[p] then
-                            hrp.Anchored = false
-                            hum.WalkSpeed = 16
-                            frozenPlayerPositions[p] = nil
-                        end
-                    end
-
-                    if getgenv().HitboxEnabled and isEnemy then
+                    -- Aplicar hitbox a TODOS los jugadores (sin importar equipo)
+                    if getgenv().HitboxEnabled then
                         if not originalHitboxStates[p] then
                             originalHitboxStates[p] = {}
                             for _, name in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
@@ -642,18 +592,31 @@ RunService.RenderStepped:Connect(function()
                             end
                         end
                     end
+
+                    -- Freeze solo para enemigos (si está activado)
+                    if getgenv().FreezePlayersEnabled and not isTeammate(p) then
+                        if not frozenPlayerPositions[p] then frozenPlayerPositions[p] = hrp.CFrame end
+                        hrp.Anchored = true
+                        hrp.CFrame = frozenPlayerPositions[p]
+                        hum.WalkSpeed = 0
+                    else
+                        if frozenPlayerPositions[p] then
+                            hrp.Anchored = false
+                            hum.WalkSpeed = 16
+                            frozenPlayerPositions[p] = nil
+                        end
+                    end
                 end
             end
         end
 
-        -- ESP Dibujos 2D Limpio
+        -- ESP Dibujos 2D Limpio (Solo caja y vida)
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer then
                 if not espDrawings[p] then
                     espDrawings[p] = {
                         BoxOutline = Drawing.new("Square"),
                         Box = Drawing.new("Square"),
-                        Name = Drawing.new("Text"),
                         HealthBarOutline = Drawing.new("Square"),
                         HealthBar = Drawing.new("Square")
                     }
@@ -662,10 +625,6 @@ RunService.RenderStepped:Connect(function()
                     espDrawings[p].BoxOutline.Color = Color3.new(0,0,0)
                     espDrawings[p].Box.Filled = false
                     espDrawings[p].Box.Thickness = 1
-                    espDrawings[p].Name.Size = 16
-                    espDrawings[p].Name.Center = true
-                    espDrawings[p].Name.Outline = true
-                    espDrawings[p].Name.Color = Color3.new(1,1,1)
                     espDrawings[p].HealthBarOutline.Filled = true
                     espDrawings[p].HealthBarOutline.Color = Color3.new(0,0,0)
                     espDrawings[p].HealthBar.Filled = true
@@ -692,12 +651,8 @@ RunService.RenderStepped:Connect(function()
 
                         d.Box.Size = Vector2.new(w, h)
                         d.Box.Position = Vector2.new(rootPos.X - w / 2, topPos.Y)
-                        d.Box.Color = getgenv().EspMainColor
+                        d.Box.Color = getTeamColor(p) -- Color según equipo
                         d.Box.Visible = true
-
-                        d.Name.Text = p.Name
-                        d.Name.Position = Vector2.new(rootPos.X, topPos.Y - 20)
-                        d.Name.Visible = true
 
                         local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
                         local bH = h * hpPct
@@ -712,14 +667,12 @@ RunService.RenderStepped:Connect(function()
                     else
                         d.BoxOutline.Visible = false
                         d.Box.Visible = false
-                        d.Name.Visible = false
                         d.HealthBarOutline.Visible = false
                         d.HealthBar.Visible = false
                     end
                 else
                     d.BoxOutline.Visible = false
                     d.Box.Visible = false
-                    d.Name.Visible = false
                     d.HealthBarOutline.Visible = false
                     d.HealthBar.Visible = false
                 end
