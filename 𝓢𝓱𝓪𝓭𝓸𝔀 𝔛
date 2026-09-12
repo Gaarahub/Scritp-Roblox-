@@ -164,6 +164,7 @@ local Tabs = {
     Movement = Window:Tab({ Title = "Movement", Icon = "activity" }),
     Visual = Window:Tab({ Title = "Visual", Icon = "eye" }),
     KillSound = Window:Tab({ Title = "Kill Sound", Icon = "volume-2" }),
+    Music = Window:Tab({ Title = "Música", Icon = "music" }),
     Settings = Window:Tab({ Title = "Settings", Icon = "settings" }),
 }
 
@@ -307,6 +308,104 @@ Tabs.KillSound:Button({
             soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
             soundInstance:Play()
         end
+    end
+})
+
+-- [ SECCIÓN MÚSICA ]
+Tabs.Music:Section({ Title = "Reproductor de Música" })
+
+-- Variables de música
+getgenv().MusicEnabled = false
+getgenv().SelectedMusic = nil
+getgenv().MusicVolume = 0.5
+getgenv().MusicLoop = false
+
+-- Códigos de música (TUS 5 CANCIONES)
+local MusicCodes = {
+    ["Canción 1"] = 100435902275131,
+    ["Canción 2"] = 94281718874647,
+    ["Canción 3"] = 109252339723127,
+    ["Canción 4"] = 137717310854691,
+    ["Canción 5"] = 76720396472792
+}
+
+-- Crear instancia de sonido para música
+local musicInstance = Instance.new("Sound")
+musicInstance.Name = "RedDavilMusic"
+musicInstance.Volume = getgenv().MusicVolume
+musicInstance.Looped = getgenv().MusicLoop
+musicInstance.Parent = SoundService
+
+Tabs.Music:Toggle({
+    Title = "Activar Música",
+    Value = false,
+    Callback = function(v)
+        getgenv().MusicEnabled = v
+        if v and getgenv().SelectedMusic then
+            musicInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedMusic)
+            musicInstance:Play()
+        elseif not v then
+            musicInstance:Stop()
+        end
+    end
+})
+
+Tabs.Music:Dropdown({
+    Title = "Seleccionar Canción",
+    Values = { "Canción 1", "Canción 2", "Canción 3", "Canción 4", "Canción 5" },
+    Value = "Canción 1",
+    Callback = function(selected)
+        local musicId = MusicCodes[selected]
+        if musicId then
+            getgenv().SelectedMusic = musicId
+            if getgenv().MusicEnabled then
+                musicInstance.SoundId = "rbxassetid://" .. tostring(musicId)
+                musicInstance:Play()
+            end
+        end
+    end
+})
+
+Tabs.Music:Slider({
+    Title = "Volumen",
+    Step = 0.1,
+    Value = { Min = 0, Max = 1, Default = 0.5 },
+    Callback = function(v)
+        getgenv().MusicVolume = v
+        musicInstance.Volume = v
+    end
+})
+
+Tabs.Music:Toggle({
+    Title = "Repetir Canción",
+    Value = false,
+    Callback = function(v)
+        getgenv().MusicLoop = v
+        musicInstance.Looped = v
+    end
+})
+
+Tabs.Music:Button({
+    Title = "▶️ Reproducir",
+    Callback = function()
+        if getgenv().SelectedMusic then
+            musicInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedMusic)
+            musicInstance:Play()
+        end
+    end
+})
+
+Tabs.Music:Button({
+    Title = "⏸️ Pausar",
+    Callback = function()
+        musicInstance:Pause()
+    end
+})
+
+Tabs.Music:Button({
+    Title = "⏹️ Detener",
+    Callback = function()
+        musicInstance:Stop()
     end
 })
 
