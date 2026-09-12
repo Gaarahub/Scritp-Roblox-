@@ -1,9 +1,13 @@
+-- Xray
 -- =====================================================
 --  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Fix Total & Stretched REAL + KILLSOUND FIX)
 --  Creado por Alex X - Editado para Clean ESP & Stretched Screen REAL
 --  FIX: Team Check CORREGIDO (solo detecta aliados reales)
---  FIX: Triggerbot con detección de visibilidad REAL
+--  FIX: Triggerbot con detección de visibilidad REAL y disparo automático
 --  FIX: ESP SIMPLIFICADO (Solo Line, Health y Distance)
+--  FIX: X-Ray con restauración completa
+--  NUEVO: ESP con colores a través de paredes
+--  NUEVO: Settings con personalización del menú
 -- =====================================================
 local success, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -30,14 +34,17 @@ soundInstance.Volume = 3
 soundInstance.Looped = false
 soundInstance.Parent = SoundService
 
--- Códigos de Kill Sound (SOLO TUS 5 + LA NUEVA)
+-- Códigos de Kill Sound (CON NOMBRES CON FLOW)
 local KillSoundCodes = {
-    ["Kill Sound 1"] = 92020424227680,
-    ["Kill Sound 2"] = 88723755620447,
-    ["Kill Sound 3"] = 74979395951576,
-    ["Kill Sound 4"] = 126659750825724,
-    ["Kill Sound 5"] = 105326415381211,
-    ["Nuevo Kill Sound"] = 132063528736852
+    ["💀 Death Note"] = 92020424227680,
+    ["🔥 Fire Blast"] = 88723755620447,
+    ["⚡ Thunder Clap"] = 74979395951576,
+    ["💥 Boom Headshot"] = 126659750825724,
+    ["👻 Ghost Bite"] = 105326415381211,
+    ["🎯 Bullseye"] = 132063528736852,
+    ["🩸 Blood Moon"] = 128798506824723,
+    ["💀 Dark Reaper"] = 93173477986275,
+    ["🔪 Silent Kill"] = 80646270929418
 }
 
 -- Variables Globales
@@ -64,19 +71,36 @@ getgenv().FovEnabled = false
 getgenv().FovRadius = 120
 getgenv().FovColor = Color3.fromRGB(138, 43, 226)
 
+-- TRIGGERBOT MEJORADO
 getgenv().TriggerbotEnabled = false
 getgenv().TriggerbotDelay = 0.02
+getgenv().TriggerbotRange = 200  -- Distancia máxima de disparo
+getgenv().TriggerbotHeadshot = false  -- Si true, apunta a la cabeza
+getgenv().TriggerbotFOV = 90  -- Ángulo de visión para el triggerbot
 getgenv().RapidFireEnabled = false
 getgenv().InfAmmoEnabled = false
 
 -- NUEVAS VARIABLES VISUALES
-getgenv().EspGlobalEnabled = false
-getgenv().EspLineEnabled = true
-getgenv().EspHealthEnabled = true
-getgenv().EspDistanceEnabled = true
-getgenv().EspMainColor = Color3.fromRGB(255, 0, 0)
+getgenv().XRayEnabled = false
 getgenv().StretchedEnabled = false
 getgenv().StretchedIntensity = 0.75
+
+-- NUEVAS VARIABLES ESP
+getgenv().ESPEnabled = false
+getgenv().ESPBoxEnabled = true
+getgenv().ESPLineEnabled = true
+getgenv().ESPNameEnabled = true
+getgenv().ESPHealthEnabled = true
+getgenv().ESPDistanceEnabled = true
+getgenv().ESPColor = Color3.fromRGB(255, 0, 0) -- Rojo para enemigos
+getgenv().ESPTeamColor = Color3.fromRGB(0, 255, 0) -- Verde para aliados
+getgenv().ESPThickness = 1.5
+
+-- NUEVAS VARIABLES DE PERSONALIZACIÓN DEL MENÚ
+getgenv().MenuTheme = "Dark"  -- Tema del menú
+getgenv().MenuColor = Color3.fromRGB(138, 43, 226)  -- Color principal
+getgenv().MenuTransparency = 0.3  -- Transparencia del menú
+getgenv().MenuAccentColor = Color3.fromRGB(255, 255, 255)  -- Color de acento
 
 getgenv().SkinChangerEnabled = false
 getgenv().SelectedWeaponSkin = "Gold"
@@ -95,6 +119,17 @@ local frozenPlayerPositions = {}
 local espDrawings = {}
 local deadPlayers = {}
 local playerHealthTracker = {}
+
+-- NUEVO: Sistema de restauración para X-Ray
+local originalTransparencies = {}  -- Guarda las transparencias originales
+local xrayApplied = false          -- Estado actual del X-Ray
+
+-- NUEVO: Sistema ESP
+local espObjects = {}  -- Diccionario para guardar los objetos de dibujo ESP
+
+-- NUEVO: Variables para Triggerbot mejorado
+local isShooting = false
+local lastShotTime = 0
 
 local Window = WindUI:CreateWindow({
     Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜB",
@@ -176,9 +211,12 @@ Tabs.Combat:Slider({ Title = "Suavizado Aimbot (1 = Snap)", Step = 1, Value = { 
 Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = false, Callback = function(v) getgenv().FovEnabled = v end })
 Tabs.Combat:Slider({ Title = "Radio del FOV", Step = 5, Value = { Min = 30, Max = 400, Default = 120 }, Callback = function(v) getgenv().FovRadius = v end })
 
-Tabs.Combat:Section({ Title = "Triggerbot Automático (Solo Visible)" })
+Tabs.Combat:Section({ Title = "Triggerbot Automático (Dispara solo)" })
 Tabs.Combat:Toggle({ Title = "Activar Triggerbot", Value = false, Callback = function(v) getgenv().TriggerbotEnabled = v end })
 Tabs.Combat:Slider({ Title = "Retraso de Disparo", Step = 0.01, Value = { Min = 0, Max = 0.2, Default = 0.02 }, Callback = function(v) getgenv().TriggerbotDelay = v end })
+Tabs.Combat:Slider({ Title = "Distancia Máxima", Step = 10, Value = { Min = 50, Max = 500, Default = 200 }, Callback = function(v) getgenv().TriggerbotRange = v end })
+Tabs.Combat:Toggle({ Title = "Modo Headshot", Value = false, Callback = function(v) getgenv().TriggerbotHeadshot = v end })
+Tabs.Combat:Slider({ Title = "Ángulo de Visión", Step = 5, Value = { Min = 30, Max = 180, Default = 90 }, Callback = function(v) getgenv().TriggerbotFOV = v end })
 Tabs.Combat:Toggle({ Title = "Team Check", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end })
 
 Tabs.Combat:Section({ Title = "Hitboxes" })
@@ -246,13 +284,63 @@ Tabs.Movement:Toggle({ Title = "Noclip", Value = false, Callback = function(v) g
 Tabs.Movement:Toggle({ Title = "SpinBot", Value = false, Callback = function(v) getgenv().SpinBotEnabled = v end })
 Tabs.Movement:Slider({ Title = "Velocidad SpinBot", Step = 5, Value = { Min = 10, Max = 500, Default = 120 }, Callback = function(v) getgenv().SpinSpeed = v end })
 
--- [ SECCIÓN VISUAL (ESP SIMPLIFICADO) ]
-Tabs.Visual:Section({ Title = "ESP Simplificado" })
-Tabs.Visual:Toggle({ Title = "Activar ESP Global", Value = false, Callback = function(v) getgenv().EspGlobalEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Línea (Line)", Value = true, Callback = function(v) getgenv().EspLineEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Vida (Health)", Value = true, Callback = function(v) getgenv().EspHealthEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = true, Callback = function(v) getgenv().EspDistanceEnabled = v end })
-Tabs.Visual:Colorpicker({ Title = "Color ESP", Value = Color3.fromRGB(255, 0, 0), Callback = function(v) getgenv().EspMainColor = v end })
+-- [ SECCIÓN VISUAL (XRAY, STRETCHED Y ESP) ]
+Tabs.Visual:Section({ Title = "X-Ray (Ver a través de paredes)" })
+Tabs.Visual:Toggle({ Title = "Activar X-Ray", Value = false, Callback = function(v)
+    getgenv().XRayEnabled = v
+    if v then
+        -- Activar X-Ray: Guardar transparencias originales y hacer transparentes
+        if not xrayApplied then
+            originalTransparencies = {}  -- Limpiar el diccionario
+            for _, part in ipairs(workspace:GetDescendants()) do
+                if part:IsA("BasePart") and not part:IsDescendantOf(LocalPlayer.Character) then
+                    -- Guardar la transparencia original
+                    originalTransparencies[part] = part.Transparency
+                    -- Hacer transparente si no lo está ya
+                    if part.Transparency < 0.5 then
+                        part.Transparency = 0.7
+                    end
+                end
+            end
+            xrayApplied = true
+        end
+    else
+        -- Desactivar X-Ray: Restaurar transparencias originales
+        if xrayApplied then
+            for part, originalTransparency in pairs(originalTransparencies) do
+                if part and part.Parent then  -- Verificar que la parte aún existe
+                    part.Transparency = originalTransparency
+                end
+            end
+            originalTransparencies = {}  -- Limpiar el diccionario
+            xrayApplied = false
+        end
+    end
+end })
+
+Tabs.Visual:Section({ Title = "ESP (Ver jugadores a través de paredes)" })
+Tabs.Visual:Toggle({ Title = "Activar ESP", Value = false, Callback = function(v)
+    getgenv().ESPEnabled = v
+    if not v then
+        -- Limpiar todos los dibujos ESP
+        for player, drawings in pairs(espObjects) do
+            for _, drawing in pairs(drawings) do
+                if drawing then
+                    drawing.Visible = false
+                    drawing:Remove()
+                end
+            end
+        end
+        espObjects = {}
+    end
+end })
+
+Tabs.Visual:Toggle({ Title = "Mostrar Cajas (Box)", Value = true, Callback = function(v) getgenv().ESPBoxEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Líneas (Line)", Value = true, Callback = function(v) getgenv().ESPLineEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Nombres", Value = true, Callback = function(v) getgenv().ESPNameEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Salud", Value = true, Callback = function(v) getgenv().ESPHealthEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = true, Callback = function(v) getgenv().ESPDistanceEnabled = v end })
+Tabs.Visual:Slider({ Title = "Grosor de Líneas", Step = 0.5, Value = { Min = 0.5, Max = 5, Default = 1.5 }, Callback = function(v) getgenv().ESPThickness = v end })
 
 Tabs.Visual:Section({ Title = "Pantalla Estirada (Stretched REAL)" })
 Tabs.Visual:Toggle({ Title = "Activar Stretched Screen", Value = false, Callback = function(v) 
@@ -285,14 +373,17 @@ Tabs.KillSound:Toggle({
 local KillSoundDropdown = Tabs.KillSound:Dropdown({
     Title = "Seleccionar Kill Sound",
     Values = {
-        "Kill Sound 1",
-        "Kill Sound 2",
-        "Kill Sound 3",
-        "Kill Sound 4",
-        "Kill Sound 5",
-        "Nuevo Kill Sound"
+        "💀 Death Note",
+        "🔥 Fire Blast",
+        "⚡ Thunder Clap",
+        "💥 Boom Headshot",
+        "👻 Ghost Bite",
+        "🎯 Bullseye",
+        "🩸 Blood Moon",
+        "💀 Dark Reaper",
+        "🔪 Silent Kill"
     },
-    Value = "Nuevo Kill Sound",
+    Value = "🎯 Bullseye",
     Callback = function(selected)
         local soundId = KillSoundCodes[selected]
         if soundId then
@@ -320,13 +411,16 @@ getgenv().SelectedMusic = nil
 getgenv().MusicVolume = 0.5
 getgenv().MusicLoop = false
 
--- Códigos de música (TUS 5 CANCIONES)
+-- Códigos de música (CON NOMBRES CON FLOW)
 local MusicCodes = {
-    ["Canción 1"] = 100435902275131,
-    ["Canción 2"] = 94281718874647,
-    ["Canción 3"] = 109252339723127,
-    ["Canción 4"] = 137717310854691,
-    ["Canción 5"] = 76720396472792
+    ["🎵 Night Drive"] = 100435902275131,
+    ["🌙 Moonlight"] = 94281718874647,
+    ["⚡ Electric"] = 109252339723127,
+    ["🔥 Fire Flow"] = 137717310854691,
+    ["💎 Diamond"] = 76720396472792,
+    ["🌊 Ocean Wave"] = 138587477693672,
+    ["🚀 Sky High"] = 77035364654473,
+    ["🎧 Bass Drop"] = 107670524299289
 }
 
 -- Crear instancia de sonido para música
@@ -352,8 +446,17 @@ Tabs.Music:Toggle({
 
 Tabs.Music:Dropdown({
     Title = "Seleccionar Canción",
-    Values = { "Canción 1", "Canción 2", "Canción 3", "Canción 4", "Canción 5" },
-    Value = "Canción 1",
+    Values = {
+        "🎵 Night Drive",
+        "🌙 Moonlight",
+        "⚡ Electric",
+        "🔥 Fire Flow",
+        "💎 Diamond",
+        "🌊 Ocean Wave",
+        "🚀 Sky High",
+        "🎧 Bass Drop"
+    },
+    Value = "🎵 Night Drive",
     Callback = function(selected)
         local musicId = MusicCodes[selected]
         if musicId then
@@ -408,6 +511,291 @@ Tabs.Music:Button({
         musicInstance:Stop()
     end
 })
+
+-- [ SECCIÓN SETTINGS - PERSONALIZACIÓN DEL MENÚ ]
+Tabs.Settings:Section({ Title = "Personalización del Menú" })
+
+-- Tema del menú
+Tabs.Settings:Dropdown({
+    Title = "Tema del Menú",
+    Values = { "Dark", "Darker", "Light", "Midnight", "Ocean", "Sunset" },
+    Value = "Dark",
+    Callback = function(v)
+        getgenv().MenuTheme = v
+        ApplyMenuTheme()
+    end
+})
+
+-- Color principal del menú
+Tabs.Settings:Dropdown({
+    Title = "Color Principal",
+    Values = { "Morado", "Azul", "Rojo", "Verde", "Naranja", "Rosa", "Cian", "Amarillo", "Blanco" },
+    Value = "Morado",
+    Callback = function(v)
+        local colors = {
+            ["Morado"] = Color3.fromRGB(138, 43, 226),
+            ["Azul"] = Color3.fromRGB(0, 100, 255),
+            ["Rojo"] = Color3.fromRGB(255, 0, 0),
+            ["Verde"] = Color3.fromRGB(0, 255, 0),
+            ["Naranja"] = Color3.fromRGB(255, 128, 0),
+            ["Rosa"] = Color3.fromRGB(255, 0, 128),
+            ["Cian"] = Color3.fromRGB(0, 255, 255),
+            ["Amarillo"] = Color3.fromRGB(255, 255, 0),
+            ["Blanco"] = Color3.fromRGB(255, 255, 255)
+        }
+        getgenv().MenuColor = colors[v] or Color3.fromRGB(138, 43, 226)
+        ApplyMenuTheme()
+    end
+})
+
+-- Transparencia del menú
+Tabs.Settings:Slider({
+    Title = "Transparencia del Menú",
+    Step = 0.05,
+    Value = { Min = 0, Max = 1, Default = 0.3 },
+    Callback = function(v)
+        getgenv().MenuTransparency = v
+        ApplyMenuTheme()
+    end
+})
+
+-- Botón para restablecer colores
+Tabs.Settings:Button({
+    Title = "🔄 Restablecer Colores",
+    Callback = function()
+        getgenv().MenuTheme = "Dark"
+        getgenv().MenuColor = Color3.fromRGB(138, 43, 226)
+        getgenv().MenuTransparency = 0.3
+        ApplyMenuTheme()
+    end
+})
+
+-- [ SECCIÓN SETTINGS - OPCIONES BÁSICAS ]
+Tabs.Settings:Section({ Title = "Opciones Básicas" })
+
+-- Mostrar FPS
+Tabs.Settings:Toggle({
+    Title = "Mostrar FPS",
+    Value = false,
+    Callback = function(v)
+        getgenv().ShowFPS = v
+        if v then
+            -- Crear FPS counter
+            if not getgenv().FPSCounter then
+                local fpsGui = Instance.new("ScreenGui")
+                fpsGui.Name = "FPSCounter"
+                fpsGui.ResetOnSpawn = false
+                fpsGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+                
+                local fpsLabel = Instance.new("TextLabel")
+                fpsLabel.Name = "FPSLabel"
+                fpsLabel.Size = UDim2.fromOffset(100, 30)
+                fpsLabel.Position = UDim2.new(0, 10, 0, 10)
+                fpsLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                fpsLabel.BackgroundTransparency = 0.5
+                fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                fpsLabel.TextSize = 16
+                fpsLabel.Font = Enum.Font.GothamBold
+                fpsLabel.Parent = fpsGui
+                
+                getgenv().FPSCounter = fpsLabel
+                
+                -- Actualizar FPS
+                task.spawn(function()
+                    local lastTime = tick()
+                    local frames = 0
+                    while getgenv().ShowFPS do
+                        task.wait(0.1)
+                        frames = frames + 1
+                        if tick() - lastTime >= 1 then
+                            local fps = math.floor(frames / (tick() - lastTime))
+                            if getgenv().FPSCounter then
+                                getgenv().FPSCounter.Text = "FPS: " .. tostring(fps)
+                            end
+                            frames = 0
+                            lastTime = tick()
+                        end
+                    end
+                end)
+            end
+        else
+            -- Eliminar FPS counter
+            if getgenv().FPSCounter then
+                getgenv().FPSCounter.Parent:Destroy()
+                getgenv().FPSCounter = nil
+            end
+        end
+    end
+})
+
+-- Mostrar ping
+Tabs.Settings:Toggle({
+    Title = "Mostrar Ping",
+    Value = false,
+    Callback = function(v)
+        getgenv().ShowPing = v
+        if v then
+            -- Crear ping counter
+            if not getgenv().PingCounter then
+                local pingGui = Instance.new("ScreenGui")
+                pingGui.Name = "PingCounter"
+                pingGui.ResetOnSpawn = false
+                pingGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+                
+                local pingLabel = Instance.new("TextLabel")
+                pingLabel.Name = "PingLabel"
+                pingLabel.Size = UDim2.fromOffset(100, 30)
+                pingLabel.Position = UDim2.new(0, 10, 0, 50)
+                pingLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                pingLabel.BackgroundTransparency = 0.5
+                pingLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                pingLabel.TextSize = 16
+                pingLabel.Font = Enum.Font.GothamBold
+                pingLabel.Parent = pingGui
+                
+                getgenv().PingCounter = pingLabel
+                
+                -- Actualizar ping
+                task.spawn(function()
+                    while getgenv().ShowPing do
+                        task.wait(1)
+                        if getgenv().PingCounter then
+                            local ping = game:GetService("Stats").Network.ServerStatsItem.Ping:GetValue()
+                            getgenv().PingCounter.Text = "Ping: " .. tostring(math.floor(ping)) .. "ms"
+                        end
+                    end
+                end)
+            end
+        else
+            -- Eliminar ping counter
+            if getgenv().PingCounter then
+                getgenv().PingCounter.Parent:Destroy()
+                getgenv().PingCounter = nil
+            end
+        end
+    end
+})
+
+-- Mostrar hora
+Tabs.Settings:Toggle({
+    Title = "Mostrar Hora",
+    Value = false,
+    Callback = function(v)
+        getgenv().ShowTime = v
+        if v then
+            -- Crear time counter
+            if not getgenv().TimeCounter then
+                local timeGui = Instance.new("ScreenGui")
+                timeGui.Name = "TimeCounter"
+                timeGui.ResetOnSpawn = false
+                timeGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+                
+                local timeLabel = Instance.new("TextLabel")
+                timeLabel.Name = "TimeLabel"
+                timeLabel.Size = UDim2.fromOffset(100, 30)
+                timeLabel.Position = UDim2.new(0, 10, 0, 90)
+                timeLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                timeLabel.BackgroundTransparency = 0.5
+                timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                timeLabel.TextSize = 16
+                timeLabel.Font = Enum.Font.GothamBold
+                timeLabel.Parent = timeGui
+                
+                getgenv().TimeCounter = timeLabel
+                
+                -- Actualizar hora
+                task.spawn(function()
+                    while getgenv().ShowTime do
+                        task.wait(1)
+                        if getgenv().TimeCounter then
+                            local time = os.date("%H:%M:%S")
+                            getgenv().TimeCounter.Text = "Hora: " .. time
+                        end
+                    end
+                end)
+            end
+        else
+            -- Eliminar time counter
+            if getgenv().TimeCounter then
+                getgenv().TimeCounter.Parent:Destroy()
+                getgenv().TimeCounter = nil
+            end
+        end
+    end
+})
+
+-- Botón para cerrar el menú
+Tabs.Settings:Button({
+    Title = "❌ Cerrar Menú",
+    Callback = function()
+        pcall(function()
+            Window:ToggleTransparency(true)
+        end)
+    end
+})
+
+-- Botón para reiniciar el script
+Tabs.Settings:Button({
+    Title = "🔄 Reiniciar Script",
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+        end)
+    end
+})
+
+-- Función para aplicar el tema del menú
+function ApplyMenuTheme()
+    pcall(function()
+        -- Aplicar tema
+        local themes = {
+            ["Dark"] = { bg = Color3.fromRGB(20, 20, 20), text = Color3.fromRGB(255, 255, 255) },
+            ["Darker"] = { bg = Color3.fromRGB(10, 10, 10), text = Color3.fromRGB(255, 255, 255) },
+            ["Light"] = { bg = Color3.fromRGB(240, 240, 240), text = Color3.fromRGB(0, 0, 0) },
+            ["Midnight"] = { bg = Color3.fromRGB(5, 5, 20), text = Color3.fromRGB(200, 200, 255) },
+            ["Ocean"] = { bg = Color3.fromRGB(0, 50, 100), text = Color3.fromRGB(255, 255, 255) },
+            ["Sunset"] = { bg = Color3.fromRGB(100, 30, 50), text = Color3.fromRGB(255, 255, 200) }
+        }
+        
+        local theme = themes[getgenv().MenuTheme] or themes["Dark"]
+        
+        -- Aplicar colores al menú
+        if Window and Window.UI then
+            -- Cambiar color de fondo
+            for _, v in ipairs(Window.UI:GetDescendants()) do
+                if v:IsA("Frame") or v:IsA("ScrollingFrame") then
+                    if v.Name:find("Background") or v.Name:find("Main") or v.Name:find("Container") then
+                        v.BackgroundColor3 = theme.bg
+                        v.BackgroundTransparency = getgenv().MenuTransparency
+                    end
+                end
+                if v:IsA("TextLabel") or v:IsA("TextButton") then
+                    if v.TextColor3 == Color3.fromRGB(255, 255, 255) then
+                        v.TextColor3 = theme.text
+                    end
+                end
+            end
+            
+            -- Cambiar color de acento
+            for _, v in ipairs(Window.UI:GetDescendants()) do
+                if v:IsA("Frame") or v:IsA("TextButton") then
+                    if v.BackgroundColor3 == Color3.fromRGB(138, 43, 226) then
+                        v.BackgroundColor3 = getgenv().MenuColor
+                    end
+                end
+            end
+        end
+        
+        -- Actualizar botón flotante
+        reopenFrame.BackgroundColor3 = getgenv().MenuColor
+    end)
+end
+
+-- Aplicar tema inicial
+task.spawn(function()
+    task.wait(1)
+    ApplyMenuTheme()
+end)
 
 -- =====================================================
 --  SISTEMA DE KILL SOUND ULTRA ESTRICTO (SOLO TUS KILLS)
@@ -579,7 +967,7 @@ function getTeamColor(player)
 end
 
 -- =====================================================
---  SISTEMA DE VISIBILIDAD REAL PARA TRIGGERBOT (A MI MANERA)
+--  SISTEMA DE VISIBILIDAD REAL PARA TRIGGERBOT (MEJORADO)
 -- =====================================================
 
 function isEnemyVisible(player)
@@ -593,16 +981,34 @@ function isEnemyVisible(player)
     if not hrp or not hum or hum.Health <= 0 then return false end
     
     local camPos = Camera.CFrame.Position
+    local camLook = Camera.CFrame.LookVector
     
+    -- Determinar qué parte usar como objetivo
     local targetPart = head or hrp
+    if getgenv().TriggerbotHeadshot and head then
+        targetPart = head
+    end
+    
     local targetPos = targetPart.Position
     
+    -- Verificar distancia
+    local distance = (targetPos - camPos).Magnitude
+    if distance > getgenv().TriggerbotRange then return false end
+    
+    -- Verificar ángulo de visión (FOV)
+    local toTarget = (targetPos - camPos).Unit
+    local angle = math.acos(math.clamp(camLook:Dot(toTarget), -1, 1))
+    local angleDeg = math.deg(angle)
+    
+    if angleDeg > getgenv().TriggerbotFOV / 2 then return false end
+    
+    -- Raycast para verificar visibilidad
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {LocalPlayer.Character, char}
     params.IgnoreWater = true
     
-    local raycastResult = workspace:Raycast(camPos, (targetPos - camPos).Unit * (targetPos - camPos).Magnitude, params)
+    local raycastResult = workspace:Raycast(camPos, (targetPos - camPos).Unit * distance, params)
     
     if not raycastResult then
         return true
@@ -616,35 +1022,85 @@ function isEnemyVisible(player)
     return false
 end
 
-function isCursorOnVisibleEnemy()
-    local mouse = LocalPlayer:GetMouse()
-    local target = mouse.Target
+-- Función para encontrar el mejor objetivo visible
+function findBestTarget()
+    local bestTarget = nil
+    local bestDistance = math.huge
     
-    if not target then return false end
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and not isTeammate(player) and player.Character then
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                if isEnemyVisible(player) then
+                    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local distance = (hrp.Position - Camera.CFrame.Position).Magnitude
+                        if distance < bestDistance then
+                            bestDistance = distance
+                            bestTarget = player
+                        end
+                    end
+                end
+            end
+        end
+    end
     
-    local enemyPlayer = Players:GetPlayerFromCharacter(target.Parent) or Players:GetPlayerFromCharacter(target.Parent.Parent)
-    
-    if not enemyPlayer or enemyPlayer == LocalPlayer then return false end
-    if isTeammate(enemyPlayer) then return false end
-    
-    if not isEnemyVisible(enemyPlayer) then return false end
-    
-    local hum = enemyPlayer.Character and enemyPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if not hum or hum.Health <= 0 then return false end
-    
-    return true
+    return bestTarget
 end
 
--- TRIGGERBOT MEJORADO CON VISIBILIDAD REAL
+-- Función para disparar
+function shoot()
+    local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
+    if not tool then return end
+    
+    -- Verificar si el arma tiene un evento de disparo
+    local remoteEvent = tool:FindFirstChild("RemoteEvent") or tool:FindFirstChild("Fire") or tool:FindFirstChild("Shoot")
+    
+    if remoteEvent then
+        -- Intentar disparar a través del RemoteEvent
+        pcall(function()
+            remoteEvent:FireServer()
+        end)
+    end
+    
+    -- También intentar con VirtualUser como respaldo
+    pcall(function()
+        VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        task.wait(0.05)
+        VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end)
+end
+
+-- TRIGGERBOT MEJORADO CON DISPARO AUTOMÁTICO
 task.spawn(function()
-    while task.wait(0.03) do
+    while task.wait(0.01) do
         pcall(function()
             if getgenv().TriggerbotEnabled then
-                if isCursorOnVisibleEnemy() then
+                local target = findBestTarget()
+                
+                if target then
+                    -- Apuntar al objetivo si el aimbot está desactivado
+                    if not getgenv().AimbotEnabled then
+                        local char = target.Character
+                        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                        local head = char and char:FindFirstChild("Head")
+                        
+                        if hrp then
+                            local targetPart = head or hrp
+                            if getgenv().TriggerbotHeadshot and head then
+                                targetPart = head
+                            end
+                            
+                            -- Apuntar la cámara al objetivo
+                            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+                        end
+                    end
+                    
+                    -- Disparar
+                    shoot()
+                    
+                    -- Pequeña pausa entre disparos
                     task.wait(getgenv().TriggerbotDelay)
-                    VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                    task.wait(0.04)
-                    VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
                 end
             end
         end)
@@ -696,148 +1152,157 @@ local function getClosestTargetUniversal()
 end
 
 -- =====================================================
---  ESP SIMPLIFICADO (Solo Line, Health y Distance)
+--  SISTEMA ESP (Ver jugadores a través de paredes)
 -- =====================================================
 
--- Función para crear los elementos de dibujo para cada jugador
-local function createEspDrawings(player)
+-- Función para crear los dibujos ESP para un jugador
+local function createESPDrawings(player)
+    if espObjects[player] then return end
+    
     local drawings = {}
     
-    -- Línea (Line)
-    drawings.Line = Drawing.new("Line")
-    drawings.Line.Thickness = 1.5
-    drawings.Line.Visible = false
+    -- Caja (Box)
+    local box = Drawing.new("Square")
+    box.Thickness = getgenv().ESPThickness
+    box.Transparency = 1
+    box.Visible = false
+    drawings.Box = box
     
-    -- Barra de vida (Health)
-    drawings.HealthBarOutline = Drawing.new("Square")
-    drawings.HealthBarOutline.Filled = true
-    drawings.HealthBarOutline.Color = Color3.new(0, 0, 0)
-    drawings.HealthBarOutline.Visible = false
+    -- Línea desde el centro de la pantalla
+    local line = Drawing.new("Line")
+    line.Thickness = getgenv().ESPThickness
+    line.Transparency = 1
+    line.Visible = false
+    drawings.Line = line
     
-    drawings.HealthBar = Drawing.new("Square")
-    drawings.HealthBar.Filled = true
-    drawings.HealthBar.Visible = false
+    -- Nombre
+    local name = Drawing.new("Text")
+    name.Size = 14
+    name.Center = true
+    name.Outline = true
+    name.Visible = false
+    drawings.Name = name
     
-    -- Distancia (Distance)
-    drawings.Distance = Drawing.new("Text")
-    drawings.Distance.Size = 12
-    drawings.Distance.Center = true
-    drawings.Distance.Outline = true
-    drawings.Distance.OutlineColor = Color3.new(0, 0, 0)
-    drawings.Distance.Visible = false
+    -- Salud
+    local health = Drawing.new("Text")
+    health.Size = 12
+    health.Center = true
+    health.Outline = true
+    health.Visible = false
+    drawings.Health = health
     
-    espDrawings[player] = drawings
+    -- Distancia
+    local distance = Drawing.new("Text")
+    distance.Size = 12
+    distance.Center = true
+    distance.Outline = true
+    distance.Visible = false
+    drawings.Distance = distance
+    
+    espObjects[player] = drawings
 end
 
--- Función para actualizar el ESP de un jugador
-local function updateEsp(player)
-    local drawings = espDrawings[player]
-    if not drawings then return end
+-- Función para actualizar los dibujos ESP
+local function updateESP()
+    if not getgenv().ESPEnabled then return end
     
-    local char = player.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local camera = workspace.CurrentCamera
+    local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
     
-    -- Ocultar todo si no hay personaje o está muerto o es aliado
-    if not char or not hrp or not hum or hum.Health <= 0 or isTeammate(player) or not getgenv().EspGlobalEnabled then
-        drawings.Line.Visible = false
-        drawings.HealthBarOutline.Visible = false
-        drawings.HealthBar.Visible = false
-        drawings.Distance.Visible = false
-        return
-    end
-    
-    -- Obtener la posición en pantalla
-    local cf, sz = char:GetBoundingBox()
-    local topPos = Camera:WorldToViewportPoint(cf.Position + Vector3.new(0, sz.Y / 2, 0))
-    local botPos = Camera:WorldToViewportPoint(cf.Position - Vector3.new(0, sz.Y / 2, 0))
-    local rootPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-    
-    -- Si no está en pantalla, ocultar
-    if not onScreen then
-        drawings.Line.Visible = false
-        drawings.HealthBarOutline.Visible = false
-        drawings.HealthBar.Visible = false
-        drawings.Distance.Visible = false
-        return
-    end
-    
-    -- Calcular dimensiones
-    local h = math.abs(botPos.Y - topPos.Y)
-    local w = h / 2
-    local centerX = rootPos.X
-    local topY = topPos.Y
-    
-    -- Color del ESP (rojo para enemigos)
-    local espColor = getTeamColor(player)
-    if getgenv().EspMainColor ~= Color3.fromRGB(255, 0, 0) then
-        espColor = getgenv().EspMainColor
-    end
-    
-    -- 1. LÍNEA (LINE)
-    if getgenv().EspLineEnabled then
-        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-        drawings.Line.From = screenCenter
-        drawings.Line.To = Vector2.new(centerX, topY + h / 2)
-        drawings.Line.Color = espColor
-        drawings.Line.Visible = true
-    else
-        drawings.Line.Visible = false
-    end
-    
-    -- 2. BARRA DE VIDA (HEALTH)
-    if getgenv().EspHealthEnabled then
-        local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-        local bH = h * hpPct
-        
-        drawings.HealthBarOutline.Size = Vector2.new(4, h + 2)
-        drawings.HealthBarOutline.Position = Vector2.new(centerX - w / 2 - 6, topY - 1)
-        drawings.HealthBarOutline.Visible = true
-        
-        drawings.HealthBar.Size = Vector2.new(2, bH)
-        drawings.HealthBar.Position = Vector2.new(centerX - w / 2 - 5, topY + (h - bH))
-        drawings.HealthBar.Color = Color3.fromRGB(255 - (hpPct * 255), hpPct * 255, 0)
-        drawings.HealthBar.Visible = true
-    else
-        drawings.HealthBarOutline.Visible = false
-        drawings.HealthBar.Visible = false
-    end
-    
-    -- 3. DISTANCIA (DISTANCE)
-    if getgenv().EspDistanceEnabled then
-        local distance = math.floor((hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
-        drawings.Distance.Text = tostring(distance) .. "m"
-        drawings.Distance.Position = Vector2.new(centerX, botPos.Y + 5)
-        drawings.Distance.Color = Color3.fromRGB(255, 255, 255)
-        drawings.Distance.Visible = true
-    else
-        drawings.Distance.Visible = false
-    end
-end
-
--- Crear ESP para todos los jugadores existentes
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then
-        createEspDrawings(p)
-    end
-end
-
--- Crear ESP para nuevos jugadores
-Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
-        createEspDrawings(p)
-    end
-end)
-
--- Limpiar ESP cuando un jugador sale
-Players.PlayerRemoving:Connect(function(p)
-    if espDrawings[p] then
-        for _, drawing in pairs(espDrawings[p]) do
-            drawing:Remove()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head")
+            
+            if hum and hum.Health > 0 and hrp and head then
+                -- Crear dibujos si no existen
+                createESPDrawings(player)
+                local drawings = espObjects[player]
+                
+                -- Determinar color (rojo para enemigos, verde para aliados)
+                local color = getTeamColor(player)
+                
+                -- Obtener posición en pantalla
+                local headPos, headOnScreen = camera:WorldToViewportPoint(head.Position)
+                local rootPos, rootOnScreen = camera:WorldToViewportPoint(hrp.Position)
+                
+                if headOnScreen and rootOnScreen then
+                    -- Calcular altura y anchura de la caja
+                    local height = math.abs(headPos.Y - rootPos.Y) * 2
+                    local width = height * 0.6
+                    
+                    -- Actualizar caja
+                    if getgenv().ESPBoxEnabled then
+                        drawings.Box.Visible = true
+                        drawings.Box.Color = color
+                        drawings.Box.Thickness = getgenv().ESPThickness
+                        drawings.Box.Position = Vector2.new(rootPos.X - width/2, rootPos.Y - height/2)
+                        drawings.Box.Size = Vector2.new(width, height)
+                    else
+                        drawings.Box.Visible = false
+                    end
+                    
+                    -- Actualizar línea
+                    if getgenv().ESPLineEnabled then
+                        drawings.Line.Visible = true
+                        drawings.Line.Color = color
+                        drawings.Line.Thickness = getgenv().ESPThickness
+                        drawings.Line.From = screenCenter
+                        drawings.Line.To = Vector2.new(rootPos.X, rootPos.Y)
+                    else
+                        drawings.Line.Visible = false
+                    end
+                    
+                    -- Actualizar nombre
+                    if getgenv().ESPNameEnabled then
+                        drawings.Name.Visible = true
+                        drawings.Name.Text = player.Name
+                        drawings.Name.Color = color
+                        drawings.Name.Position = Vector2.new(rootPos.X, rootPos.Y - height/2 - 20)
+                    else
+                        drawings.Name.Visible = false
+                    end
+                    
+                    -- Actualizar salud
+                    if getgenv().ESPHealthEnabled then
+                        drawings.Health.Visible = true
+                        local healthPercent = math.floor((hum.Health / hum.MaxHealth) * 100)
+                        drawings.Health.Text = tostring(healthPercent) .. "%"
+                        drawings.Health.Color = Color3.fromRGB(0, 255, 0)
+                        drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y - height/2 - 5)
+                    else
+                        drawings.Health.Visible = false
+                    end
+                    
+                    -- Actualizar distancia
+                    if getgenv().ESPDistanceEnabled then
+                        drawings.Distance.Visible = true
+                        local dist = math.floor((camera.CFrame.Position - hrp.Position).Magnitude)
+                        drawings.Distance.Text = tostring(dist) .. "m"
+                        drawings.Distance.Color = color
+                        drawings.Distance.Position = Vector2.new(rootPos.X, rootPos.Y + height/2 + 5)
+                    else
+                        drawings.Distance.Visible = false
+                    end
+                else
+                    -- Ocultar todos los dibujos si no está en pantalla
+                    for _, drawing in pairs(drawings) do
+                        drawing.Visible = false
+                    end
+                end
+            else
+                -- Ocultar todos los dibujos si el jugador no es válido
+                if espObjects[player] then
+                    for _, drawing in pairs(espObjects[player]) do
+                        drawing.Visible = false
+                    end
+                end
+            end
         end
-        espDrawings[p] = nil
     end
-end)
+end
 
 -- Bucle Principal en RenderStepped
 RunService.RenderStepped:Connect(function()
@@ -875,6 +1340,9 @@ RunService.RenderStepped:Connect(function()
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
+
+        -- Actualizar ESP
+        updateESP()
 
         -- HITBOX PARA TODOS LOS JUGADORES (FIX) - AHORA RESPETA TEAM CHECK
         for _, p in ipairs(Players:GetPlayers()) do
@@ -918,13 +1386,6 @@ RunService.RenderStepped:Connect(function()
                         end
                     end
                 end
-            end
-        end
-
-        -- ACTUALIZAR ESP PARA TODOS LOS JUGADORES
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then
-                updateEsp(p)
             end
         end
     end)
