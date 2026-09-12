@@ -1,14 +1,68 @@
--- Xray
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Fix Total & Stretched REAL + KILLSOUND FIX)
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Darker Tab Background + Blue Text Palette)
 --  Creado por Alex X - Editado para Clean ESP & Stretched Screen REAL
---  FIX: Team Check CORREGIDO (solo detecta aliados reales)
---  FIX: Triggerbot con detección de visibilidad REAL y disparo automático
---  FIX: ESP SIMPLIFICADO (Solo Line, Health y Distance)
---  FIX: X-Ray con restauración completa
---  NUEVO: ESP con colores a través de paredes
---  NUEVO: Settings con personalización del menú
+--  MODIFICADO: Solo Team Check activado, todas las demás opciones apagadas
+--  Invisibilidad arreglada: invisible para otros, semi-transparente para ti
+--  SIN BUGS DE MOVIMIENTO - Tu personaje se mueve normal
 -- =====================================================
+local HttpService = game:GetService("HttpService")
+local FileName = "OddRivals_Config.json"
+
+-- Tabla de configuración persistente por defecto (TODAS APAGADAS)
+local Config = {
+    AimbotEnabled = false,
+    FovEnabled = false,
+    TriggerbotEnabled = false,
+    HitboxEnabled = false,
+    FreezePlayersEnabled = false,
+    RapidFireEnabled = false,
+    InfAmmoEnabled = false,
+    SkinChangerEnabled = false,
+    SkinPatternEnabled = false,
+    SpeedEnabled = false,
+    InfJumpEnabled = false,
+    NoclipEnabled = false,
+    SpinBotEnabled = false,
+    InvisibleEnabled = false,
+    XRayEnabled = false,
+    ESPEnabled = false,
+    ESPBoxEnabled = false,
+    ESPLineEnabled = false,
+    ESPNameEnabled = false,
+    ESPHealthEnabled = false,
+    ESPDistanceEnabled = false,
+    StretchedEnabled = false,
+    KillSoundEnabled = false,
+    MusicEnabled = false,
+    ShowFPS = false,
+    ShowPing = false,
+    ShowTime = false
+}
+
+local function LoadConfig()
+    if pcall(function() readfile(FileName) end) then
+        local success, decoded = pcall(function()
+            return HttpService:JSONDecode(readfile(FileName))
+        end)
+        if success and type(decoded) == "table" then
+            for k, v in pairs(decoded) do
+                Config[k] = v
+            end
+        end
+    end
+end
+
+local function SaveConfig()
+    local success, encoded = pcall(function()
+        return HttpService:JSONEncode(Config)
+    end)
+    if success then
+        writefile(FileName, encoded)
+    end
+end
+
+LoadConfig()
+
 local success, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 end)
@@ -21,7 +75,9 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
+local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -34,7 +90,6 @@ soundInstance.Volume = 3
 soundInstance.Looped = false
 soundInstance.Parent = SoundService
 
--- Códigos de Kill Sound (CON NOMBRES CON FLOW)
 local KillSoundCodes = {
     ["💀 Death Note"] = 92020424227680,
     ["🔥 Fire Blast"] = 88723755620447,
@@ -47,97 +102,78 @@ local KillSoundCodes = {
     ["🔪 Silent Kill"] = 80646270929418
 }
 
--- Variables Globales
-getgenv().KillSoundEnabled = false
+getgenv().KillSoundEnabled = Config.KillSoundEnabled
 getgenv().SelectedKillSound = 132063528736852
 
 getgenv().SpinSpeed = 120
-getgenv().SpinBotEnabled = false
-getgenv().NoclipEnabled = false
+getgenv().SpinBotEnabled = Config.SpinBotEnabled
+getgenv().NoclipEnabled = Config.NoclipEnabled
 getgenv().PlayerSpeedValue = 16
-getgenv().SpeedEnabled = false
-getgenv().InfJumpEnabled = false
-getgenv().TeamCheckEnabled = true
-getgenv().HitboxEnabled = false
+getgenv().SpeedEnabled = Config.SpeedEnabled
+getgenv().InfJumpEnabled = Config.InfJumpEnabled
+getgenv().InvisibleEnabled = Config.InvisibleEnabled
+getgenv().TeamCheckEnabled = true -- ÚNICA OPCIÓN ACTIVADA
+getgenv().HitboxEnabled = Config.HitboxEnabled
 getgenv().HitboxSize = 5
 getgenv().HitboxTransparency = 0.5
-getgenv().HitboxColor = Color3.fromRGB(138, 43, 226)
+getgenv().HitboxColor = Color3.fromRGB(50, 150, 255)
 
-getgenv().FreezePlayersEnabled = false
-getgenv().AimbotEnabled = false
+getgenv().FreezePlayersEnabled = Config.FreezePlayersEnabled
+getgenv().AimbotEnabled = Config.AimbotEnabled
 getgenv().AimbotSmooth = 1
 getgenv().AimbotPart = "Head"
-getgenv().FovEnabled = false
+getgenv().FovEnabled = Config.FovEnabled
 getgenv().FovRadius = 120
-getgenv().FovColor = Color3.fromRGB(138, 43, 226)
+getgenv().FovColor = Color3.fromRGB(50, 150, 255)
 
--- TRIGGERBOT MEJORADO
-getgenv().TriggerbotEnabled = false
+getgenv().TriggerbotEnabled = Config.TriggerbotEnabled
 getgenv().TriggerbotDelay = 0.02
-getgenv().TriggerbotRange = 200  -- Distancia máxima de disparo
-getgenv().TriggerbotHeadshot = false  -- Si true, apunta a la cabeza
-getgenv().TriggerbotFOV = 90  -- Ángulo de visión para el triggerbot
-getgenv().RapidFireEnabled = false
-getgenv().InfAmmoEnabled = false
+getgenv().TriggerbotRange = 200
+getgenv().TriggerbotHeadshot = false
+getgenv().TriggerbotFOV = 90
+getgenv().RapidFireEnabled = Config.RapidFireEnabled
+getgenv().InfAmmoEnabled = Config.InfAmmoEnabled
 
--- NUEVAS VARIABLES VISUALES
-getgenv().XRayEnabled = false
-getgenv().StretchedEnabled = false
+getgenv().XRayEnabled = Config.XRayEnabled
+getgenv().StretchedEnabled = Config.StretchedEnabled
 getgenv().StretchedIntensity = 0.75
 
--- NUEVAS VARIABLES ESP
-getgenv().ESPEnabled = false
-getgenv().ESPBoxEnabled = true
-getgenv().ESPLineEnabled = true
-getgenv().ESPNameEnabled = true
-getgenv().ESPHealthEnabled = true
-getgenv().ESPDistanceEnabled = true
-getgenv().ESPColor = Color3.fromRGB(255, 0, 0) -- Rojo para enemigos
-getgenv().ESPTeamColor = Color3.fromRGB(0, 255, 0) -- Verde para aliados
+getgenv().ESPEnabled = Config.ESPEnabled
+getgenv().ESPBoxEnabled = Config.ESPBoxEnabled
+getgenv().ESPLineEnabled = Config.ESPLineEnabled
+getgenv().ESPNameEnabled = Config.ESPNameEnabled
+getgenv().ESPHealthEnabled = Config.ESPHealthEnabled
+getgenv().ESPDistanceEnabled = Config.ESPDistanceEnabled
+getgenv().ESPColor = Color3.fromRGB(255, 0, 0)
+getgenv().ESPTeamColor = Color3.fromRGB(0, 255, 0)
 getgenv().ESPThickness = 1.5
 
--- NUEVAS VARIABLES DE PERSONALIZACIÓN DEL MENÚ
-getgenv().MenuTheme = "Dark"  -- Tema del menú
-getgenv().MenuColor = Color3.fromRGB(138, 43, 226)  -- Color principal
-getgenv().MenuTransparency = 0.3  -- Transparencia del menú
-getgenv().MenuAccentColor = Color3.fromRGB(255, 255, 255)  -- Color de acento
-
-getgenv().SkinChangerEnabled = false
+getgenv().SkinChangerEnabled = Config.SkinChangerEnabled
 getgenv().SelectedWeaponSkin = "Gold"
 getgenv().SelectedWeaponMaterial = "Neon"
-getgenv().SkinPatternEnabled = false
+getgenv().SkinPatternEnabled = Config.SkinPatternEnabled
 getgenv().SelectedWeaponPattern = "Galaxy"
 
--- Variables para Kill Sound ULTRA ESTRICTO (solo tus kills)
 local myKillTracker = {}
 local myLastHitTime = {}
 local myDamageDealt = {}
-
 local originalWeaponStates = {}
 local originalHitboxStates = {}
 local frozenPlayerPositions = {}
-local espDrawings = {}
-local deadPlayers = {}
-local playerHealthTracker = {}
+local espObjects = {}
+local originalTransparencies = {}
+local xrayApplied = false
+local cloneModel = nil
+local originalPartsTransparency = {} -- Para guardar transparencias originales
 
--- NUEVO: Sistema de restauración para X-Ray
-local originalTransparencies = {}  -- Guarda las transparencias originales
-local xrayApplied = false          -- Estado actual del X-Ray
-
--- NUEVO: Sistema ESP
-local espObjects = {}  -- Diccionario para guardar los objetos de dibujo ESP
-
--- NUEVO: Variables para Triggerbot mejorado
-local isShooting = false
-local lastShotTime = 0
-
+-- Crear ventana con tema azul oscuro
 local Window = WindUI:CreateWindow({
     Title = "ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜB",
     Icon = "sparkles",
     Author = "Alex X",
     Folder = "StretchedScreen1AN",
     Size = UDim2.fromOffset(560, 320),
-    Transparent = true,
+    Transparent = false,
     Theme = "Dark",
     SideBarWidth = 150,
     HasOutline = true,
@@ -150,10 +186,35 @@ local Window = WindUI:CreateWindow({
     }
 })
 
-Window:ToggleTransparency(true)
+Window:ToggleTransparency(false)
 Window:SetToggleKey(Enum.KeyCode.RightControl)
 
--- BOTÓN FLOTANTE PARA REABRIR EL MENÚ (cuando se minimiza)
+-- Aplicar tema azul oscuro al menú
+task.spawn(function()
+    task.wait(0.6)
+    pcall(function()
+        for _, gui in ipairs(CoreGui:GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                for _, descendant in ipairs(gui:GetDescendants()) do
+                    if descendant:IsA("Frame") then
+                        descendant.BackgroundColor3 = Color3.fromRGB(10, 15, 30) -- Azul oscuro
+                    end
+                    if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                        descendant.TextColor3 = Color3.fromRGB(200, 220, 255) -- Texto azul claro
+                    end
+                    if descendant:IsA("ScrollingFrame") then
+                        descendant.BackgroundColor3 = Color3.fromRGB(10, 15, 30)
+                    end
+                    if descendant:IsA("UIStroke") then
+                        descendant.Color = Color3.fromRGB(30, 60, 120)
+                    end
+                end
+            end
+        end
+    end)
+end)
+
+-- Botón de reabrir con tema azul oscuro
 local reopenButton = Instance.new("ScreenGui")
 reopenButton.Name = "RedDavilReopenButton"
 reopenButton.ResetOnSpawn = false
@@ -161,19 +222,32 @@ reopenButton.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 local reopenFrame = Instance.new("TextButton")
 reopenFrame.Name = "ReopenButton"
-reopenFrame.Size = UDim2.fromOffset(50, 50)
-reopenFrame.Position = UDim2.new(1, -60, 1, -60)
-reopenFrame.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
-reopenFrame.BackgroundTransparency = 0.3
+reopenFrame.Size = UDim2.fromOffset(52, 52)
+reopenFrame.Position = UDim2.new(1, -70, 0.5, -26)
+reopenFrame.BackgroundColor3 = Color3.fromRGB(10, 15, 30) -- Azul oscuro
+reopenFrame.BackgroundTransparency = 0.15
 reopenFrame.Text = "⚡"
-reopenFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
-reopenFrame.TextSize = 24
+reopenFrame.TextColor3 = Color3.fromRGB(200, 220, 255) -- Texto azul claro
+reopenFrame.TextSize = 22
 reopenFrame.Font = Enum.Font.GothamBold
 reopenFrame.Parent = reopenButton
 reopenFrame.Visible = false
 
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = reopenFrame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(30, 60, 120) -- Borde azul oscuro
+stroke.Thickness = 2
+stroke.Parent = reopenFrame
+
 reopenFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        TweenService:Create(reopenFrame, TweenInfo.new(0.1), {Size = UDim2.fromOffset(45, 45)}):Play()
+        task.wait(0.1)
+        TweenService:Create(reopenFrame, TweenInfo.new(0.1), {Size = UDim2.fromOffset(52, 52)}):Play()
+        
         pcall(function()
             Window:ToggleTransparency(false)
             Window:SetToggleKey(Enum.KeyCode.RightControl)
@@ -205,23 +279,25 @@ local Tabs = {
 
 -- [ SECCIÓN COMBAT ]
 Tabs.Combat:Section({ Title = "Aimbot Ultra Agresivo & FOV" })
-Tabs.Combat:Toggle({ Title = "Activar Aimbot", Value = false, Callback = function(v) getgenv().AimbotEnabled = v end })
+Tabs.Combat:Toggle({ Title = "Activar Aimbot", Value = Config.AimbotEnabled, Callback = function(v) getgenv().AimbotEnabled = v Config.AimbotEnabled = v SaveConfig() end })
 Tabs.Combat:Dropdown({ Title = "Parte (Aimbot)", Values = { "Head", "HumanoidRootPart", "UpperTorso" }, Value = "Head", Callback = function(v) getgenv().AimbotPart = v end })
 Tabs.Combat:Slider({ Title = "Suavizado Aimbot (1 = Snap)", Step = 1, Value = { Min = 1, Max = 10, Default = 1 }, Callback = function(v) getgenv().AimbotSmooth = v end })
-Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = false, Callback = function(v) getgenv().FovEnabled = v end })
+Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = Config.FovEnabled, Callback = function(v) getgenv().FovEnabled = v Config.FovEnabled = v SaveConfig() end })
 Tabs.Combat:Slider({ Title = "Radio del FOV", Step = 5, Value = { Min = 30, Max = 400, Default = 120 }, Callback = function(v) getgenv().FovRadius = v end })
 
 Tabs.Combat:Section({ Title = "Triggerbot Automático (Dispara solo)" })
-Tabs.Combat:Toggle({ Title = "Activar Triggerbot", Value = false, Callback = function(v) getgenv().TriggerbotEnabled = v end })
+Tabs.Combat:Toggle({ Title = "Activar Triggerbot", Value = Config.TriggerbotEnabled, Callback = function(v) getgenv().TriggerbotEnabled = v Config.TriggerbotEnabled = v SaveConfig() end })
 Tabs.Combat:Slider({ Title = "Retraso de Disparo", Step = 0.01, Value = { Min = 0, Max = 0.2, Default = 0.02 }, Callback = function(v) getgenv().TriggerbotDelay = v end })
 Tabs.Combat:Slider({ Title = "Distancia Máxima", Step = 10, Value = { Min = 50, Max = 500, Default = 200 }, Callback = function(v) getgenv().TriggerbotRange = v end })
 Tabs.Combat:Toggle({ Title = "Modo Headshot", Value = false, Callback = function(v) getgenv().TriggerbotHeadshot = v end })
 Tabs.Combat:Slider({ Title = "Ángulo de Visión", Step = 5, Value = { Min = 30, Max = 180, Default = 90 }, Callback = function(v) getgenv().TriggerbotFOV = v end })
-Tabs.Combat:Toggle({ Title = "Team Check", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end })
+Tabs.Combat:Toggle({ Title = "Team Check", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end }) -- ACTIVADO
 
 Tabs.Combat:Section({ Title = "Hitboxes" })
-Tabs.Combat:Toggle({ Title = "Activar Hitbox (TODOS)", Value = false, Callback = function(v)
+Tabs.Combat:Toggle({ Title = "Activar Hitbox (TODOS)", Value = Config.HitboxEnabled, Callback = function(v)
     getgenv().HitboxEnabled = v
+    Config.HitboxEnabled = v
+    SaveConfig()
     if not v then
         for p, parts in pairs(originalHitboxStates) do
             if p and p.Character then
@@ -241,8 +317,10 @@ end })
 Tabs.Combat:Slider({ Title = "Tamaño Hitbox", Step = 1, Value = { Min = 2, Max = 20, Default = 5 }, Callback = function(v) getgenv().HitboxSize = v end })
 Tabs.Combat:Slider({ Title = "Transparencia Hitbox", Step = 0.1, Value = { Min = 0, Max = 1, Default = 0.5 }, Callback = function(v) getgenv().HitboxTransparency = v end })
 
-Tabs.Combat:Toggle({ Title = "Congelar Enemigos (Freeze)", Value = false, Callback = function(v)
+Tabs.Combat:Toggle({ Title = "Congelar Enemigos (Freeze)", Value = Config.FreezePlayersEnabled, Callback = function(v)
     getgenv().FreezePlayersEnabled = v
+    Config.FreezePlayersEnabled = v
+    SaveConfig()
     if not v then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -258,20 +336,22 @@ end })
 
 -- [ SECCIÓN WEAPMOD ]
 Tabs.WeapMod:Section({ Title = "Armas" })
-Tabs.WeapMod:Toggle({ Title = "Rapid Fire", Value = false, Callback = function(v) getgenv().RapidFireEnabled = v end })
-Tabs.WeapMod:Toggle({ Title = "Infinite Ammo", Value = false, Callback = function(v) getgenv().InfAmmoEnabled = v end })
+Tabs.WeapMod:Toggle({ Title = "Rapid Fire", Value = Config.RapidFireEnabled, Callback = function(v) getgenv().RapidFireEnabled = v Config.RapidFireEnabled = v SaveConfig() end })
+Tabs.WeapMod:Toggle({ Title = "Infinite Ammo", Value = Config.InfAmmoEnabled, Callback = function(v) getgenv().InfAmmoEnabled = v Config.InfAmmoEnabled = v SaveConfig() end })
 
 -- [ SECCIÓN SKIN CHANGER ]
 Tabs.SkinChanger:Section({ Title = "Personalización" })
-Tabs.SkinChanger:Toggle({ Title = "Colores Sólidos", Value = false, Callback = function(v) getgenv().SkinChangerEnabled = v end })
+Tabs.SkinChanger:Toggle({ Title = "Colores Sólidos", Value = Config.SkinChangerEnabled, Callback = function(v) getgenv().SkinChangerEnabled = v Config.SkinChangerEnabled = v SaveConfig() end })
 Tabs.SkinChanger:Dropdown({ Title = "Estilo / Color", Values = { "Gold", "Diamond", "Ruby", "Emerald", "Obsidian", "Rainbow", "Amethyst", "Sapphire" }, Value = "Gold", Callback = function(v) getgenv().SelectedWeaponSkin = v end })
 Tabs.SkinChanger:Dropdown({ Title = "Material Visual", Values = { "Neon", "Glass", "Metal", "SmoothPlastic", "ForceField" }, Value = "Neon", Callback = function(v) getgenv().SelectedWeaponMaterial = v end })
-Tabs.SkinChanger:Toggle({ Title = "Diseños Dinámicos", Value = false, Callback = function(v) getgenv().SkinPatternEnabled = v end })
+Tabs.SkinChanger:Toggle({ Title = "Diseños Dinámicos", Value = Config.SkinPatternEnabled, Callback = function(v) getgenv().SkinPatternEnabled = v Config.SkinPatternEnabled = v SaveConfig() end })
 Tabs.SkinChanger:Dropdown({ Title = "Diseño", Values = { "Galaxy", "Camo", "Carbon Fiber", "Lava", "Lightning" }, Value = "Galaxy", Callback = function(v) getgenv().SelectedWeaponPattern = v end })
 
 -- [ SECCIÓN MOVEMENT ]
-Tabs.Movement:Toggle({ Title = "Speed", Value = false, Callback = function(v)
+Tabs.Movement:Toggle({ Title = "Speed", Value = Config.SpeedEnabled, Callback = function(v)
     getgenv().SpeedEnabled = v
+    Config.SpeedEnabled = v
+    SaveConfig()
     if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().PlayerSpeedValue
     elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
@@ -279,24 +359,89 @@ Tabs.Movement:Toggle({ Title = "Speed", Value = false, Callback = function(v)
     end
 end })
 Tabs.Movement:Slider({ Title = "Velocidad", Step = 1, Value = { Min = 16, Max = 200, Default = 16 }, Callback = function(v) getgenv().PlayerSpeedValue = v ; if getgenv().SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character.Humanoid.WalkSpeed = v end end })
-Tabs.Movement:Toggle({ Title = "Infinite Jump", Value = false, Callback = function(v) getgenv().InfJumpEnabled = v end })
-Tabs.Movement:Toggle({ Title = "Noclip", Value = false, Callback = function(v) getgenv().NoclipEnabled = v end })
-Tabs.Movement:Toggle({ Title = "SpinBot", Value = false, Callback = function(v) getgenv().SpinBotEnabled = v end })
+Tabs.Movement:Toggle({ Title = "Infinite Jump", Value = Config.InfJumpEnabled, Callback = function(v) getgenv().InfJumpEnabled = v Config.InfJumpEnabled = v SaveConfig() end })
+Tabs.Movement:Toggle({ Title = "Noclip", Value = Config.NoclipEnabled, Callback = function(v) getgenv().NoclipEnabled = v Config.NoclipEnabled = v SaveConfig() end })
+Tabs.Movement:Toggle({ Title = "SpinBot", Value = Config.SpinBotEnabled, Callback = function(v) getgenv().SpinBotEnabled = v Config.SpinBotEnabled = v SaveConfig() end })
 Tabs.Movement:Slider({ Title = "Velocidad SpinBot", Step = 5, Value = { Min = 10, Max = 500, Default = 120 }, Callback = function(v) getgenv().SpinSpeed = v end })
 
--- [ SECCIÓN VISUAL (XRAY, STRETCHED Y ESP) ]
-Tabs.Visual:Section({ Title = "X-Ray (Ver a través de paredes)" })
-Tabs.Visual:Toggle({ Title = "Activar X-Ray", Value = false, Callback = function(v)
-    getgenv().XRayEnabled = v
+Tabs.Movement:Section({ Title = "Invisibilidad & Desync" })
+Tabs.Movement:Toggle({ Title = "Invisibilidad FE (Sin Bugs de Movimiento)", Value = Config.InvisibleEnabled, Callback = function(v)
+    getgenv().InvisibleEnabled = v
+    Config.InvisibleEnabled = v
+    SaveConfig()
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
     if v then
-        -- Activar X-Ray: Guardar transparencias originales y hacer transparentes
+        -- Guardar transparencias originales
+        originalPartsTransparency = {}
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                originalPartsTransparency[part] = part.Transparency
+            end
+        end
+        
+        -- Crear clon estático (NO se mueve, solo es decorativo para otros)
+        char.Archivable = true
+        cloneModel = char:Clone()
+        cloneModel.Name = LocalPlayer.Name .. "_Invisible"
+        for _, part in ipairs(cloneModel:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 1 -- Completamente invisible
+                part.CanCollide = false
+            end
+        end
+        cloneModel.Parent = workspace
+        
+        -- Hacer invisible para los demás jugadores (transparencia total)
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 1
+                part.CanCollide = false
+            end
+        end
+        
+        -- Hacer semi-transparente para ti mismo (0.5 = medio visible)
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Transparency = 0.5
+            end
+        end
+        
+        -- NO mover el personaje - tu movimiento queda 100% normal
+        -- El clon se queda en la posición original para que otros vean algo ahí
+        
+    else
+        -- Restaurar todo
+        if cloneModel then
+            cloneModel:Destroy()
+            cloneModel = nil
+        end
+        
+        -- Restaurar transparencias originales
+        for part, transparency in pairs(originalPartsTransparency) do
+            if part and part.Parent then
+                part.Transparency = transparency
+                part.CanCollide = true
+            end
+        end
+        originalPartsTransparency = {}
+    end
+end })
+
+-- [ SECCIÓN VISUAL ]
+Tabs.Visual:Section({ Title = "X-Ray (Ver a través de paredes)" })
+Tabs.Visual:Toggle({ Title = "Activar X-Ray", Value = Config.XRayEnabled, Callback = function(v)
+    getgenv().XRayEnabled = v
+    Config.XRayEnabled = v
+    SaveConfig()
+    if v then
         if not xrayApplied then
-            originalTransparencies = {}  -- Limpiar el diccionario
+            originalTransparencies = {}
             for _, part in ipairs(workspace:GetDescendants()) do
                 if part:IsA("BasePart") and not part:IsDescendantOf(LocalPlayer.Character) then
-                    -- Guardar la transparencia original
                     originalTransparencies[part] = part.Transparency
-                    -- Hacer transparente si no lo está ya
                     if part.Transparency < 0.5 then
                         part.Transparency = 0.7
                     end
@@ -305,24 +450,24 @@ Tabs.Visual:Toggle({ Title = "Activar X-Ray", Value = false, Callback = function
             xrayApplied = true
         end
     else
-        -- Desactivar X-Ray: Restaurar transparencias originales
         if xrayApplied then
             for part, originalTransparency in pairs(originalTransparencies) do
-                if part and part.Parent then  -- Verificar que la parte aún existe
+                if part and part.Parent then
                     part.Transparency = originalTransparency
                 end
             end
-            originalTransparencies = {}  -- Limpiar el diccionario
+            originalTransparencies = {}
             xrayApplied = false
         end
     end
 end })
 
 Tabs.Visual:Section({ Title = "ESP (Ver jugadores a través de paredes)" })
-Tabs.Visual:Toggle({ Title = "Activar ESP", Value = false, Callback = function(v)
+Tabs.Visual:Toggle({ Title = "Activar ESP", Value = Config.ESPEnabled, Callback = function(v)
     getgenv().ESPEnabled = v
+    Config.ESPEnabled = v
+    SaveConfig()
     if not v then
-        -- Limpiar todos los dibujos ESP
         for player, drawings in pairs(espObjects) do
             for _, drawing in pairs(drawings) do
                 if drawing then
@@ -335,16 +480,18 @@ Tabs.Visual:Toggle({ Title = "Activar ESP", Value = false, Callback = function(v
     end
 end })
 
-Tabs.Visual:Toggle({ Title = "Mostrar Cajas (Box)", Value = true, Callback = function(v) getgenv().ESPBoxEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Líneas (Line)", Value = true, Callback = function(v) getgenv().ESPLineEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Nombres", Value = true, Callback = function(v) getgenv().ESPNameEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Salud", Value = true, Callback = function(v) getgenv().ESPHealthEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = true, Callback = function(v) getgenv().ESPDistanceEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Cajas (Box)", Value = Config.ESPBoxEnabled, Callback = function(v) getgenv().ESPBoxEnabled = v Config.ESPBoxEnabled = v SaveConfig() end })
+Tabs.Visual:Toggle({ Title = "Mostrar Líneas (Line)", Value = Config.ESPLineEnabled, Callback = function(v) getgenv().ESPLineEnabled = v Config.ESPLineEnabled = v SaveConfig() end })
+Tabs.Visual:Toggle({ Title = "Mostrar Nombres", Value = Config.ESPNameEnabled, Callback = function(v) getgenv().ESPNameEnabled = v Config.ESPNameEnabled = v SaveConfig() end })
+Tabs.Visual:Toggle({ Title = "Mostrar Salud", Value = Config.ESPHealthEnabled, Callback = function(v) getgenv().ESPHealthEnabled = v Config.ESPHealthEnabled = v SaveConfig() end })
+Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = Config.ESPDistanceEnabled, Callback = function(v) getgenv().ESPDistanceEnabled = v Config.ESPDistanceEnabled = v SaveConfig() end })
 Tabs.Visual:Slider({ Title = "Grosor de Líneas", Step = 0.5, Value = { Min = 0.5, Max = 5, Default = 1.5 }, Callback = function(v) getgenv().ESPThickness = v end })
 
 Tabs.Visual:Section({ Title = "Pantalla Estirada (Stretched REAL)" })
-Tabs.Visual:Toggle({ Title = "Activar Stretched Screen", Value = false, Callback = function(v) 
+Tabs.Visual:Toggle({ Title = "Activar Stretched Screen", Value = Config.StretchedEnabled, Callback = function(v) 
     getgenv().StretchedEnabled = v 
+    Config.StretchedEnabled = v
+    SaveConfig()
     if v then
         ApplyRealStretch()
     else
@@ -360,35 +507,24 @@ Tabs.Visual:Slider({ Title = "Intensidad Estiramiento", Step = 0.01, Value = { M
 end })
 
 -- [ SECCIÓN KILL SOUND ]
-Tabs.KillSound:Section({ Title = "Kill Sound (Arreglado para PC y Móvil)" })
-
+Tabs.KillSound:Section({ Title = "Kill Sound" })
 Tabs.KillSound:Toggle({
     Title = "Activar Kill Sound",
-    Value = false,
+    Value = Config.KillSoundEnabled,
     Callback = function(v)
         getgenv().KillSoundEnabled = v
+        Config.KillSoundEnabled = v
+        SaveConfig()
     end
 })
 
-local KillSoundDropdown = Tabs.KillSound:Dropdown({
+Tabs.KillSound:Dropdown({
     Title = "Seleccionar Kill Sound",
-    Values = {
-        "💀 Death Note",
-        "🔥 Fire Blast",
-        "⚡ Thunder Clap",
-        "💥 Boom Headshot",
-        "👻 Ghost Bite",
-        "🎯 Bullseye",
-        "🩸 Blood Moon",
-        "💀 Dark Reaper",
-        "🔪 Silent Kill"
-    },
+    Values = { "💀 Death Note", "🔥 Fire Blast", "⚡ Thunder Clap", "💥 Boom Headshot", "👻 Ghost Bite", "🎯 Bullseye", "🩸 Blood Moon", "💀 Dark Reaper", "🔪 Silent Kill" },
     Value = "🎯 Bullseye",
     Callback = function(selected)
         local soundId = KillSoundCodes[selected]
-        if soundId then
-            getgenv().SelectedKillSound = soundId
-        end
+        if soundId then getgenv().SelectedKillSound = soundId end
     end
 })
 
@@ -404,14 +540,11 @@ Tabs.KillSound:Button({
 
 -- [ SECCIÓN MÚSICA ]
 Tabs.Music:Section({ Title = "Reproductor de Música" })
-
--- Variables de música
-getgenv().MusicEnabled = false
+getgenv().MusicEnabled = Config.MusicEnabled
 getgenv().SelectedMusic = nil
 getgenv().MusicVolume = 0.5
 getgenv().MusicLoop = false
 
--- Códigos de música (CON NOMBRES CON FLOW)
 local MusicCodes = {
     ["🎵 Night Drive"] = 100435902275131,
     ["🌙 Moonlight"] = 94281718874647,
@@ -423,7 +556,6 @@ local MusicCodes = {
     ["🎧 Bass Drop"] = 107670524299289
 }
 
--- Crear instancia de sonido para música
 local musicInstance = Instance.new("Sound")
 musicInstance.Name = "RedDavilMusic"
 musicInstance.Volume = getgenv().MusicVolume
@@ -432,9 +564,11 @@ musicInstance.Parent = SoundService
 
 Tabs.Music:Toggle({
     Title = "Activar Música",
-    Value = false,
+    Value = Config.MusicEnabled,
     Callback = function(v)
         getgenv().MusicEnabled = v
+        Config.MusicEnabled = v
+        SaveConfig()
         if v and getgenv().SelectedMusic then
             musicInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedMusic)
             musicInstance:Play()
@@ -446,16 +580,7 @@ Tabs.Music:Toggle({
 
 Tabs.Music:Dropdown({
     Title = "Seleccionar Canción",
-    Values = {
-        "🎵 Night Drive",
-        "🌙 Moonlight",
-        "⚡ Electric",
-        "🔥 Fire Flow",
-        "💎 Diamond",
-        "🌊 Ocean Wave",
-        "🚀 Sky High",
-        "🎧 Bass Drop"
-    },
+    Values = { "🎵 Night Drive", "🌙 Moonlight", "⚡ Electric", "🔥 Fire Flow", "💎 Diamond", "🌊 Ocean Wave", "🚀 Sky High", "🎧 Bass Drop" },
     Value = "🎵 Night Drive",
     Callback = function(selected)
         local musicId = MusicCodes[selected]
@@ -469,262 +594,24 @@ Tabs.Music:Dropdown({
     end
 })
 
-Tabs.Music:Slider({
-    Title = "Volumen",
-    Step = 0.1,
-    Value = { Min = 0, Max = 1, Default = 0.5 },
-    Callback = function(v)
-        getgenv().MusicVolume = v
-        musicInstance.Volume = v
-    end
-})
+Tabs.Music:Slider({ Title = "Volumen", Step = 0.1, Value = { Min = 0, Max = 1, Default = 0.5 }, Callback = function(v) getgenv().MusicVolume = v musicInstance.Volume = v end })
+Tabs.Music:Toggle({ Title = "Repetir Canción", Value = false, Callback = function(v) getgenv().MusicLoop = v musicInstance.Looped = v end })
+Tabs.Music:Button({ Title = "▶️ Reproducir", Callback = function() if getgenv().SelectedMusic then musicInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedMusic) musicInstance:Play() end end })
+Tabs.Music:Button({ Title = "⏸️ Pausar", Callback = function() musicInstance:Pause() end })
+Tabs.Music:Button({ Title = "⏹️ Detener", Callback = function() musicInstance:Stop() end })
 
-Tabs.Music:Toggle({
-    Title = "Repetir Canción",
-    Value = false,
-    Callback = function(v)
-        getgenv().MusicLoop = v
-        musicInstance.Looped = v
-    end
-})
+-- [ SECCIÓN SETTINGS - SIMPLIFICADA ]
+Tabs.Settings:Section({ Title = "Configuración" })
 
-Tabs.Music:Button({
-    Title = "▶️ Reproducir",
-    Callback = function()
-        if getgenv().SelectedMusic then
-            musicInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedMusic)
-            musicInstance:Play()
-        end
-    end
-})
-
-Tabs.Music:Button({
-    Title = "⏸️ Pausar",
-    Callback = function()
-        musicInstance:Pause()
-    end
-})
-
-Tabs.Music:Button({
-    Title = "⏹️ Detener",
-    Callback = function()
-        musicInstance:Stop()
-    end
-})
-
--- [ SECCIÓN SETTINGS - PERSONALIZACIÓN DEL MENÚ ]
-Tabs.Settings:Section({ Title = "Personalización del Menú" })
-
--- Tema del menú
-Tabs.Settings:Dropdown({
-    Title = "Tema del Menú",
-    Values = { "Dark", "Darker", "Light", "Midnight", "Ocean", "Sunset" },
-    Value = "Dark",
-    Callback = function(v)
-        getgenv().MenuTheme = v
-        ApplyMenuTheme()
-    end
-})
-
--- Color principal del menú
-Tabs.Settings:Dropdown({
-    Title = "Color Principal",
-    Values = { "Morado", "Azul", "Rojo", "Verde", "Naranja", "Rosa", "Cian", "Amarillo", "Blanco" },
-    Value = "Morado",
-    Callback = function(v)
-        local colors = {
-            ["Morado"] = Color3.fromRGB(138, 43, 226),
-            ["Azul"] = Color3.fromRGB(0, 100, 255),
-            ["Rojo"] = Color3.fromRGB(255, 0, 0),
-            ["Verde"] = Color3.fromRGB(0, 255, 0),
-            ["Naranja"] = Color3.fromRGB(255, 128, 0),
-            ["Rosa"] = Color3.fromRGB(255, 0, 128),
-            ["Cian"] = Color3.fromRGB(0, 255, 255),
-            ["Amarillo"] = Color3.fromRGB(255, 255, 0),
-            ["Blanco"] = Color3.fromRGB(255, 255, 255)
-        }
-        getgenv().MenuColor = colors[v] or Color3.fromRGB(138, 43, 226)
-        ApplyMenuTheme()
-    end
-})
-
--- Transparencia del menú
-Tabs.Settings:Slider({
-    Title = "Transparencia del Menú",
-    Step = 0.05,
-    Value = { Min = 0, Max = 1, Default = 0.3 },
-    Callback = function(v)
-        getgenv().MenuTransparency = v
-        ApplyMenuTheme()
-    end
-})
-
--- Botón para restablecer colores
+-- Botón para guardar configuración manualmente
 Tabs.Settings:Button({
-    Title = "🔄 Restablecer Colores",
+    Title = "💾 Guardar Configuración",
     Callback = function()
-        getgenv().MenuTheme = "Dark"
-        getgenv().MenuColor = Color3.fromRGB(138, 43, 226)
-        getgenv().MenuTransparency = 0.3
-        ApplyMenuTheme()
+        SaveConfig()
     end
 })
 
--- [ SECCIÓN SETTINGS - OPCIONES BÁSICAS ]
-Tabs.Settings:Section({ Title = "Opciones Básicas" })
-
--- Mostrar FPS
-Tabs.Settings:Toggle({
-    Title = "Mostrar FPS",
-    Value = false,
-    Callback = function(v)
-        getgenv().ShowFPS = v
-        if v then
-            -- Crear FPS counter
-            if not getgenv().FPSCounter then
-                local fpsGui = Instance.new("ScreenGui")
-                fpsGui.Name = "FPSCounter"
-                fpsGui.ResetOnSpawn = false
-                fpsGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-                
-                local fpsLabel = Instance.new("TextLabel")
-                fpsLabel.Name = "FPSLabel"
-                fpsLabel.Size = UDim2.fromOffset(100, 30)
-                fpsLabel.Position = UDim2.new(0, 10, 0, 10)
-                fpsLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                fpsLabel.BackgroundTransparency = 0.5
-                fpsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                fpsLabel.TextSize = 16
-                fpsLabel.Font = Enum.Font.GothamBold
-                fpsLabel.Parent = fpsGui
-                
-                getgenv().FPSCounter = fpsLabel
-                
-                -- Actualizar FPS
-                task.spawn(function()
-                    local lastTime = tick()
-                    local frames = 0
-                    while getgenv().ShowFPS do
-                        task.wait(0.1)
-                        frames = frames + 1
-                        if tick() - lastTime >= 1 then
-                            local fps = math.floor(frames / (tick() - lastTime))
-                            if getgenv().FPSCounter then
-                                getgenv().FPSCounter.Text = "FPS: " .. tostring(fps)
-                            end
-                            frames = 0
-                            lastTime = tick()
-                        end
-                    end
-                end)
-            end
-        else
-            -- Eliminar FPS counter
-            if getgenv().FPSCounter then
-                getgenv().FPSCounter.Parent:Destroy()
-                getgenv().FPSCounter = nil
-            end
-        end
-    end
-})
-
--- Mostrar ping
-Tabs.Settings:Toggle({
-    Title = "Mostrar Ping",
-    Value = false,
-    Callback = function(v)
-        getgenv().ShowPing = v
-        if v then
-            -- Crear ping counter
-            if not getgenv().PingCounter then
-                local pingGui = Instance.new("ScreenGui")
-                pingGui.Name = "PingCounter"
-                pingGui.ResetOnSpawn = false
-                pingGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-                
-                local pingLabel = Instance.new("TextLabel")
-                pingLabel.Name = "PingLabel"
-                pingLabel.Size = UDim2.fromOffset(100, 30)
-                pingLabel.Position = UDim2.new(0, 10, 0, 50)
-                pingLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                pingLabel.BackgroundTransparency = 0.5
-                pingLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                pingLabel.TextSize = 16
-                pingLabel.Font = Enum.Font.GothamBold
-                pingLabel.Parent = pingGui
-                
-                getgenv().PingCounter = pingLabel
-                
-                -- Actualizar ping
-                task.spawn(function()
-                    while getgenv().ShowPing do
-                        task.wait(1)
-                        if getgenv().PingCounter then
-                            local ping = game:GetService("Stats").Network.ServerStatsItem.Ping:GetValue()
-                            getgenv().PingCounter.Text = "Ping: " .. tostring(math.floor(ping)) .. "ms"
-                        end
-                    end
-                end)
-            end
-        else
-            -- Eliminar ping counter
-            if getgenv().PingCounter then
-                getgenv().PingCounter.Parent:Destroy()
-                getgenv().PingCounter = nil
-            end
-        end
-    end
-})
-
--- Mostrar hora
-Tabs.Settings:Toggle({
-    Title = "Mostrar Hora",
-    Value = false,
-    Callback = function(v)
-        getgenv().ShowTime = v
-        if v then
-            -- Crear time counter
-            if not getgenv().TimeCounter then
-                local timeGui = Instance.new("ScreenGui")
-                timeGui.Name = "TimeCounter"
-                timeGui.ResetOnSpawn = false
-                timeGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-                
-                local timeLabel = Instance.new("TextLabel")
-                timeLabel.Name = "TimeLabel"
-                timeLabel.Size = UDim2.fromOffset(100, 30)
-                timeLabel.Position = UDim2.new(0, 10, 0, 90)
-                timeLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-                timeLabel.BackgroundTransparency = 0.5
-                timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                timeLabel.TextSize = 16
-                timeLabel.Font = Enum.Font.GothamBold
-                timeLabel.Parent = timeGui
-                
-                getgenv().TimeCounter = timeLabel
-                
-                -- Actualizar hora
-                task.spawn(function()
-                    while getgenv().ShowTime do
-                        task.wait(1)
-                        if getgenv().TimeCounter then
-                            local time = os.date("%H:%M:%S")
-                            getgenv().TimeCounter.Text = "Hora: " .. time
-                        end
-                    end
-                end)
-            end
-        else
-            -- Eliminar time counter
-            if getgenv().TimeCounter then
-                getgenv().TimeCounter.Parent:Destroy()
-                getgenv().TimeCounter = nil
-            end
-        end
-    end
-})
-
--- Botón para cerrar el menú
+-- Botón para cerrar menú
 Tabs.Settings:Button({
     Title = "❌ Cerrar Menú",
     Callback = function()
@@ -734,7 +621,7 @@ Tabs.Settings:Button({
     end
 })
 
--- Botón para reiniciar el script
+-- Botón para reiniciar script
 Tabs.Settings:Button({
     Title = "🔄 Reiniciar Script",
     Callback = function()
@@ -744,63 +631,9 @@ Tabs.Settings:Button({
     end
 })
 
--- Función para aplicar el tema del menú
-function ApplyMenuTheme()
-    pcall(function()
-        -- Aplicar tema
-        local themes = {
-            ["Dark"] = { bg = Color3.fromRGB(20, 20, 20), text = Color3.fromRGB(255, 255, 255) },
-            ["Darker"] = { bg = Color3.fromRGB(10, 10, 10), text = Color3.fromRGB(255, 255, 255) },
-            ["Light"] = { bg = Color3.fromRGB(240, 240, 240), text = Color3.fromRGB(0, 0, 0) },
-            ["Midnight"] = { bg = Color3.fromRGB(5, 5, 20), text = Color3.fromRGB(200, 200, 255) },
-            ["Ocean"] = { bg = Color3.fromRGB(0, 50, 100), text = Color3.fromRGB(255, 255, 255) },
-            ["Sunset"] = { bg = Color3.fromRGB(100, 30, 50), text = Color3.fromRGB(255, 255, 200) }
-        }
-        
-        local theme = themes[getgenv().MenuTheme] or themes["Dark"]
-        
-        -- Aplicar colores al menú
-        if Window and Window.UI then
-            -- Cambiar color de fondo
-            for _, v in ipairs(Window.UI:GetDescendants()) do
-                if v:IsA("Frame") or v:IsA("ScrollingFrame") then
-                    if v.Name:find("Background") or v.Name:find("Main") or v.Name:find("Container") then
-                        v.BackgroundColor3 = theme.bg
-                        v.BackgroundTransparency = getgenv().MenuTransparency
-                    end
-                end
-                if v:IsA("TextLabel") or v:IsA("TextButton") then
-                    if v.TextColor3 == Color3.fromRGB(255, 255, 255) then
-                        v.TextColor3 = theme.text
-                    end
-                end
-            end
-            
-            -- Cambiar color de acento
-            for _, v in ipairs(Window.UI:GetDescendants()) do
-                if v:IsA("Frame") or v:IsA("TextButton") then
-                    if v.BackgroundColor3 == Color3.fromRGB(138, 43, 226) then
-                        v.BackgroundColor3 = getgenv().MenuColor
-                    end
-                end
-            end
-        end
-        
-        -- Actualizar botón flotante
-        reopenFrame.BackgroundColor3 = getgenv().MenuColor
-    end)
-end
-
--- Aplicar tema inicial
-task.spawn(function()
-    task.wait(1)
-    ApplyMenuTheme()
-end)
-
 -- =====================================================
---  SISTEMA DE KILL SOUND ULTRA ESTRICTO (SOLO TUS KILLS)
+--  SISTEMA DE KILL SOUND ULTRA ESTRICTO
 -- =====================================================
-
 local function playKillSound()
     if getgenv().KillSoundEnabled and soundInstance and getgenv().SelectedKillSound then
         soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
@@ -815,31 +648,19 @@ end
 
 local function didLocalPlayerKill(victim)
     if not victim or not victim.Character then return false end
-    
     local hum = victim.Character:FindFirstChildOfClass("Humanoid")
     if not hum then return false end
-    
     local creatorTag = hum:FindFirstChild("creator")
-    if creatorTag and creatorTag:IsA("ObjectValue") and creatorTag.Value == LocalPlayer then
-        return true
-    end
-    
+    if creatorTag and creatorTag:IsA("ObjectValue") and creatorTag.Value == LocalPlayer then return true end
     local lastHit = myLastHitTime[victim]
-    if lastHit and (tick() - lastHit) <= 1.5 then
-        return true
-    end
-    
+    if lastHit and (tick() - lastHit) <= 1.5 then return true end
     local damage = myDamageDealt[victim] or 0
-    if damage > (hum.MaxHealth * 0.5) then
-        return true
-    end
-    
+    if damage > (hum.MaxHealth * 0.5) then return true end
     return false
 end
 
 local function setupDamageTracker(player)
     if player == LocalPlayer then return end
-    
     myKillTracker[player] = false
     myLastHitTime[player] = 0
     myDamageDealt[player] = 0
@@ -848,10 +669,8 @@ local function setupDamageTracker(player)
         myKillTracker[player] = false
         myLastHitTime[player] = 0
         myDamageDealt[player] = 0
-        
         local hum = char:WaitForChild("Humanoid", 10)
         if not hum then return end
-        
         local lastHealth = hum.Health
         hum.HealthChanged:Connect(function(newHealth)
             if newHealth < lastHealth then
@@ -865,205 +684,96 @@ local function setupDamageTracker(player)
                 end
             end
             lastHealth = newHealth
-            
             if newHealth <= 0 and lastHealth > 0 and not myKillTracker[player] then
                 myKillTracker[player] = true
-                if didLocalPlayerKill(player) then
-                    playKillSound()
-                end
+                if didLocalPlayerKill(player) then playKillSound() end
             end
         end)
-        
         hum.Died:Connect(function()
             if not myKillTracker[player] then
                 myKillTracker[player] = true
-                if didLocalPlayerKill(player) then
-                    playKillSound()
-                end
+                if didLocalPlayerKill(player) then playKillSound() end
             end
         end)
     end
-    
     if player.Character then onCharacterAdded(player.Character) end
     player.CharacterAdded:Connect(onCharacterAdded)
 end
 
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then setupDamageTracker(p) end
-end
-Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then setupDamageTracker(p) end
-end)
-
-Players.PlayerRemoving:Connect(function(p)
-    myKillTracker[p] = nil
-    myLastHitTime[p] = nil
-    myDamageDealt[p] = nil
-end)
+for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer then setupDamageTracker(p) end end
+Players.PlayerAdded:Connect(function(p) if p ~= LocalPlayer then setupDamageTracker(p) end end)
+Players.PlayerRemoving:Connect(function(p) myKillTracker[p] = nil myLastHitTime[p] = nil myDamageDealt[p] = nil end)
 
 -- =====================================================
---  NUEVO TEAM CHECK ULTRA-ESTRICTO (A MI MANERA)
+--  TEAM CHECK & UTILIDADES
 -- =====================================================
-
 function isTeammate(player)
     if player == LocalPlayer then return true end
     if not getgenv().TeamCheckEnabled then return false end
-    
-    -- Método 1: Comparar Teams directamente
-    if LocalPlayer.Team and player.Team then
-        if LocalPlayer.Team == player.Team then
-            return true
-        end
-    end
-    
-    -- Método 2: Comparar TeamColor
-    if LocalPlayer.TeamColor and player.TeamColor then
-        if LocalPlayer.TeamColor == player.TeamColor then
-            return true
-        end
-    end
-    
-    -- Método 3: Verificar si están en el mismo grupo (si aplica)
-    if LocalPlayer:IsInGroup(player.UserId) then
-        return true
-    end
-    
-    -- Método 4: Verificar si tienen el mismo nombre de equipo en el Character
-    local lpChar = LocalPlayer.Character
-    local pChar = player.Character
-    if lpChar and pChar then
-        local lpTeam = lpChar:FindFirstChild("Team")
-        local pTeam = pChar:FindFirstChild("Team")
-        if lpTeam and pTeam and lpTeam.Value == pTeam.Value then
-            return true
-        end
-    end
-    
-    -- Método 5: Verificar si el color de su ropa es similar (para juegos sin sistema de equipos)
-    if lpChar and pChar then
-        local lpShirt = lpChar:FindFirstChildOfClass("Shirt")
-        local pShirt = pChar:FindFirstChildOfClass("Shirt")
-        if lpShirt and pShirt then
-            local lpColor = lpShirt.Color
-            local pColor = pShirt.Color
-            if lpColor and pColor then
-                local diff = (lpColor.R - pColor.R)^2 + (lpColor.G - pColor.G)^2 + (lpColor.B - pColor.B)^2
-                if diff < 0.1 then
-                    return true
-                end
-            end
-        end
-    end
-    
+    if LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then return true end
+    if LocalPlayer.TeamColor and player.TeamColor and LocalPlayer.TeamColor == player.TeamColor then return true end
+    if LocalPlayer:IsInGroup(player.UserId) then return true end
     return false
 end
 
 function getTeamColor(player)
-    if isTeammate(player) then
-        return Color3.fromRGB(0, 255, 0)
-    else
-        return Color3.fromRGB(255, 0, 0)
-    end
+    if isTeammate(player) then return Color3.fromRGB(0, 255, 0) else return Color3.fromRGB(255, 0, 0) end
 end
-
--- =====================================================
---  SISTEMA DE VISIBILIDAD REAL PARA TRIGGERBOT (MEJORADO)
--- =====================================================
 
 function isEnemyVisible(player)
     if not player or not player.Character then return false end
-    
     local char = player.Character
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local head = char:FindFirstChild("Head")
     local hum = char:FindFirstChildOfClass("Humanoid")
-    
     if not hrp or not hum or hum.Health <= 0 then return false end
-    
     local camPos = Camera.CFrame.Position
     local camLook = Camera.CFrame.LookVector
-    
-    -- Determinar qué parte usar como objetivo
     local targetPart = head or hrp
-    if getgenv().TriggerbotHeadshot and head then
-        targetPart = head
-    end
-    
+    if getgenv().TriggerbotHeadshot and head then targetPart = head end
     local targetPos = targetPart.Position
-    
-    -- Verificar distancia
     local distance = (targetPos - camPos).Magnitude
     if distance > getgenv().TriggerbotRange then return false end
-    
-    -- Verificar ángulo de visión (FOV)
     local toTarget = (targetPos - camPos).Unit
     local angle = math.acos(math.clamp(camLook:Dot(toTarget), -1, 1))
-    local angleDeg = math.deg(angle)
-    
-    if angleDeg > getgenv().TriggerbotFOV / 2 then return false end
-    
-    -- Raycast para verificar visibilidad
+    if math.deg(angle) > getgenv().TriggerbotFOV / 2 then return false end
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {LocalPlayer.Character, char}
     params.IgnoreWater = true
-    
     local raycastResult = workspace:Raycast(camPos, (targetPos - camPos).Unit * distance, params)
-    
-    if not raycastResult then
-        return true
-    end
-    
+    if not raycastResult then return true end
     local hitPart = raycastResult.Instance
-    if hitPart and hitPart:IsDescendantOf(char) then
-        return true
-    end
-    
+    if hitPart and hitPart:IsDescendantOf(char) then return true end
     return false
 end
 
--- Función para encontrar el mejor objetivo visible
 function findBestTarget()
     local bestTarget = nil
     local bestDistance = math.huge
-    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and not isTeammate(player) and player.Character then
             local hum = player.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                if isEnemyVisible(player) then
-                    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp then
-                        local distance = (hrp.Position - Camera.CFrame.Position).Magnitude
-                        if distance < bestDistance then
-                            bestDistance = distance
-                            bestTarget = player
-                        end
+            if hum and hum.Health > 0 and isEnemyVisible(player) then
+                local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local distance = (hrp.Position - Camera.CFrame.Position).Magnitude
+                    if distance < bestDistance then
+                        bestDistance = distance
+                        bestTarget = player
                     end
                 end
             end
         end
     end
-    
     return bestTarget
 end
 
--- Función para disparar
 function shoot()
     local tool = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Tool")
     if not tool then return end
-    
-    -- Verificar si el arma tiene un evento de disparo
     local remoteEvent = tool:FindFirstChild("RemoteEvent") or tool:FindFirstChild("Fire") or tool:FindFirstChild("Shoot")
-    
-    if remoteEvent then
-        -- Intentar disparar a través del RemoteEvent
-        pcall(function()
-            remoteEvent:FireServer()
-        end)
-    end
-    
-    -- También intentar con VirtualUser como respaldo
+    if remoteEvent then pcall(function() remoteEvent:FireServer() end) end
     pcall(function()
         VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
         task.wait(0.05)
@@ -1071,35 +781,23 @@ function shoot()
     end)
 end
 
--- TRIGGERBOT MEJORADO CON DISPARO AUTOMÁTICO
 task.spawn(function()
     while task.wait(0.01) do
         pcall(function()
             if getgenv().TriggerbotEnabled then
                 local target = findBestTarget()
-                
                 if target then
-                    -- Apuntar al objetivo si el aimbot está desactivado
                     if not getgenv().AimbotEnabled then
                         local char = target.Character
                         local hrp = char and char:FindFirstChild("HumanoidRootPart")
                         local head = char and char:FindFirstChild("Head")
-                        
                         if hrp then
                             local targetPart = head or hrp
-                            if getgenv().TriggerbotHeadshot and head then
-                                targetPart = head
-                            end
-                            
-                            -- Apuntar la cámara al objetivo
+                            if getgenv().TriggerbotHeadshot and head then targetPart = head end
                             Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
                         end
                     end
-                    
-                    -- Disparar
                     shoot()
-                    
-                    -- Pequeña pausa entre disparos
                     task.wait(getgenv().TriggerbotDelay)
                 end
             end
@@ -1107,7 +805,6 @@ task.spawn(function()
     end
 end)
 
--- [ FUNCIÓN REAL DE STRETCHED SCREEN ]
 local stretchConnection = nil
 function ApplyRealStretch()
     if stretchConnection then stretchConnection:Disconnect() end
@@ -1119,14 +816,12 @@ function ApplyRealStretch()
     end)
 end
 
--- [ LÓGICA INTERNA DE FOV Y VISIBILIDAD ]
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 1.5
 fovCircle.Filled = false
 fovCircle.Transparency = 1
 
 local function getClosestTargetUniversal()
-    local Camera = workspace.CurrentCamera
     local closestPart = nil
     local shortestDist = getgenv().FovRadius
     local centerScreen = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -1151,182 +846,78 @@ local function getClosestTargetUniversal()
     return closestPart
 end
 
--- =====================================================
---  SISTEMA ESP (Ver jugadores a través de paredes)
--- =====================================================
-
--- Función para crear los dibujos ESP para un jugador
 local function createESPDrawings(player)
     if espObjects[player] then return end
-    
     local drawings = {}
-    
-    -- Caja (Box)
-    local box = Drawing.new("Square")
-    box.Thickness = getgenv().ESPThickness
-    box.Transparency = 1
-    box.Visible = false
-    drawings.Box = box
-    
-    -- Línea desde el centro de la pantalla
-    local line = Drawing.new("Line")
-    line.Thickness = getgenv().ESPThickness
-    line.Transparency = 1
-    line.Visible = false
-    drawings.Line = line
-    
-    -- Nombre
-    local name = Drawing.new("Text")
-    name.Size = 14
-    name.Center = true
-    name.Outline = true
-    name.Visible = false
-    drawings.Name = name
-    
-    -- Salud
-    local health = Drawing.new("Text")
-    health.Size = 12
-    health.Center = true
-    health.Outline = true
-    health.Visible = false
-    drawings.Health = health
-    
-    -- Distancia
-    local distance = Drawing.new("Text")
-    distance.Size = 12
-    distance.Center = true
-    distance.Outline = true
-    distance.Visible = false
-    drawings.Distance = distance
-    
+    local box = Drawing.new("Square") box.Thickness = getgenv().ESPThickness box.Transparency = 1 box.Visible = false drawings.Box = box
+    local line = Drawing.new("Line") line.Thickness = getgenv().ESPThickness line.Transparency = 1 line.Visible = false drawings.Line = line
+    local name = Drawing.new("Text") name.Size = 14 name.Center = true name.Outline = true name.Visible = false drawings.Name = name
+    local health = Drawing.new("Text") health.Size = 12 health.Center = true health.Outline = true health.Visible = false drawings.Health = health
+    local distance = Drawing.new("Text") distance.Size = 12 distance.Center = true distance.Outline = true distance.Visible = false drawings.Distance = distance
     espObjects[player] = drawings
 end
 
--- Función para actualizar los dibujos ESP
 local function updateESP()
     if not getgenv().ESPEnabled then return end
-    
-    local camera = workspace.CurrentCamera
-    local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
-    
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local char = player.Character
             local hum = char:FindFirstChildOfClass("Humanoid")
             local hrp = char:FindFirstChild("HumanoidRootPart")
             local head = char:FindFirstChild("Head")
-            
             if hum and hum.Health > 0 and hrp and head then
-                -- Crear dibujos si no existen
                 createESPDrawings(player)
                 local drawings = espObjects[player]
-                
-                -- Determinar color (rojo para enemigos, verde para aliados)
                 local color = getTeamColor(player)
-                
-                -- Obtener posición en pantalla
-                local headPos, headOnScreen = camera:WorldToViewportPoint(head.Position)
-                local rootPos, rootOnScreen = camera:WorldToViewportPoint(hrp.Position)
-                
+                local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
+                local rootPos, rootOnScreen = Camera:WorldToViewportPoint(hrp.Position)
                 if headOnScreen and rootOnScreen then
-                    -- Calcular altura y anchura de la caja
                     local height = math.abs(headPos.Y - rootPos.Y) * 2
                     local width = height * 0.6
-                    
-                    -- Actualizar caja
                     if getgenv().ESPBoxEnabled then
-                        drawings.Box.Visible = true
-                        drawings.Box.Color = color
-                        drawings.Box.Thickness = getgenv().ESPThickness
-                        drawings.Box.Position = Vector2.new(rootPos.X - width/2, rootPos.Y - height/2)
-                        drawings.Box.Size = Vector2.new(width, height)
-                    else
-                        drawings.Box.Visible = false
-                    end
-                    
-                    -- Actualizar línea
+                        drawings.Box.Visible = true drawings.Box.Color = color drawings.Box.Thickness = getgenv().ESPThickness
+                        drawings.Box.Position = Vector2.new(rootPos.X - width/2, rootPos.Y - height/2) drawings.Box.Size = Vector2.new(width, height)
+                    else drawings.Box.Visible = false end
                     if getgenv().ESPLineEnabled then
-                        drawings.Line.Visible = true
-                        drawings.Line.Color = color
-                        drawings.Line.Thickness = getgenv().ESPThickness
-                        drawings.Line.From = screenCenter
-                        drawings.Line.To = Vector2.new(rootPos.X, rootPos.Y)
-                    else
-                        drawings.Line.Visible = false
-                    end
-                    
-                    -- Actualizar nombre
+                        drawings.Line.Visible = true drawings.Line.Color = color drawings.Line.Thickness = getgenv().ESPThickness
+                        drawings.Line.From = screenCenter drawings.Line.To = Vector2.new(rootPos.X, rootPos.Y)
+                    else drawings.Line.Visible = false end
                     if getgenv().ESPNameEnabled then
-                        drawings.Name.Visible = true
-                        drawings.Name.Text = player.Name
-                        drawings.Name.Color = color
+                        drawings.Name.Visible = true drawings.Name.Text = player.Name drawings.Name.Color = color
                         drawings.Name.Position = Vector2.new(rootPos.X, rootPos.Y - height/2 - 20)
-                    else
-                        drawings.Name.Visible = false
-                    end
-                    
-                    -- Actualizar salud
+                    else drawings.Name.Visible = false end
                     if getgenv().ESPHealthEnabled then
-                        drawings.Health.Visible = true
-                        local healthPercent = math.floor((hum.Health / hum.MaxHealth) * 100)
-                        drawings.Health.Text = tostring(healthPercent) .. "%"
-                        drawings.Health.Color = Color3.fromRGB(0, 255, 0)
-                        drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y - height/2 - 5)
-                    else
-                        drawings.Health.Visible = false
-                    end
-                    
-                    -- Actualizar distancia
+                        drawings.Health.Visible = true drawings.Health.Text = math.floor((hum.Health / hum.MaxHealth) * 100) .. "%"
+                        drawings.Health.Color = Color3.fromRGB(0, 255, 0) drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y - height/2 - 5)
+                    else drawings.Health.Visible = false end
                     if getgenv().ESPDistanceEnabled then
-                        drawings.Distance.Visible = true
-                        local dist = math.floor((camera.CFrame.Position - hrp.Position).Magnitude)
-                        drawings.Distance.Text = tostring(dist) .. "m"
-                        drawings.Distance.Color = color
-                        drawings.Distance.Position = Vector2.new(rootPos.X, rootPos.Y + height/2 + 5)
-                    else
-                        drawings.Distance.Visible = false
-                    end
+                        drawings.Distance.Visible = true drawings.Distance.Text = math.floor((Camera.CFrame.Position - hrp.Position).Magnitude) .. "m"
+                        drawings.Distance.Color = color drawings.Distance.Position = Vector2.new(rootPos.X, rootPos.Y + height/2 + 5)
+                    else drawings.Distance.Visible = false end
                 else
-                    -- Ocultar todos los dibujos si no está en pantalla
-                    for _, drawing in pairs(drawings) do
-                        drawing.Visible = false
-                    end
+                    for _, drawing in pairs(drawings) do drawing.Visible = false end
                 end
             else
-                -- Ocultar todos los dibujos si el jugador no es válido
-                if espObjects[player] then
-                    for _, drawing in pairs(espObjects[player]) do
-                        drawing.Visible = false
-                    end
-                end
+                if espObjects[player] then for _, drawing in pairs(espObjects[player]) do drawing.Visible = false end end
             end
         end
     end
 end
 
--- Bucle Principal en RenderStepped
 RunService.RenderStepped:Connect(function()
     pcall(function()
-        local Camera = workspace.CurrentCamera
-
         if getgenv().FovEnabled then
             fovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            fovCircle.Radius = getgenv().FovRadius
-            fovCircle.Color = getgenv().FovColor
-            fovCircle.Visible = true
-        else
-            fovCircle.Visible = false
-        end
+            fovCircle.Radius = getgenv().FovRadius fovCircle.Color = getgenv().FovColor fovCircle.Visible = true
+        else fovCircle.Visible = false end
 
         if getgenv().AimbotEnabled then
             local target = getClosestTargetUniversal()
             if target then
                 local targetCF = CFrame.new(Camera.CFrame.Position, target.Position)
-                if getgenv().AimbotSmooth <= 1 then
-                    Camera.CFrame = targetCF
-                else
-                    Camera.CFrame = Camera.CFrame:Lerp(targetCF, 1 / (getgenv().AimbotSmooth * 0.2))
-                end
+                if getgenv().AimbotSmooth <= 1 then Camera.CFrame = targetCF
+                else Camera.CFrame = Camera.CFrame:Lerp(targetCF, 1 / (getgenv().AimbotSmooth * 0.2)) end
             end
         end
 
@@ -1336,54 +927,39 @@ RunService.RenderStepped:Connect(function()
         end
 
         if getgenv().NoclipEnabled and LocalPlayer.Character then
-            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
         end
 
-        -- Actualizar ESP
         updateESP()
 
-        -- HITBOX PARA TODOS LOS JUGADORES (FIX) - AHORA RESPETA TEAM CHECK
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and not isTeammate(p) then
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
-
                 if hum and hum.Health > 0 and hrp then
                     if getgenv().HitboxEnabled then
                         if not originalHitboxStates[p] then
                             originalHitboxStates[p] = {}
                             for _, name in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
                                 local part = p.Character:FindFirstChild(name)
-                                if part then
-                                    table.insert(originalHitboxStates[p], { Part = part, Size = part.Size, Transparency = part.Transparency, CanCollide = part.CanCollide, Material = part.Material })
-                                end
+                                if part then table.insert(originalHitboxStates[p], { Part = part, Size = part.Size, Transparency = part.Transparency, CanCollide = part.CanCollide, Material = part.Material }) end
                             end
                         end
                         for _, name in ipairs({"Head", "HumanoidRootPart", "UpperTorso"}) do
                             local part = p.Character:FindFirstChild(name)
                             if part then
                                 part.Size = Vector3.new(getgenv().HitboxSize, getgenv().HitboxSize, getgenv().HitboxSize)
-                                part.Transparency = getgenv().HitboxTransparency
-                                part.Color = getgenv().HitboxColor
-                                part.Material = Enum.Material.Neon
-                                part.CanCollide = false
+                                part.Transparency = getgenv().HitboxTransparency part.Color = getgenv().HitboxColor
+                                part.Material = Enum.Material.Neon part.CanCollide = false
                             end
                         end
                     end
 
                     if getgenv().FreezePlayersEnabled and not isTeammate(p) then
                         if not frozenPlayerPositions[p] then frozenPlayerPositions[p] = hrp.CFrame end
-                        hrp.Anchored = true
-                        hrp.CFrame = frozenPlayerPositions[p]
-                        hum.WalkSpeed = 0
+                        hrp.Anchored = true hrp.CFrame = frozenPlayerPositions[p] hum.WalkSpeed = 0
                     else
-                        if frozenPlayerPositions[p] then
-                            hrp.Anchored = false
-                            hum.WalkSpeed = 16
-                            frozenPlayerPositions[p] = nil
-                        end
+                        if frozenPlayerPositions[p] then hrp.Anchored = false hum.WalkSpeed = 16 frozenPlayerPositions[p] = nil end
                     end
                 end
             end
@@ -1398,14 +974,13 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Bucle de Armas (SkinChanger, Diseños y Mods)
 task.spawn(function()
     while task.wait(0.6) do
         pcall(function()
             local char = LocalPlayer.Character
             local bp = LocalPlayer:FindFirstChildOfClass("Backpack")
             local patterns = {
-                ["Galaxy"] = { c = Color3.fromRGB(138, 43, 226), m = Enum.Material.ForceField },
+                ["Galaxy"] = { c = Color3.fromRGB(50, 150, 255), m = Enum.Material.ForceField },
                 ["Camo"] = { c = Color3.fromRGB(85, 95, 60), m = Enum.Material.SmoothPlastic },
                 ["Carbon Fiber"] = { c = Color3.fromRGB(40, 40, 40), m = Enum.Material.Glass },
                 ["Lava"] = { c = Color3.fromRGB(255, 69, 0), m = Enum.Material.Neon },
@@ -1425,23 +1000,18 @@ task.spawn(function()
                                 end
                             end
                         end
-
                         if not originalWeaponStates[item] then
                             originalWeaponStates[item] = {}
                             for _, part in ipairs(item:GetDescendants()) do
-                                if part:IsA("BasePart") then
-                                    originalWeaponStates[item][part] = { Color = part.Color, Material = part.Material }
-                                end
+                                if part:IsA("BasePart") then originalWeaponStates[item][part] = { Color = part.Color, Material = part.Material } end
                             end
                         end
-
                         if getgenv().SkinPatternEnabled then
                             local pat = patterns[getgenv().SelectedWeaponPattern] or patterns["Galaxy"]
                             for _, part in ipairs(item:GetDescendants()) do
                                 if part:IsA("BasePart") then
                                     if part:IsA("MeshPart") then part.TextureID = "" end
-                                    part.Color = pat.c
-                                    part.Material = pat.m
+                                    part.Color = pat.c part.Material = pat.m
                                 end
                             end
                         elseif getgenv().SkinChangerEnabled then
@@ -1456,26 +1026,20 @@ task.spawn(function()
                             for _, part in ipairs(item:GetDescendants()) do
                                 if part:IsA("BasePart") then
                                     if part:IsA("MeshPart") then part.TextureID = "" end
-                                    part.Color = col
-                                    part.Material = mat
+                                    part.Color = col part.Material = mat
                                 end
                             end
                         else
                             if originalWeaponStates[item] then
                                 for part, data in pairs(originalWeaponStates[item]) do
-                                    if part and part.Parent then
-                                        part.Color = data.Color
-                                        part.Material = data.Material
-                                    end
+                                    if part and part.Parent then part.Color = data.Color part.Material = data.Material end
                                 end
                             end
                         end
                     end
                 end
             end
-
-            applyToContainer(char)
-            applyToContainer(bp)
+            applyToContainer(char) applyToContainer(bp)
         end)
     end
 end)
