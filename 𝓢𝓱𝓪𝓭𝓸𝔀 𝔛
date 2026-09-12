@@ -1,9 +1,11 @@
 -- =====================================================
---  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Darker Tab Background + Blue Text Palette)
+--  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (TODO EL MENÚ EN AZUL OSCURO)
 --  Creado por Alex X - Editado para Clean ESP & Stretched Screen REAL
 --  MODIFICADO: Solo Team Check activado, todas las demás opciones apagadas
 --  Invisibilidad arreglada: invisible para otros, semi-transparente para ti
---  SIN BUGS DE MOVIMIENTO - Tu personaje se mueve normal
+--  MOVIMIENTO 100% FUNCIONAL - Tu personaje se mueve normal
+--  MÚSICA CON VOLUMEN MEJORADO (hasta 2.0)
+--  TODO EL MENÚ EN AZUL OSCURO
 -- =====================================================
 local HttpService = game:GetService("HttpService")
 local FileName = "OddRivals_Config.json"
@@ -189,29 +191,118 @@ local Window = WindUI:CreateWindow({
 Window:ToggleTransparency(false)
 Window:SetToggleKey(Enum.KeyCode.RightControl)
 
--- Aplicar tema azul oscuro al menú
-task.spawn(function()
-    task.wait(0.6)
+-- =====================================================
+--  APLICAR TEMA AZUL OSCURO A TODO EL MENÚ
+--  (Se ejecuta constantemente para cubrir todo)
+-- =====================================================
+local function ApplyDarkBlueTheme()
     pcall(function()
+        -- Colores del tema
+        local bgColor = Color3.fromRGB(8, 12, 25)        -- Fondo principal azul muy oscuro
+        local bgColor2 = Color3.fromRGB(12, 18, 35)      -- Fondo secundario
+        local bgColor3 = Color3.fromRGB(16, 24, 45)      -- Fondo terciario
+        local accentColor = Color3.fromRGB(30, 60, 120)  -- Acento azul
+        local accentColor2 = Color3.fromRGB(50, 100, 200) -- Acento azul claro
+        local textColor = Color3.fromRGB(200, 220, 255)  -- Texto azul claro
+        local textColor2 = Color3.fromRGB(150, 180, 230) -- Texto azul medio
+        local borderColor = Color3.fromRGB(40, 80, 160)   -- Bordes azules
+        
+        -- Recorrer TODOS los elementos del CoreGui
         for _, gui in ipairs(CoreGui:GetChildren()) do
             if gui:IsA("ScreenGui") then
                 for _, descendant in ipairs(gui:GetDescendants()) do
+                    -- Frames (fondos)
                     if descendant:IsA("Frame") then
-                        descendant.BackgroundColor3 = Color3.fromRGB(10, 15, 30) -- Azul oscuro
+                        descendant.BackgroundColor3 = bgColor
+                    end
+                    
+                    -- ScrollingFrames
+                    if descendant:IsA("ScrollingFrame") then
+                        descendant.BackgroundColor3 = bgColor
+                        descendant.ScrollBarImageColor3 = accentColor
+                    end
+                    
+                    -- TextLabels y TextButtons
+                    if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                        descendant.TextColor3 = textColor
+                        if descendant:IsA("TextButton") then
+                            descendant.BackgroundColor3 = bgColor2
+                        end
+                    end
+                    
+                    -- TextBoxes
+                    if descendant:IsA("TextBox") then
+                        descendant.TextColor3 = textColor
+                        descendant.BackgroundColor3 = bgColor2
+                        descendant.PlaceholderColor3 = textColor2
+                    end
+                    
+                    -- UIStroke (bordes)
+                    if descendant:IsA("UIStroke") then
+                        descendant.Color = borderColor
+                    end
+                    
+                    -- ImageLabels (iconos)
+                    if descendant:IsA("ImageLabel") then
+                        descendant.BackgroundColor3 = bgColor2
+                    end
+                    
+                    -- ImageButtons
+                    if descendant:IsA("ImageButton") then
+                        descendant.BackgroundColor3 = bgColor2
+                    end
+                    
+                    -- Sliders
+                    if descendant:IsA("Slider") or descendant.Name:lower():find("slider") then
+                        descendant.BackgroundColor3 = bgColor2
+                    end
+                    
+                    -- Toggles
+                    if descendant:IsA("TextButton") and (descendant.Name:lower():find("toggle") or descendant.Name:lower():find("check")) then
+                        descendant.BackgroundColor3 = bgColor2
+                    end
+                    
+                    -- Dropdowns
+                    if descendant:IsA("TextButton") and descendant.Name:lower():find("dropdown") then
+                        descendant.BackgroundColor3 = bgColor2
+                    end
+                end
+            end
+        end
+        
+        -- También aplicar al PlayerGui (para el botón de reabrir)
+        for _, gui in ipairs(LocalPlayer:WaitForChild("PlayerGui"):GetChildren()) do
+            if gui:IsA("ScreenGui") then
+                for _, descendant in ipairs(gui:GetDescendants()) do
+                    if descendant:IsA("Frame") then
+                        descendant.BackgroundColor3 = bgColor
                     end
                     if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                        descendant.TextColor3 = Color3.fromRGB(200, 220, 255) -- Texto azul claro
-                    end
-                    if descendant:IsA("ScrollingFrame") then
-                        descendant.BackgroundColor3 = Color3.fromRGB(10, 15, 30)
+                        descendant.TextColor3 = textColor
+                        if descendant:IsA("TextButton") then
+                            descendant.BackgroundColor3 = bgColor2
+                        end
                     end
                     if descendant:IsA("UIStroke") then
-                        descendant.Color = Color3.fromRGB(30, 60, 120)
+                        descendant.Color = borderColor
                     end
                 end
             end
         end
     end)
+end
+
+-- Aplicar el tema inmediatamente
+task.spawn(function()
+    task.wait(0.5)
+    ApplyDarkBlueTheme()
+end)
+
+-- Aplicar el tema constantemente (cada 0.5 segundos)
+task.spawn(function()
+    while task.wait(0.5) do
+        ApplyDarkBlueTheme()
+    end
 end)
 
 -- Botón de reabrir con tema azul oscuro
@@ -224,7 +315,7 @@ local reopenFrame = Instance.new("TextButton")
 reopenFrame.Name = "ReopenButton"
 reopenFrame.Size = UDim2.fromOffset(52, 52)
 reopenFrame.Position = UDim2.new(1, -70, 0.5, -26)
-reopenFrame.BackgroundColor3 = Color3.fromRGB(10, 15, 30) -- Azul oscuro
+reopenFrame.BackgroundColor3 = Color3.fromRGB(8, 12, 25) -- Azul muy oscuro
 reopenFrame.BackgroundTransparency = 0.15
 reopenFrame.Text = "⚡"
 reopenFrame.TextColor3 = Color3.fromRGB(200, 220, 255) -- Texto azul claro
@@ -238,7 +329,7 @@ corner.CornerRadius = UDim.new(0, 14)
 corner.Parent = reopenFrame
 
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(30, 60, 120) -- Borde azul oscuro
+stroke.Color = Color3.fromRGB(40, 80, 160) -- Borde azul
 stroke.Thickness = 2
 stroke.Parent = reopenFrame
 
@@ -279,14 +370,14 @@ local Tabs = {
 
 -- [ SECCIÓN COMBAT ]
 Tabs.Combat:Section({ Title = "Aimbot Ultra Agresivo & FOV" })
-Tabs.Combat:Toggle({ Title = "Activar Aimbot", Value = Config.AimbotEnabled, Callback = function(v) getgenv().AimbotEnabled = v Config.AimbotEnabled = v SaveConfig() end })
+Tabs.Combat:Toggle({ Title = "Activar Aimbot", Value = Config.AimbotEnabled, Callback = function(v) getgenv().AimbotEnabled = v Config.AimbotEnabled = v end })
 Tabs.Combat:Dropdown({ Title = "Parte (Aimbot)", Values = { "Head", "HumanoidRootPart", "UpperTorso" }, Value = "Head", Callback = function(v) getgenv().AimbotPart = v end })
 Tabs.Combat:Slider({ Title = "Suavizado Aimbot (1 = Snap)", Step = 1, Value = { Min = 1, Max = 10, Default = 1 }, Callback = function(v) getgenv().AimbotSmooth = v end })
-Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = Config.FovEnabled, Callback = function(v) getgenv().FovEnabled = v Config.FovEnabled = v SaveConfig() end })
+Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = Config.FovEnabled, Callback = function(v) getgenv().FovEnabled = v Config.FovEnabled = v end })
 Tabs.Combat:Slider({ Title = "Radio del FOV", Step = 5, Value = { Min = 30, Max = 400, Default = 120 }, Callback = function(v) getgenv().FovRadius = v end })
 
 Tabs.Combat:Section({ Title = "Triggerbot Automático (Dispara solo)" })
-Tabs.Combat:Toggle({ Title = "Activar Triggerbot", Value = Config.TriggerbotEnabled, Callback = function(v) getgenv().TriggerbotEnabled = v Config.TriggerbotEnabled = v SaveConfig() end })
+Tabs.Combat:Toggle({ Title = "Activar Triggerbot", Value = Config.TriggerbotEnabled, Callback = function(v) getgenv().TriggerbotEnabled = v Config.TriggerbotEnabled = v end })
 Tabs.Combat:Slider({ Title = "Retraso de Disparo", Step = 0.01, Value = { Min = 0, Max = 0.2, Default = 0.02 }, Callback = function(v) getgenv().TriggerbotDelay = v end })
 Tabs.Combat:Slider({ Title = "Distancia Máxima", Step = 10, Value = { Min = 50, Max = 500, Default = 200 }, Callback = function(v) getgenv().TriggerbotRange = v end })
 Tabs.Combat:Toggle({ Title = "Modo Headshot", Value = false, Callback = function(v) getgenv().TriggerbotHeadshot = v end })
@@ -297,7 +388,6 @@ Tabs.Combat:Section({ Title = "Hitboxes" })
 Tabs.Combat:Toggle({ Title = "Activar Hitbox (TODOS)", Value = Config.HitboxEnabled, Callback = function(v)
     getgenv().HitboxEnabled = v
     Config.HitboxEnabled = v
-    SaveConfig()
     if not v then
         for p, parts in pairs(originalHitboxStates) do
             if p and p.Character then
@@ -320,7 +410,6 @@ Tabs.Combat:Slider({ Title = "Transparencia Hitbox", Step = 0.1, Value = { Min =
 Tabs.Combat:Toggle({ Title = "Congelar Enemigos (Freeze)", Value = Config.FreezePlayersEnabled, Callback = function(v)
     getgenv().FreezePlayersEnabled = v
     Config.FreezePlayersEnabled = v
-    SaveConfig()
     if not v then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
@@ -336,22 +425,21 @@ end })
 
 -- [ SECCIÓN WEAPMOD ]
 Tabs.WeapMod:Section({ Title = "Armas" })
-Tabs.WeapMod:Toggle({ Title = "Rapid Fire", Value = Config.RapidFireEnabled, Callback = function(v) getgenv().RapidFireEnabled = v Config.RapidFireEnabled = v SaveConfig() end })
-Tabs.WeapMod:Toggle({ Title = "Infinite Ammo", Value = Config.InfAmmoEnabled, Callback = function(v) getgenv().InfAmmoEnabled = v Config.InfAmmoEnabled = v SaveConfig() end })
+Tabs.WeapMod:Toggle({ Title = "Rapid Fire", Value = Config.RapidFireEnabled, Callback = function(v) getgenv().RapidFireEnabled = v Config.RapidFireEnabled = v end })
+Tabs.WeapMod:Toggle({ Title = "Infinite Ammo", Value = Config.InfAmmoEnabled, Callback = function(v) getgenv().InfAmmoEnabled = v Config.InfAmmoEnabled = v end })
 
 -- [ SECCIÓN SKIN CHANGER ]
 Tabs.SkinChanger:Section({ Title = "Personalización" })
-Tabs.SkinChanger:Toggle({ Title = "Colores Sólidos", Value = Config.SkinChangerEnabled, Callback = function(v) getgenv().SkinChangerEnabled = v Config.SkinChangerEnabled = v SaveConfig() end })
+Tabs.SkinChanger:Toggle({ Title = "Colores Sólidos", Value = Config.SkinChangerEnabled, Callback = function(v) getgenv().SkinChangerEnabled = v Config.SkinChangerEnabled = v end })
 Tabs.SkinChanger:Dropdown({ Title = "Estilo / Color", Values = { "Gold", "Diamond", "Ruby", "Emerald", "Obsidian", "Rainbow", "Amethyst", "Sapphire" }, Value = "Gold", Callback = function(v) getgenv().SelectedWeaponSkin = v end })
 Tabs.SkinChanger:Dropdown({ Title = "Material Visual", Values = { "Neon", "Glass", "Metal", "SmoothPlastic", "ForceField" }, Value = "Neon", Callback = function(v) getgenv().SelectedWeaponMaterial = v end })
-Tabs.SkinChanger:Toggle({ Title = "Diseños Dinámicos", Value = Config.SkinPatternEnabled, Callback = function(v) getgenv().SkinPatternEnabled = v Config.SkinPatternEnabled = v SaveConfig() end })
+Tabs.SkinChanger:Toggle({ Title = "Diseños Dinámicos", Value = Config.SkinPatternEnabled, Callback = function(v) getgenv().SkinPatternEnabled = v Config.SkinPatternEnabled = v end })
 Tabs.SkinChanger:Dropdown({ Title = "Diseño", Values = { "Galaxy", "Camo", "Carbon Fiber", "Lava", "Lightning" }, Value = "Galaxy", Callback = function(v) getgenv().SelectedWeaponPattern = v end })
 
 -- [ SECCIÓN MOVEMENT ]
 Tabs.Movement:Toggle({ Title = "Speed", Value = Config.SpeedEnabled, Callback = function(v)
     getgenv().SpeedEnabled = v
     Config.SpeedEnabled = v
-    SaveConfig()
     if v and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = getgenv().PlayerSpeedValue
     elseif LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
@@ -359,11 +447,12 @@ Tabs.Movement:Toggle({ Title = "Speed", Value = Config.SpeedEnabled, Callback = 
     end
 end })
 Tabs.Movement:Slider({ Title = "Velocidad", Step = 1, Value = { Min = 16, Max = 200, Default = 16 }, Callback = function(v) getgenv().PlayerSpeedValue = v ; if getgenv().SpeedEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then LocalPlayer.Character.Humanoid.WalkSpeed = v end end })
-Tabs.Movement:Toggle({ Title = "Infinite Jump", Value = Config.InfJumpEnabled, Callback = function(v) getgenv().InfJumpEnabled = v Config.InfJumpEnabled = v SaveConfig() end })
-Tabs.Movement:Toggle({ Title = "Noclip", Value = Config.NoclipEnabled, Callback = function(v) getgenv().NoclipEnabled = v Config.NoclipEnabled = v SaveConfig() end })
-Tabs.Movement:Toggle({ Title = "SpinBot", Value = Config.SpinBotEnabled, Callback = function(v) getgenv().SpinBotEnabled = v Config.SpinBotEnabled = v SaveConfig() end })
+Tabs.Movement:Toggle({ Title = "Infinite Jump", Value = Config.InfJumpEnabled, Callback = function(v) getgenv().InfJumpEnabled = v Config.InfJumpEnabled = v end })
+Tabs.Movement:Toggle({ Title = "Noclip", Value = Config.NoclipEnabled, Callback = function(v) getgenv().NoclipEnabled = v Config.NoclipEnabled = v end })
+Tabs.Movement:Toggle({ Title = "SpinBot", Value = Config.SpinBotEnabled, Callback = function(v) getgenv().SpinBotEnabled = v Config.SpinBotEnabled = v end })
 Tabs.Movement:Slider({ Title = "Velocidad SpinBot", Step = 5, Value = { Min = 10, Max = 500, Default = 120 }, Callback = function(v) getgenv().SpinSpeed = v end })
 
+-- [ SECCIÓN INVISIBILIDAD - CORREGIDA PARA MOVIMIENTO NORMAL ]
 Tabs.Movement:Section({ Title = "Invisibilidad & Desync" })
 Tabs.Movement:Toggle({ Title = "Invisibilidad FE (Sin Bugs de Movimiento)", Value = Config.InvisibleEnabled, Callback = function(v)
     getgenv().InvisibleEnabled = v
@@ -382,17 +471,25 @@ Tabs.Movement:Toggle({ Title = "Invisibilidad FE (Sin Bugs de Movimiento)", Valu
             end
         end
         
-        -- Crear clon estático (NO se mueve, solo es decorativo para otros)
+        -- Crear clon estático (se queda donde activaste la invisibilidad)
         char.Archivable = true
         cloneModel = char:Clone()
         cloneModel.Name = LocalPlayer.Name .. "_Invisible"
+        
+        -- El clon se queda completamente invisible para todos
         for _, part in ipairs(cloneModel:GetDescendants()) do
             if part:IsA("BasePart") then
-                part.Transparency = 1 -- Completamente invisible
+                part.Transparency = 1 -- Invisible
                 part.CanCollide = false
             end
         end
         cloneModel.Parent = workspace
+        
+        -- ANCLAR SOLO EL CLON para que no se mueva
+        local cloneHRP = cloneModel:FindFirstChild("HumanoidRootPart")
+        if cloneHRP then
+            cloneHRP.Anchored = true -- El clon se queda fijo donde lo activaste
+        end
         
         -- Hacer invisible para los demás jugadores (transparencia total)
         for _, part in ipairs(char:GetDescendants()) do
@@ -403,14 +500,15 @@ Tabs.Movement:Toggle({ Title = "Invisibilidad FE (Sin Bugs de Movimiento)", Valu
         end
         
         -- Hacer semi-transparente para ti mismo (0.5 = medio visible)
+        -- Esto se aplica SOLO a tu cámara, no al clon
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
-                part.Transparency = 0.5
+                part.Transparency = 0.5 -- Semi-transparente para ti
             end
         end
         
-        -- NO mover el personaje - tu movimiento queda 100% normal
-        -- El clon se queda en la posición original para que otros vean algo ahí
+        -- IMPORTANTE: NO anclar el HumanoidRootPart del personaje real
+        -- Así tu movimiento queda 100% normal y puedes moverte libremente
         
     else
         -- Restaurar todo
@@ -418,6 +516,8 @@ Tabs.Movement:Toggle({ Title = "Invisibilidad FE (Sin Bugs de Movimiento)", Valu
             cloneModel:Destroy()
             cloneModel = nil
         end
+        
+        -- NO desanclar nada del personaje real porque nunca lo anclamos
         
         -- Restaurar transparencias originales
         for part, transparency in pairs(originalPartsTransparency) do
@@ -435,7 +535,6 @@ Tabs.Visual:Section({ Title = "X-Ray (Ver a través de paredes)" })
 Tabs.Visual:Toggle({ Title = "Activar X-Ray", Value = Config.XRayEnabled, Callback = function(v)
     getgenv().XRayEnabled = v
     Config.XRayEnabled = v
-    SaveConfig()
     if v then
         if not xrayApplied then
             originalTransparencies = {}
@@ -466,7 +565,6 @@ Tabs.Visual:Section({ Title = "ESP (Ver jugadores a través de paredes)" })
 Tabs.Visual:Toggle({ Title = "Activar ESP", Value = Config.ESPEnabled, Callback = function(v)
     getgenv().ESPEnabled = v
     Config.ESPEnabled = v
-    SaveConfig()
     if not v then
         for player, drawings in pairs(espObjects) do
             for _, drawing in pairs(drawings) do
@@ -480,18 +578,17 @@ Tabs.Visual:Toggle({ Title = "Activar ESP", Value = Config.ESPEnabled, Callback 
     end
 end })
 
-Tabs.Visual:Toggle({ Title = "Mostrar Cajas (Box)", Value = Config.ESPBoxEnabled, Callback = function(v) getgenv().ESPBoxEnabled = v Config.ESPBoxEnabled = v SaveConfig() end })
-Tabs.Visual:Toggle({ Title = "Mostrar Líneas (Line)", Value = Config.ESPLineEnabled, Callback = function(v) getgenv().ESPLineEnabled = v Config.ESPLineEnabled = v SaveConfig() end })
-Tabs.Visual:Toggle({ Title = "Mostrar Nombres", Value = Config.ESPNameEnabled, Callback = function(v) getgenv().ESPNameEnabled = v Config.ESPNameEnabled = v SaveConfig() end })
-Tabs.Visual:Toggle({ Title = "Mostrar Salud", Value = Config.ESPHealthEnabled, Callback = function(v) getgenv().ESPHealthEnabled = v Config.ESPHealthEnabled = v SaveConfig() end })
-Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = Config.ESPDistanceEnabled, Callback = function(v) getgenv().ESPDistanceEnabled = v Config.ESPDistanceEnabled = v SaveConfig() end })
+Tabs.Visual:Toggle({ Title = "Mostrar Cajas (Box)", Value = Config.ESPBoxEnabled, Callback = function(v) getgenv().ESPBoxEnabled = v Config.ESPBoxEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Líneas (Line)", Value = Config.ESPLineEnabled, Callback = function(v) getgenv().ESPLineEnabled = v Config.ESPLineEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Nombres", Value = Config.ESPNameEnabled, Callback = function(v) getgenv().ESPNameEnabled = v Config.ESPNameEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Salud", Value = Config.ESPHealthEnabled, Callback = function(v) getgenv().ESPHealthEnabled = v Config.ESPHealthEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = Config.ESPDistanceEnabled, Callback = function(v) getgenv().ESPDistanceEnabled = v Config.ESPDistanceEnabled = v end })
 Tabs.Visual:Slider({ Title = "Grosor de Líneas", Step = 0.5, Value = { Min = 0.5, Max = 5, Default = 1.5 }, Callback = function(v) getgenv().ESPThickness = v end })
 
 Tabs.Visual:Section({ Title = "Pantalla Estirada (Stretched REAL)" })
 Tabs.Visual:Toggle({ Title = "Activar Stretched Screen", Value = Config.StretchedEnabled, Callback = function(v) 
     getgenv().StretchedEnabled = v 
     Config.StretchedEnabled = v
-    SaveConfig()
     if v then
         ApplyRealStretch()
     else
@@ -514,7 +611,6 @@ Tabs.KillSound:Toggle({
     Callback = function(v)
         getgenv().KillSoundEnabled = v
         Config.KillSoundEnabled = v
-        SaveConfig()
     end
 })
 
@@ -538,11 +634,11 @@ Tabs.KillSound:Button({
     end
 })
 
--- [ SECCIÓN MÚSICA ]
+-- [ SECCIÓN MÚSICA - CON VOLUMEN MEJORADO HASTA 2.0 ]
 Tabs.Music:Section({ Title = "Reproductor de Música" })
 getgenv().MusicEnabled = Config.MusicEnabled
 getgenv().SelectedMusic = nil
-getgenv().MusicVolume = 0.5
+getgenv().MusicVolume = 1.0  -- Volumen por defecto más alto
 getgenv().MusicLoop = false
 
 local MusicCodes = {
@@ -568,7 +664,6 @@ Tabs.Music:Toggle({
     Callback = function(v)
         getgenv().MusicEnabled = v
         Config.MusicEnabled = v
-        SaveConfig()
         if v and getgenv().SelectedMusic then
             musicInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedMusic)
             musicInstance:Play()
@@ -594,7 +689,8 @@ Tabs.Music:Dropdown({
     end
 })
 
-Tabs.Music:Slider({ Title = "Volumen", Step = 0.1, Value = { Min = 0, Max = 1, Default = 0.5 }, Callback = function(v) getgenv().MusicVolume = v musicInstance.Volume = v end })
+-- Slider de volumen MEJORADO: ahora va de 0 a 2.0 (el doble del máximo normal)
+Tabs.Music:Slider({ Title = "Volumen (0-2.0)", Step = 0.1, Value = { Min = 0, Max = 2.0, Default = 1.0 }, Callback = function(v) getgenv().MusicVolume = v musicInstance.Volume = v end })
 Tabs.Music:Toggle({ Title = "Repetir Canción", Value = false, Callback = function(v) getgenv().MusicLoop = v musicInstance.Looped = v end })
 Tabs.Music:Button({ Title = "▶️ Reproducir", Callback = function() if getgenv().SelectedMusic then musicInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedMusic) musicInstance:Play() end end })
 Tabs.Music:Button({ Title = "⏸️ Pausar", Callback = function() musicInstance:Pause() end })
