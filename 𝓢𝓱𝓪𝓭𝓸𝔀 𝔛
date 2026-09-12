@@ -28,16 +28,13 @@ soundInstance.Volume = 3
 soundInstance.Looped = false
 soundInstance.Parent = SoundService
 
--- Códigos de Kill Sound Meme
+-- Códigos de Kill Sound (SOLO TUS 5 + LA NUEVA)
 local KillSoundCodes = {
-    ["OOOH MY GOD Vine"] = 336771379,
-    ["Laughing Cat Meme"] = 120717906835357,
-    ["EMOTIONAL DAMAGE"] = 8627853380,
-    ["Oh My God! Wow!"] = 130114549451469,
-    ["GET OUT!!!"] = 138093000712523,
-    ["신태일 - 뭐야!!! (Angry Korean Gamer)"] = 5700099982,
-    ["Among Us Intro Sound"] = 7361207035,
-    ["A Few Moments Later.."] = 122289855001542,
+    ["Kill Sound 1"] = 92020424227680,
+    ["Kill Sound 2"] = 88723755620447,
+    ["Kill Sound 3"] = 74979395951576,
+    ["Kill Sound 4"] = 126659750825724,
+    ["Kill Sound 5"] = 105326415381211,
     ["Nuevo Kill Sound"] = 132063528736852
 }
 
@@ -279,14 +276,11 @@ Tabs.KillSound:Toggle({
 local KillSoundDropdown = Tabs.KillSound:Dropdown({
     Title = "Seleccionar Kill Sound",
     Values = {
-        "OOOH MY GOD Vine",
-        "Laughing Cat Meme",
-        "EMOTIONAL DAMAGE",
-        "Oh My God! Wow!",
-        "GET OUT!!!",
-        "신태일 - 뭐야!!! (Angry Korean Gamer)",
-        "Among Us Intro Sound",
-        "A Few Moments Later..",
+        "Kill Sound 1",
+        "Kill Sound 2",
+        "Kill Sound 3",
+        "Kill Sound 4",
+        "Kill Sound 5",
         "Nuevo Kill Sound"
     },
     Value = "Nuevo Kill Sound",
