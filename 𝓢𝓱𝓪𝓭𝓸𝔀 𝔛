@@ -2,6 +2,8 @@
 --  WindUI Mobile Style - ʀᴇᴅㅤᴅᴀᴠɪʟㅤʜᴜʙ (Fix Total & Stretched REAL + KILLSOUND FIX)
 --  Creado por Alex X - Editado para Clean ESP & Stretched Screen REAL
 --  FIX: Team Check CORREGIDO (solo detecta aliados reales)
+--  FIX: Triggerbot con detección de visibilidad REAL
+--  FIX: ESP SIMPLIFICADO (Solo Line, Health y Distance)
 -- =====================================================
 local success, WindUI = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
@@ -69,7 +71,10 @@ getgenv().InfAmmoEnabled = false
 
 -- NUEVAS VARIABLES VISUALES
 getgenv().EspGlobalEnabled = false
-getgenv().EspMainColor = Color3.fromRGB(255, 255, 255)
+getgenv().EspLineEnabled = true
+getgenv().EspHealthEnabled = true
+getgenv().EspDistanceEnabled = true
+getgenv().EspMainColor = Color3.fromRGB(255, 0, 0)
 getgenv().StretchedEnabled = false
 getgenv().StretchedIntensity = 0.75
 
@@ -134,7 +139,6 @@ reopenFrame.Visible = false
 
 reopenFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        -- Reabrir el menú
         pcall(function()
             Window:ToggleTransparency(false)
             Window:SetToggleKey(Enum.KeyCode.RightControl)
@@ -143,7 +147,6 @@ reopenFrame.InputBegan:Connect(function(input)
     end
 end)
 
--- Detectar cuando el menú se minimiza/cierra y mostrar el botón flotante
 task.spawn(function()
     while task.wait(0.5) do
         pcall(function()
@@ -172,7 +175,7 @@ Tabs.Combat:Slider({ Title = "Suavizado Aimbot (1 = Snap)", Step = 1, Value = { 
 Tabs.Combat:Toggle({ Title = "Mostrar Círculo FOV", Value = false, Callback = function(v) getgenv().FovEnabled = v end })
 Tabs.Combat:Slider({ Title = "Radio del FOV", Step = 5, Value = { Min = 30, Max = 400, Default = 120 }, Callback = function(v) getgenv().FovRadius = v end })
 
-Tabs.Combat:Section({ Title = "Triggerbot Automático" })
+Tabs.Combat:Section({ Title = "Triggerbot Automático (Solo Visible)" })
 Tabs.Combat:Toggle({ Title = "Activar Triggerbot", Value = false, Callback = function(v) getgenv().TriggerbotEnabled = v end })
 Tabs.Combat:Slider({ Title = "Retraso de Disparo", Step = 0.01, Value = { Min = 0, Max = 0.2, Default = 0.02 }, Callback = function(v) getgenv().TriggerbotDelay = v end })
 Tabs.Combat:Toggle({ Title = "Team Check", Value = true, Callback = function(v) getgenv().TeamCheckEnabled = v end })
@@ -242,9 +245,14 @@ Tabs.Movement:Toggle({ Title = "Noclip", Value = false, Callback = function(v) g
 Tabs.Movement:Toggle({ Title = "SpinBot", Value = false, Callback = function(v) getgenv().SpinBotEnabled = v end })
 Tabs.Movement:Slider({ Title = "Velocidad SpinBot", Step = 5, Value = { Min = 10, Max = 500, Default = 120 }, Callback = function(v) getgenv().SpinSpeed = v end })
 
--- [ SECCIÓN VISUAL (LIMPIA Y MEJORADA) ]
-Tabs.Visual:Section({ Title = "Visuales Competitivos" })
-Tabs.Visual:Toggle({ Title = "Activar ESP Global (Limpio)", Value = false, Callback = function(v) getgenv().EspGlobalEnabled = v end })
+-- [ SECCIÓN VISUAL (ESP SIMPLIFICADO) ]
+Tabs.Visual:Section({ Title = "ESP Simplificado" })
+Tabs.Visual:Toggle({ Title = "Activar ESP Global", Value = false, Callback = function(v) getgenv().EspGlobalEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Línea (Line)", Value = true, Callback = function(v) getgenv().EspLineEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Vida (Health)", Value = true, Callback = function(v) getgenv().EspHealthEnabled = v end })
+Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = true, Callback = function(v) getgenv().EspDistanceEnabled = v end })
+Tabs.Visual:Colorpicker({ Title = "Color ESP", Value = Color3.fromRGB(255, 0, 0), Callback = function(v) getgenv().EspMainColor = v end })
+
 Tabs.Visual:Section({ Title = "Pantalla Estirada (Stretched REAL)" })
 Tabs.Visual:Toggle({ Title = "Activar Stretched Screen", Value = false, Callback = function(v) 
     getgenv().StretchedEnabled = v 
@@ -306,7 +314,6 @@ Tabs.KillSound:Button({
 --  SISTEMA DE KILL SOUND ULTRA ESTRICTO (SOLO TUS KILLS)
 -- =====================================================
 
--- Función para reproducir el sonido
 local function playKillSound()
     if getgenv().KillSoundEnabled and soundInstance and getgenv().SelectedKillSound then
         soundInstance.SoundId = "rbxassetid://" .. tostring(getgenv().SelectedKillSound)
@@ -319,26 +326,22 @@ local function playKillSound()
     end
 end
 
--- Función ULTRA ESTRICTA para verificar si TÚ mataste al jugador
 local function didLocalPlayerKill(victim)
     if not victim or not victim.Character then return false end
     
     local hum = victim.Character:FindFirstChildOfClass("Humanoid")
     if not hum then return false end
     
-    -- Método 1: Verificar la etiqueta "creator" (la más confiable)
     local creatorTag = hum:FindFirstChild("creator")
     if creatorTag and creatorTag:IsA("ObjectValue") and creatorTag.Value == LocalPlayer then
         return true
     end
     
-    -- Método 2: Verificar si le hicimos daño en los últimos 1.5 segundos
     local lastHit = myLastHitTime[victim]
     if lastHit and (tick() - lastHit) <= 1.5 then
         return true
     end
     
-    -- Método 3: Verificar si el daño que hicimos fue significativo (más del 50% de su vida)
     local damage = myDamageDealt[victim] or 0
     if damage > (hum.MaxHealth * 0.5) then
         return true
@@ -347,7 +350,6 @@ local function didLocalPlayerKill(victim)
     return false
 end
 
--- Función para rastrear SOLO el daño que TÚ haces personalmente
 local function setupDamageTracker(player)
     if player == LocalPlayer then return end
     
@@ -368,7 +370,6 @@ local function setupDamageTracker(player)
             if newHealth < lastHealth then
                 local damage = lastHealth - newHealth
                 if damage > 0 then
-                    -- SOLO registrar daño si estamos disparando activamente
                     local isShooting = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
                     if isShooting then
                         myDamageDealt[player] = myDamageDealt[player] + damage
@@ -378,10 +379,8 @@ local function setupDamageTracker(player)
             end
             lastHealth = newHealth
             
-            -- Cuando el jugador muere
             if newHealth <= 0 and lastHealth > 0 and not myKillTracker[player] then
                 myKillTracker[player] = true
-                -- SOLO reproducir si TÚ lo mataste
                 if didLocalPlayerKill(player) then
                     playKillSound()
                 end
@@ -391,7 +390,6 @@ local function setupDamageTracker(player)
         hum.Died:Connect(function()
             if not myKillTracker[player] then
                 myKillTracker[player] = true
-                -- SOLO reproducir si TÚ lo mataste
                 if didLocalPlayerKill(player) then
                     playKillSound()
                 end
@@ -403,7 +401,6 @@ local function setupDamageTracker(player)
     player.CharacterAdded:Connect(onCharacterAdded)
 end
 
--- Limpiar y reconfigurar el rastreo
 for _, p in ipairs(Players:GetPlayers()) do
     if p ~= LocalPlayer then setupDamageTracker(p) end
 end
@@ -418,40 +415,142 @@ Players.PlayerRemoving:Connect(function(p)
 end)
 
 -- =====================================================
---  TEAM CHECK CORREGIDO (SOLO DETECTA ALIADOS REALES)
+--  NUEVO TEAM CHECK ULTRA-ESTRICTO (A MI MANERA)
 -- =====================================================
 
--- Función SIMPLE y EFECTIVA para detectar aliados
 function isTeammate(player)
     if player == LocalPlayer then return true end
     if not getgenv().TeamCheckEnabled then return false end
     
-    -- SOLO usar el método más confiable: comparar Teams directamente
+    -- Método 1: Comparar Teams directamente
     if LocalPlayer.Team and player.Team then
         if LocalPlayer.Team == player.Team then
             return true
         end
     end
     
-    -- Si no hay Teams, verificar TeamColor
+    -- Método 2: Comparar TeamColor
     if LocalPlayer.TeamColor and player.TeamColor then
         if LocalPlayer.TeamColor == player.TeamColor then
             return true
         end
     end
     
-    -- Si no se detecta ningún equipo, NO son aliados
+    -- Método 3: Verificar si están en el mismo grupo (si aplica)
+    if LocalPlayer:IsInGroup(player.UserId) then
+        return true
+    end
+    
+    -- Método 4: Verificar si tienen el mismo nombre de equipo en el Character
+    local lpChar = LocalPlayer.Character
+    local pChar = player.Character
+    if lpChar and pChar then
+        local lpTeam = lpChar:FindFirstChild("Team")
+        local pTeam = pChar:FindFirstChild("Team")
+        if lpTeam and pTeam and lpTeam.Value == pTeam.Value then
+            return true
+        end
+    end
+    
+    -- Método 5: Verificar si el color de su ropa es similar (para juegos sin sistema de equipos)
+    if lpChar and pChar then
+        local lpShirt = lpChar:FindFirstChildOfClass("Shirt")
+        local pShirt = pChar:FindFirstChildOfClass("Shirt")
+        if lpShirt and pShirt then
+            local lpColor = lpShirt.Color
+            local pColor = pShirt.Color
+            if lpColor and pColor then
+                local diff = (lpColor.R - pColor.R)^2 + (lpColor.G - pColor.G)^2 + (lpColor.B - pColor.B)^2
+                if diff < 0.1 then
+                    return true
+                end
+            end
+        end
+    end
+    
     return false
 end
 
--- Función para obtener el color del equipo (para ESP)
 function getTeamColor(player)
     if isTeammate(player) then
-        return Color3.fromRGB(0, 255, 0) -- Verde para aliados
+        return Color3.fromRGB(0, 255, 0)
     else
-        return Color3.fromRGB(255, 0, 0) -- Rojo para enemigos
+        return Color3.fromRGB(255, 0, 0)
     end
 end
+
+-- =====================================================
+--  SISTEMA DE VISIBILIDAD REAL PARA TRIGGERBOT (A MI MANERA)
+-- =====================================================
+
+function isEnemyVisible(player)
+    if not player or not player.Character then return false end
+    
+    local char = player.Character
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local head = char:FindFirstChild("Head")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    if not hrp or not hum or hum.Health <= 0 then return false end
+    
+    local camPos = Camera.CFrame.Position
+    
+    local targetPart = head or hrp
+    local targetPos = targetPart.Position
+    
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {LocalPlayer.Character, char}
+    params.IgnoreWater = true
+    
+    local raycastResult = workspace:Raycast(camPos, (targetPos - camPos).Unit * (targetPos - camPos).Magnitude, params)
+    
+    if not raycastResult then
+        return true
+    end
+    
+    local hitPart = raycastResult.Instance
+    if hitPart and hitPart:IsDescendantOf(char) then
+        return true
+    end
+    
+    return false
+end
+
+function isCursorOnVisibleEnemy()
+    local mouse = LocalPlayer:GetMouse()
+    local target = mouse.Target
+    
+    if not target then return false end
+    
+    local enemyPlayer = Players:GetPlayerFromCharacter(target.Parent) or Players:GetPlayerFromCharacter(target.Parent.Parent)
+    
+    if not enemyPlayer or enemyPlayer == LocalPlayer then return false end
+    if isTeammate(enemyPlayer) then return false end
+    
+    if not isEnemyVisible(enemyPlayer) then return false end
+    
+    local hum = enemyPlayer.Character and enemyPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return false end
+    
+    return true
+end
+
+-- TRIGGERBOT MEJORADO CON VISIBILIDAD REAL
+task.spawn(function()
+    while task.wait(0.03) do
+        pcall(function()
+            if getgenv().TriggerbotEnabled then
+                if isCursorOnVisibleEnemy() then
+                    task.wait(getgenv().TriggerbotDelay)
+                    VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                    task.wait(0.04)
+                    VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                end
+            end
+        end)
+    end
+end)
 
 -- [ FUNCIÓN REAL DE STRETCHED SCREEN ]
 local stretchConnection = nil
@@ -497,26 +596,147 @@ local function getClosestTargetUniversal()
     return closestPart
 end
 
--- Triggerbot
-task.spawn(function()
-    while task.wait(0.04) do
-        pcall(function()
-            if getgenv().TriggerbotEnabled then
-                local target = LocalPlayer:GetMouse().Target
-                if target and target.Parent then
-                    local enemyPlayer = Players:GetPlayerFromCharacter(target.Parent) or Players:GetPlayerFromCharacter(target.Parent.Parent)
-                    if enemyPlayer and enemyPlayer ~= LocalPlayer and not isTeammate(enemyPlayer) then
-                        local hum = enemyPlayer.Character and enemyPlayer.Character:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 then
-                            task.wait(getgenv().TriggerbotDelay)
-                            VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                            task.wait(0.04)
-                            VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                        end
-                    end
-                end
-            end
-        end)
+-- =====================================================
+--  ESP SIMPLIFICADO (Solo Line, Health y Distance)
+-- =====================================================
+
+-- Función para crear los elementos de dibujo para cada jugador
+local function createEspDrawings(player)
+    local drawings = {}
+    
+    -- Línea (Line)
+    drawings.Line = Drawing.new("Line")
+    drawings.Line.Thickness = 1.5
+    drawings.Line.Visible = false
+    
+    -- Barra de vida (Health)
+    drawings.HealthBarOutline = Drawing.new("Square")
+    drawings.HealthBarOutline.Filled = true
+    drawings.HealthBarOutline.Color = Color3.new(0, 0, 0)
+    drawings.HealthBarOutline.Visible = false
+    
+    drawings.HealthBar = Drawing.new("Square")
+    drawings.HealthBar.Filled = true
+    drawings.HealthBar.Visible = false
+    
+    -- Distancia (Distance)
+    drawings.Distance = Drawing.new("Text")
+    drawings.Distance.Size = 12
+    drawings.Distance.Center = true
+    drawings.Distance.Outline = true
+    drawings.Distance.OutlineColor = Color3.new(0, 0, 0)
+    drawings.Distance.Visible = false
+    
+    espDrawings[player] = drawings
+end
+
+-- Función para actualizar el ESP de un jugador
+local function updateEsp(player)
+    local drawings = espDrawings[player]
+    if not drawings then return end
+    
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
+    -- Ocultar todo si no hay personaje o está muerto o es aliado
+    if not char or not hrp or not hum or hum.Health <= 0 or isTeammate(player) or not getgenv().EspGlobalEnabled then
+        drawings.Line.Visible = false
+        drawings.HealthBarOutline.Visible = false
+        drawings.HealthBar.Visible = false
+        drawings.Distance.Visible = false
+        return
+    end
+    
+    -- Obtener la posición en pantalla
+    local cf, sz = char:GetBoundingBox()
+    local topPos = Camera:WorldToViewportPoint(cf.Position + Vector3.new(0, sz.Y / 2, 0))
+    local botPos = Camera:WorldToViewportPoint(cf.Position - Vector3.new(0, sz.Y / 2, 0))
+    local rootPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+    
+    -- Si no está en pantalla, ocultar
+    if not onScreen then
+        drawings.Line.Visible = false
+        drawings.HealthBarOutline.Visible = false
+        drawings.HealthBar.Visible = false
+        drawings.Distance.Visible = false
+        return
+    end
+    
+    -- Calcular dimensiones
+    local h = math.abs(botPos.Y - topPos.Y)
+    local w = h / 2
+    local centerX = rootPos.X
+    local topY = topPos.Y
+    
+    -- Color del ESP (rojo para enemigos)
+    local espColor = getTeamColor(player)
+    if getgenv().EspMainColor ~= Color3.fromRGB(255, 0, 0) then
+        espColor = getgenv().EspMainColor
+    end
+    
+    -- 1. LÍNEA (LINE)
+    if getgenv().EspLineEnabled then
+        local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+        drawings.Line.From = screenCenter
+        drawings.Line.To = Vector2.new(centerX, topY + h / 2)
+        drawings.Line.Color = espColor
+        drawings.Line.Visible = true
+    else
+        drawings.Line.Visible = false
+    end
+    
+    -- 2. BARRA DE VIDA (HEALTH)
+    if getgenv().EspHealthEnabled then
+        local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+        local bH = h * hpPct
+        
+        drawings.HealthBarOutline.Size = Vector2.new(4, h + 2)
+        drawings.HealthBarOutline.Position = Vector2.new(centerX - w / 2 - 6, topY - 1)
+        drawings.HealthBarOutline.Visible = true
+        
+        drawings.HealthBar.Size = Vector2.new(2, bH)
+        drawings.HealthBar.Position = Vector2.new(centerX - w / 2 - 5, topY + (h - bH))
+        drawings.HealthBar.Color = Color3.fromRGB(255 - (hpPct * 255), hpPct * 255, 0)
+        drawings.HealthBar.Visible = true
+    else
+        drawings.HealthBarOutline.Visible = false
+        drawings.HealthBar.Visible = false
+    end
+    
+    -- 3. DISTANCIA (DISTANCE)
+    if getgenv().EspDistanceEnabled then
+        local distance = math.floor((hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+        drawings.Distance.Text = tostring(distance) .. "m"
+        drawings.Distance.Position = Vector2.new(centerX, botPos.Y + 5)
+        drawings.Distance.Color = Color3.fromRGB(255, 255, 255)
+        drawings.Distance.Visible = true
+    else
+        drawings.Distance.Visible = false
+    end
+end
+
+-- Crear ESP para todos los jugadores existentes
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        createEspDrawings(p)
+    end
+end
+
+-- Crear ESP para nuevos jugadores
+Players.PlayerAdded:Connect(function(p)
+    if p ~= LocalPlayer then
+        createEspDrawings(p)
+    end
+end)
+
+-- Limpiar ESP cuando un jugador sale
+Players.PlayerRemoving:Connect(function(p)
+    if espDrawings[p] then
+        for _, drawing in pairs(espDrawings[p]) do
+            drawing:Remove()
+        end
+        espDrawings[p] = nil
     end
 end)
 
@@ -557,14 +777,13 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- HITBOX PARA TODOS LOS JUGADORES (FIX)
+        -- HITBOX PARA TODOS LOS JUGADORES (FIX) - AHORA RESPETA TEAM CHECK
         for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
+            if p ~= LocalPlayer and p.Character and not isTeammate(p) then
                 local hum = p.Character:FindFirstChildOfClass("Humanoid")
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
 
                 if hum and hum.Health > 0 and hrp then
-                    -- Aplicar hitbox a TODOS los jugadores (sin importar equipo)
                     if getgenv().HitboxEnabled then
                         if not originalHitboxStates[p] then
                             originalHitboxStates[p] = {}
@@ -587,7 +806,6 @@ RunService.RenderStepped:Connect(function()
                         end
                     end
 
-                    -- Freeze solo para enemigos (si está activado)
                     if getgenv().FreezePlayersEnabled and not isTeammate(p) then
                         if not frozenPlayerPositions[p] then frozenPlayerPositions[p] = hrp.CFrame end
                         hrp.Anchored = true
@@ -604,72 +822,10 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- ESP Dibujos 2D Limpio (Solo caja y vida)
+        -- ACTUALIZAR ESP PARA TODOS LOS JUGADORES
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer then
-                if not espDrawings[p] then
-                    espDrawings[p] = {
-                        BoxOutline = Drawing.new("Square"),
-                        Box = Drawing.new("Square"),
-                        HealthBarOutline = Drawing.new("Square"),
-                        HealthBar = Drawing.new("Square")
-                    }
-                    espDrawings[p].BoxOutline.Filled = false
-                    espDrawings[p].BoxOutline.Thickness = 3
-                    espDrawings[p].BoxOutline.Color = Color3.new(0,0,0)
-                    espDrawings[p].Box.Filled = false
-                    espDrawings[p].Box.Thickness = 1
-                    espDrawings[p].HealthBarOutline.Filled = true
-                    espDrawings[p].HealthBarOutline.Color = Color3.new(0,0,0)
-                    espDrawings[p].HealthBar.Filled = true
-                end
-
-                local d = espDrawings[p]
-                local char = p.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-
-                if char and hrp and hum and hum.Health > 0 and not isTeammate(p) then
-                    local cf, sz = char:GetBoundingBox()
-                    local topPos = Camera:WorldToViewportPoint(cf.Position + Vector3.new(0, sz.Y / 2, 0))
-                    local botPos = Camera:WorldToViewportPoint(cf.Position - Vector3.new(0, sz.Y / 2, 0))
-                    local rootPos, vis = Camera:WorldToViewportPoint(hrp.Position)
-
-                    if vis and getgenv().EspGlobalEnabled then
-                        local h = math.abs(botPos.Y - topPos.Y)
-                        local w = h / 2
-
-                        d.BoxOutline.Size = Vector2.new(w, h)
-                        d.BoxOutline.Position = Vector2.new(rootPos.X - w / 2, topPos.Y)
-                        d.BoxOutline.Visible = true
-
-                        d.Box.Size = Vector2.new(w, h)
-                        d.Box.Position = Vector2.new(rootPos.X - w / 2, topPos.Y)
-                        d.Box.Color = getTeamColor(p) -- Color según equipo
-                        d.Box.Visible = true
-
-                        local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-                        local bH = h * hpPct
-                        d.HealthBarOutline.Size = Vector2.new(4, h + 2)
-                        d.HealthBarOutline.Position = Vector2.new(rootPos.X - w / 2 - 6, topPos.Y - 1)
-                        d.HealthBarOutline.Visible = true
-
-                        d.HealthBar.Size = Vector2.new(2, bH)
-                        d.HealthBar.Position = Vector2.new(rootPos.X - w / 2 - 5, topPos.Y + (h - bH))
-                        d.HealthBar.Color = Color3.fromRGB(255 - (hpPct * 255), hpPct * 255, 0)
-                        d.HealthBar.Visible = true
-                    else
-                        d.BoxOutline.Visible = false
-                        d.Box.Visible = false
-                        d.HealthBarOutline.Visible = false
-                        d.HealthBar.Visible = false
-                    end
-                else
-                    d.BoxOutline.Visible = false
-                    d.Box.Visible = false
-                    d.HealthBarOutline.Visible = false
-                    d.HealthBar.Visible = false
-                end
+                updateEsp(p)
             end
         end
     end)
