@@ -19,6 +19,7 @@ local Config = {
     FreezePlayersEnabled = false,
     RapidFireEnabled = false,
     InfAmmoEnabled = false,
+    AutoFireEnabled = false,
     SkinChangerEnabled = false,
     SkinPatternEnabled = false,
     SpeedEnabled = false,
@@ -27,13 +28,9 @@ local Config = {
     SpinBotEnabled = false,
     InvisibleEnabled = false,
     XRayEnabled = false,
-    ESPEnabled = false,
-    ESPBoxEnabled = false,
-    ESPLineEnabled = false,
-    ESPNameEnabled = false,
-    ESPHealthEnabled = false,
-    ESPDistanceEnabled = false,
     StretchedEnabled = false,
+    ESPEnabled = false,
+    ESPColor = "Rojo",
     KillSoundEnabled = false,
     MusicEnabled = false,
     ShowFPS = false,
@@ -135,20 +132,14 @@ getgenv().TriggerbotHeadshot = false
 getgenv().TriggerbotFOV = 90
 getgenv().RapidFireEnabled = Config.RapidFireEnabled
 getgenv().InfAmmoEnabled = Config.InfAmmoEnabled
+getgenv().AutoFireEnabled = Config.AutoFireEnabled
 
 getgenv().XRayEnabled = Config.XRayEnabled
 getgenv().StretchedEnabled = Config.StretchedEnabled
 getgenv().StretchedIntensity = 0.75
 
 getgenv().ESPEnabled = Config.ESPEnabled
-getgenv().ESPBoxEnabled = Config.ESPBoxEnabled
-getgenv().ESPLineEnabled = Config.ESPLineEnabled
-getgenv().ESPNameEnabled = Config.ESPNameEnabled
-getgenv().ESPHealthEnabled = Config.ESPHealthEnabled
-getgenv().ESPDistanceEnabled = Config.ESPDistanceEnabled
-getgenv().ESPColor = Color3.fromRGB(255, 0, 0)
-getgenv().ESPTeamColor = Color3.fromRGB(0, 255, 0)
-getgenv().ESPThickness = 1.5
+getgenv().ESPColor = Color3.fromRGB(255, 0, 0) -- Rojo por defecto
 
 getgenv().SkinChangerEnabled = Config.SkinChangerEnabled
 getgenv().SelectedWeaponSkin = "Gold"
@@ -162,11 +153,11 @@ local myDamageDealt = {}
 local originalWeaponStates = {}
 local originalHitboxStates = {}
 local frozenPlayerPositions = {}
-local espObjects = {}
 local originalTransparencies = {}
 local xrayApplied = false
 local cloneModel = nil
 local originalPartsTransparency = {} -- Para guardar transparencias originales
+local espObjects = {} -- Para el ESP simple
 
 -- Crear ventana con tema azul oscuro
 local Window = WindUI:CreateWindow({
@@ -423,10 +414,18 @@ Tabs.Combat:Toggle({ Title = "Congelar Enemigos (Freeze)", Value = Config.Freeze
     end
 end })
 
--- [ SECCIÓN WEAPMOD ]
+-- [ SECCIÓN WEAPMOD - CON AUTO FIRE ]
 Tabs.WeapMod:Section({ Title = "Armas" })
 Tabs.WeapMod:Toggle({ Title = "Rapid Fire", Value = Config.RapidFireEnabled, Callback = function(v) getgenv().RapidFireEnabled = v Config.RapidFireEnabled = v end })
 Tabs.WeapMod:Toggle({ Title = "Infinite Ammo", Value = Config.InfAmmoEnabled, Callback = function(v) getgenv().InfAmmoEnabled = v Config.InfAmmoEnabled = v end })
+
+Tabs.WeapMod:Section({ Title = "Auto Fire (Dispara solo a enemigos visibles)" })
+Tabs.WeapMod:Toggle({ Title = "Activar Auto Fire", Value = Config.AutoFireEnabled, Callback = function(v) 
+    getgenv().AutoFireEnabled = v 
+    Config.AutoFireEnabled = v
+    SaveConfig()
+end })
+Tabs.WeapMod:Slider({ Title = "Distancia Máxima", Step = 10, Value = { Min = 50, Max = 500, Default = 200 }, Callback = function(v) getgenv().AutoFireRange = v end })
 
 -- [ SECCIÓN SKIN CHANGER ]
 Tabs.SkinChanger:Section({ Title = "Personalización" })
@@ -530,7 +529,7 @@ Tabs.Movement:Toggle({ Title = "Invisibilidad FE (Sin Bugs de Movimiento)", Valu
     end
 end })
 
--- [ SECCIÓN VISUAL ]
+-- [ SECCIÓN VISUAL - SOLO X-RAY, ESP SIMPLE Y PANTALLA ESTIRADA ]
 Tabs.Visual:Section({ Title = "X-Ray (Ver a través de paredes)" })
 Tabs.Visual:Toggle({ Title = "Activar X-Ray", Value = Config.XRayEnabled, Callback = function(v)
     getgenv().XRayEnabled = v
@@ -561,29 +560,48 @@ Tabs.Visual:Toggle({ Title = "Activar X-Ray", Value = Config.XRayEnabled, Callba
     end
 end })
 
-Tabs.Visual:Section({ Title = "ESP (Ver jugadores a través de paredes)" })
-Tabs.Visual:Toggle({ Title = "Activar ESP", Value = Config.ESPEnabled, Callback = function(v)
+Tabs.Visual:Section({ Title = "ESP Simple (Resaltar Jugadores)" })
+Tabs.Visual:Toggle({ Title = "Activar ESP Simple", Value = Config.ESPEnabled, Callback = function(v)
     getgenv().ESPEnabled = v
     Config.ESPEnabled = v
     if not v then
-        for player, drawings in pairs(espObjects) do
-            for _, drawing in pairs(drawings) do
-                if drawing then
-                    drawing.Visible = false
-                    drawing:Remove()
-                end
+        for player, highlight in pairs(espObjects) do
+            if highlight then
+                highlight:Destroy()
             end
         end
         espObjects = {}
     end
 end })
 
-Tabs.Visual:Toggle({ Title = "Mostrar Cajas (Box)", Value = Config.ESPBoxEnabled, Callback = function(v) getgenv().ESPBoxEnabled = v Config.ESPBoxEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Líneas (Line)", Value = Config.ESPLineEnabled, Callback = function(v) getgenv().ESPLineEnabled = v Config.ESPLineEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Nombres", Value = Config.ESPNameEnabled, Callback = function(v) getgenv().ESPNameEnabled = v Config.ESPNameEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Salud", Value = Config.ESPHealthEnabled, Callback = function(v) getgenv().ESPHealthEnabled = v Config.ESPHealthEnabled = v end })
-Tabs.Visual:Toggle({ Title = "Mostrar Distancia", Value = Config.ESPDistanceEnabled, Callback = function(v) getgenv().ESPDistanceEnabled = v Config.ESPDistanceEnabled = v end })
-Tabs.Visual:Slider({ Title = "Grosor de Líneas", Step = 0.5, Value = { Min = 0.5, Max = 5, Default = 1.5 }, Callback = function(v) getgenv().ESPThickness = v end })
+-- Dropdown para cambiar el color del ESP
+Tabs.Visual:Dropdown({ 
+    Title = "Color del ESP", 
+    Values = { "Rojo", "Verde", "Azul", "Amarillo", "Naranja", "Morado", "Cian", "Blanco", "Rosa" }, 
+    Value = "Rojo", 
+    Callback = function(v)
+        local colors = {
+            ["Rojo"] = Color3.fromRGB(255, 0, 0),
+            ["Verde"] = Color3.fromRGB(0, 255, 0),
+            ["Azul"] = Color3.fromRGB(0, 100, 255),
+            ["Amarillo"] = Color3.fromRGB(255, 255, 0),
+            ["Naranja"] = Color3.fromRGB(255, 128, 0),
+            ["Morado"] = Color3.fromRGB(128, 0, 255),
+            ["Cian"] = Color3.fromRGB(0, 255, 255),
+            ["Blanco"] = Color3.fromRGB(255, 255, 255),
+            ["Rosa"] = Color3.fromRGB(255, 0, 128)
+        }
+        getgenv().ESPColor = colors[v] or Color3.fromRGB(255, 0, 0)
+        Config.ESPColor = v
+        -- Actualizar highlights existentes
+        for player, highlight in pairs(espObjects) do
+            if highlight then
+                highlight.FillColor = getgenv().ESPColor
+                highlight.OutlineColor = getgenv().ESPColor
+            end
+        end
+    end 
+})
 
 Tabs.Visual:Section({ Title = "Pantalla Estirada (Stretched REAL)" })
 Tabs.Visual:Toggle({ Title = "Activar Stretched Screen", Value = Config.StretchedEnabled, Callback = function(v) 
@@ -877,6 +895,25 @@ function shoot()
     end)
 end
 
+-- =====================================================
+--  AUTO FIRE - Dispara automáticamente a enemigos visibles
+-- =====================================================
+getgenv().AutoFireRange = 200 -- Distancia por defecto
+
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if getgenv().AutoFireEnabled then
+                -- Buscar cualquier enemigo visible
+                local target = findBestTarget()
+                if target then
+                    shoot()
+                end
+            end
+        end)
+    end
+end)
+
 task.spawn(function()
     while task.wait(0.01) do
         pcall(function()
@@ -942,65 +979,49 @@ local function getClosestTargetUniversal()
     return closestPart
 end
 
-local function createESPDrawings(player)
-    if espObjects[player] then return end
-    local drawings = {}
-    local box = Drawing.new("Square") box.Thickness = getgenv().ESPThickness box.Transparency = 1 box.Visible = false drawings.Box = box
-    local line = Drawing.new("Line") line.Thickness = getgenv().ESPThickness line.Transparency = 1 line.Visible = false drawings.Line = line
-    local name = Drawing.new("Text") name.Size = 14 name.Center = true name.Outline = true name.Visible = false drawings.Name = name
-    local health = Drawing.new("Text") health.Size = 12 health.Center = true health.Outline = true health.Visible = false drawings.Health = health
-    local distance = Drawing.new("Text") distance.Size = 12 distance.Center = true distance.Outline = true distance.Visible = false drawings.Distance = distance
-    espObjects[player] = drawings
-end
-
-local function updateESP()
+-- =====================================================
+--  ESP SIMPLE - SOLO RESALTAR JUGADORES CON COLOR
+-- =====================================================
+local function updateSimpleESP()
     if not getgenv().ESPEnabled then return end
-    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            local char = player.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            local head = char:FindFirstChild("Head")
-            if hum and hum.Health > 0 and hrp and head then
-                createESPDrawings(player)
-                local drawings = espObjects[player]
-                local color = getTeamColor(player)
-                local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position)
-                local rootPos, rootOnScreen = Camera:WorldToViewportPoint(hrp.Position)
-                if headOnScreen and rootOnScreen then
-                    local height = math.abs(headPos.Y - rootPos.Y) * 2
-                    local width = height * 0.6
-                    if getgenv().ESPBoxEnabled then
-                        drawings.Box.Visible = true drawings.Box.Color = color drawings.Box.Thickness = getgenv().ESPThickness
-                        drawings.Box.Position = Vector2.new(rootPos.X - width/2, rootPos.Y - height/2) drawings.Box.Size = Vector2.new(width, height)
-                    else drawings.Box.Visible = false end
-                    if getgenv().ESPLineEnabled then
-                        drawings.Line.Visible = true drawings.Line.Color = color drawings.Line.Thickness = getgenv().ESPThickness
-                        drawings.Line.From = screenCenter drawings.Line.To = Vector2.new(rootPos.X, rootPos.Y)
-                    else drawings.Line.Visible = false end
-                    if getgenv().ESPNameEnabled then
-                        drawings.Name.Visible = true drawings.Name.Text = player.Name drawings.Name.Color = color
-                        drawings.Name.Position = Vector2.new(rootPos.X, rootPos.Y - height/2 - 20)
-                    else drawings.Name.Visible = false end
-                    if getgenv().ESPHealthEnabled then
-                        drawings.Health.Visible = true drawings.Health.Text = math.floor((hum.Health / hum.MaxHealth) * 100) .. "%"
-                        drawings.Health.Color = Color3.fromRGB(0, 255, 0) drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y - height/2 - 5)
-                    else drawings.Health.Visible = false end
-                    if getgenv().ESPDistanceEnabled then
-                        drawings.Distance.Visible = true drawings.Distance.Text = math.floor((Camera.CFrame.Position - hrp.Position).Magnitude) .. "m"
-                        drawings.Distance.Color = color drawings.Distance.Position = Vector2.new(rootPos.X, rootPos.Y + height/2 + 5)
-                    else drawings.Distance.Visible = false end
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                -- Crear Highlight si no existe
+                if not espObjects[player] then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Name = "RedDavilESP"
+                    highlight.FillTransparency = 0.5
+                    highlight.OutlineTransparency = 0
+                    highlight.FillColor = getgenv().ESPColor
+                    highlight.OutlineColor = getgenv().ESPColor
+                    highlight.Parent = player.Character
+                    espObjects[player] = highlight
                 else
-                    for _, drawing in pairs(drawings) do drawing.Visible = false end
+                    -- Actualizar color si cambió
+                    espObjects[player].FillColor = getgenv().ESPColor
+                    espObjects[player].OutlineColor = getgenv().ESPColor
                 end
-            else
-                if espObjects[player] then for _, drawing in pairs(espObjects[player]) do drawing.Visible = false end end
             end
         end
     end
 end
 
+-- Limpiar ESP cuando se desactiva o el jugador muere
+local function cleanupESP()
+    for player, highlight in pairs(espObjects) do
+        if not getgenv().ESPEnabled or not player.Character or not player.Character:FindFirstChildOfClass("Humanoid") or player.Character.Humanoid.Health <= 0 then
+            if highlight then
+                highlight:Destroy()
+            end
+            espObjects[player] = nil
+        end
+    end
+end
+
+-- Actualizar ESP cada frame
 RunService.RenderStepped:Connect(function()
     pcall(function()
         if getgenv().FovEnabled then
@@ -1026,7 +1047,9 @@ RunService.RenderStepped:Connect(function()
             for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end
         end
 
-        updateESP()
+        -- Actualizar ESP simple
+        updateSimpleESP()
+        cleanupESP()
 
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and not isTeammate(p) then
